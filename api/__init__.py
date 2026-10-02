@@ -1,0 +1,1 @@
+"""Lot E — API FastAPI."""

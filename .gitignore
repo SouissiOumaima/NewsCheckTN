@@ -1,0 +1,73 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---------- Environnements ----------
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+.python-version
+
+# ---------- Notebooks ----------
+.ipynb_checkpoints/
+# (penser à vider les sorties lourdes avant commit : nbstripout recommandé)
+
+# ---------- Node / frontend JS ----------
+node_modules/
+frontend/dist/
+frontend/.next/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# ---------- Données (non versionnées) ----------
+# Corpus bruts / intermédiaires : potentiellement soumis au droit d'auteur ou sensibles
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+# Les petits jeux annotés (< 5 Mo) et échantillons peuvent être versionnés dans data/processed/ et data/annotations/
+*.parquet
+*.arrow
+
+# ---------- Modèles & index volumineux ----------
+models/checkpoints/*
+!models/checkpoints/.gitkeep
+rag_llm/index/*
+!rag_llm/index/.gitkeep
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.faiss
+*.h5
+mlruns/
+wandb/
+lightning_logs/
+
+# ---------- Résultats d'évaluation bruts ----------
+evaluation/results/*
+!evaluation/results/.gitkeep
+!evaluation/results/README.md
+
+# ---------- IDE / OS ----------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

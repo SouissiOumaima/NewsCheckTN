@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NewsCheck TN</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+    textarea { width: 100%; min-height: 140px; font-size: 1rem; }
+    button { margin-top: .5rem; padding: .5rem 1rem; }
+    .verdict { border: 1px solid #ccc; border-radius: 8px; padding: .75rem; margin-top: 1rem; }
+    .label { font-weight: bold; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <h1>NewsCheck TN</h1>
+  <p>Collez un texte (FR / AR / tunisien) pour en extraire les affirmations vérifiables.</p>
+  <textarea id="text" dir="auto"></textarea>
+  <button id="go">Vérifier</button>
+  <div id="out"></div>
+  <script>
+    // TODO(Lot E): remplacer par le vrai frontend (framework au choix).
+    const API = "http://localhost:8000";
+    document.getElementById("go").onclick = async () => {
+      const out = document.getElementById("out");
+      out.textContent = "Analyse en cours…";
+      try {
+        const res = await fetch(`${API}/check`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: document.getElementById("text").value }),
+        });
+        const { verdicts } = await res.json();
+        out.innerHTML = "";
+        if (!verdicts.length) out.textContent = "Aucune affirmation vérifiable détectée.";
+        for (const v of verdicts) {
+          const div = document.createElement("div");
+          div.className = "verdict";
+          div.innerHTML = `<div dir="auto"></div><div class="label"></div><div></div><small></small>`;
+          div.children[0].textContent = v.claim.text;
+          div.children[1].textContent = v.label;
+          div.children[2].textContent = v.explanation;
+          div.children[3].textContent =
+            `Incertitude : ${v.uncertainty.toFixed(2)} · Citations : ${v.citations.join(", ") || "—"}`;
+          out.appendChild(div);
+        }
+      } catch (e) {
+        out.textContent = "Erreur : l'API est-elle lancée ? (" + e + ")";
+      }
+    };
+  </script>
+</body>
+</html>
