@@ -30,7 +30,10 @@ python -m spacy download fr_core_news_md
 python -c "import stanza; stanza.download('ar', processors='tokenize,mwt,pos,lemma,depparse')"
 ```
 
-Stanza stocke ses modèles dans `~/stanza_resources` (hors dépôt, environ 600 Mo avec PyTorch).
+Stanza stocke ses modèles dans son cache utilisateur, hors dépôt : sous Windows
+`%LOCALAPPDATA%\StanfordNLP\stanza\Cache\<version>\resources`. Le dossier exact s'obtient avec
+`python -c "import stanza.resources.common as c; print(c.DEFAULT_MODEL_DIR)"` et peut être changé
+via la variable d'environnement `STANZA_RESOURCES_DIR`.
 
 **Sans ces bibliothèques ou modèles, le module fonctionne quand même** : `preprocessing.get_parser`
 renvoie `None` et l'analyse bascule sur les règles. C'est le mode utilisé par la CI, qui n'installe
