@@ -1,13 +1,20 @@
-"""Lot B — Segmentation et extraction d'affirmations candidates (SPO, modalité)."""
+"""Lot B — Segmentation et extraction d'affirmations candidates (SPO, modalité).
+
+Enchaînement : segmentation → factualité → SPO → modalité → coréférence.
+`extract_claims` (contrat partagé) projette la sortie détaillée vers `common.schemas.Claim`,
+sans exclure les opinions : l'information `is_opinion` reste dans la sortie détaillée, le
+filtrage éventuel relevant d'une décision d'équipe.
+"""
 
 from __future__ import annotations
 
 import re
 
 from common.schemas import Claim, Document
+from linguistic_analysis import coreference, factuality, modality, spo
+from linguistic_analysis.types import ExtractedClaim
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?؟])\s+")
-_REPORTED = re.compile(r"\b(selon|d'après|aurait|auraient)\b|حسب|وفق", re.IGNORECASE)
 MIN_TOKENS = 4
 
 
@@ -23,32 +30,46 @@ def split_sentences(text: str) -> list[tuple[str, tuple[int, int]]]:
 
 
 def detect_modality(sentence: str) -> str:
-    # TODO(Lot B): règles + traits morphologiques (mode, temps) via spaCy/Stanza.
-    return "rapporté" if _REPORTED.search(sentence) else "assertif"
+    """Label de modalité seul (voir `modality.detect_modality` pour le score et les indices)."""
+    return modality.detect_modality(sentence)[0]
 
 
-def extract_spo(sentence: str) -> tuple[str | None, str | None, str | None]:
-    # TODO(Lot B): extraction sujet-prédicat-objet sur l'arbre de dépendances.
-    return None, None, None
+def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
+    """Sortie détaillée du Lot B (champs internes inclus), opinions comprises."""
+    # TODO(Lot B): remplacer split_sentences par preprocessing.analyze(doc) (tokens, POS, arbre).
+    candidates = [
+        (sentence, span)
+        for sentence, span in split_sentences(doc.text)
+        if len(sentence.split()) >= MIN_TOKENS
+    ]
+    resolved = coreference.resolve([sentence for sentence, _ in candidates])
+    parser = "rules"  # TODO(Lot B): nom du parseur réellement utilisé une fois analyze() en place
 
-
-def extract_claims(doc: Document) -> list[Claim]:
-    """Point d'entrée du Lot B : phrases candidates à la vérification."""
-    # TODO(Lot B): coréférence pour rendre chaque affirmation autonome.
     claims = []
-    for sentence, span in split_sentences(doc.text):
-        if len(sentence.split()) < MIN_TOKENS:
-            continue
-        s, p, o = extract_spo(sentence)
+    for (sentence, span), resolved_text in zip(candidates, resolved, strict=True):
+        is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
+        triple = spo.extract_spo(sentence) or spo.SPO()
+        label, certainty, modality_triggers = modality.detect_modality(sentence)
         claims.append(
-            Claim(
+            ExtractedClaim(
                 text=sentence,
                 lang=doc.lang,
                 span=span,
-                subject=s,
-                predicate=p,
-                obj=o,
-                modality=detect_modality(sentence),
+                resolved_text=resolved_text,
+                subject=triple.subject,
+                predicate=triple.predicate,
+                obj=triple.obj,
+                modality=label,
+                certainty=certainty,
+                is_opinion=is_opinion,
+                confidence=max(triple.confidence, opinion_conf),
+                parser=parser,
+                triggers=opinion_triggers + modality_triggers,
             )
         )
     return claims
+
+
+def extract_claims(doc: Document) -> list[Claim]:
+    """Point d'entrée du Lot B (contrat partagé) : affirmations candidates à la vérification."""
+    return [c.to_claim() for c in extract_claims_detailed(doc)]

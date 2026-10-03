@@ -44,6 +44,12 @@ class ExtractedClaim:
     parser: str = "rules"  # "spacy-fr" | "stanza-ar" | "rules"
     triggers: list[str] = field(default_factory=list)  # indices ayant déclenché les règles
 
+    def __post_init__(self) -> None:
+        if not self.resolved_text:
+            self.resolved_text = self.text
+        if self.modality not in MODALITY_LABELS:
+            raise ValueError(f"Modalité inconnue : {self.modality!r} (attendu : {MODALITY_LABELS})")
+
     def to_claim(self) -> Claim:
         """Projette vers `common.schemas.Claim` (checkworthiness laissé au Lot C)."""
         return Claim(
