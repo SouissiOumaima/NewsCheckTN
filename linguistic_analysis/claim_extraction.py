@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from common.schemas import Claim, Document
 from linguistic_analysis import coreference, factuality, modality, spo
-from linguistic_analysis.preprocessing import split_sentences
+from linguistic_analysis.preprocessing import analyze, split_sentences
 from linguistic_analysis.types import ExtractedClaim
 
 __all__ = ["detect_modality", "extract_claims", "extract_claims_detailed", "split_sentences"]
@@ -25,25 +25,19 @@ def detect_modality(sentence: str) -> str:
 
 def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
     """Sortie détaillée du Lot B (champs internes inclus), opinions comprises."""
-    # TODO(Lot B): remplacer split_sentences par preprocessing.analyze(doc) (tokens, POS, arbre).
-    candidates = [
-        (sentence, span)
-        for sentence, span in split_sentences(doc.text)
-        if len(sentence.split()) >= MIN_TOKENS
-    ]
-    resolved = coreference.resolve([sentence for sentence, _ in candidates])
-    parser = "rules"  # TODO(Lot B): nom du parseur réellement utilisé une fois analyze() en place
+    sentences = [s for s in analyze(doc) if len(s.text.split()) >= MIN_TOKENS]
+    resolved = coreference.resolve([s.text for s in sentences])
 
     claims = []
-    for (sentence, span), resolved_text in zip(candidates, resolved, strict=True):
+    for sentence, resolved_text in zip(sentences, resolved, strict=True):
         is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
-        triple = spo.extract_spo(sentence) or spo.SPO()
-        label, certainty, modality_triggers = modality.detect_modality(sentence)
+        triple = spo.extract_spo(sentence.text) or spo.SPO()
+        label, certainty, modality_triggers = modality.detect_modality(sentence.text)
         claims.append(
             ExtractedClaim(
-                text=sentence,
-                lang=doc.lang,
-                span=span,
+                text=sentence.text,
+                lang=doc.lang,  # TODO(Lot B): sentence.lang une fois le point L1 tranché
+                span=(sentence.start, sentence.end),
                 resolved_text=resolved_text,
                 subject=triple.subject,
                 predicate=triple.predicate,
@@ -52,7 +46,7 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
                 certainty=certainty,
                 is_opinion=is_opinion,
                 confidence=max(triple.confidence, opinion_conf),
-                parser=parser,
+                parser=sentence.parser,
                 triggers=opinion_triggers + modality_triggers,
             )
         )

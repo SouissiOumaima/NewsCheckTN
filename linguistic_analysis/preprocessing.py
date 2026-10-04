@@ -155,7 +155,7 @@ _RULE_TOKEN = re.compile(
 _ARABIC_DIACRITICS = re.compile(r"[ً-ْـ]")
 
 
-def _fold(text: str) -> str:
+def fold(text: str) -> str:
     """Clé de recherche lexicale : minuscules, arabe sans diacritiques, alef/ya/ta unifiés."""
     text = _ARABIC_DIACRITICS.sub("", text.lower())
     text = re.sub("[إأآ]", "ا", text)
@@ -164,12 +164,12 @@ def _fold(text: str) -> str:
 
 @lru_cache(maxsize=1)
 def _tn_lexicon() -> dict[str, str]:
-    """Lexique forme -> UPOS (les clés sont repliées avec `_fold`)."""
+    """Lexique forme -> UPOS (les clés sont repliées avec `fold`)."""
     data = json.loads(TN_LEXICON.read_text(encoding="utf-8"))
     lexicon: dict[str, str] = {}
     for upos, forms in data["upos"].items():
         for form in forms:
-            key = _fold(form)
+            key = fold(form)
             if key in lexicon and lexicon[key] != upos:
                 raise ValueError(f"{TN_LEXICON.name} : {form!r} à la fois {lexicon[key]} et {upos}")
             lexicon[key] = upos
@@ -181,7 +181,7 @@ def _rule_upos(kind: str, text: str) -> str:
         return "NUM"
     if kind == "punct":
         return "SYM" if text in "%٪$€" else "PUNCT"
-    key = _fold(text)
+    key = fold(text)
     if kind == "elision":
         return _tn_lexicon().get(key, "DET")
     return _tn_lexicon().get(key, "X")
@@ -195,7 +195,7 @@ def _analyze_rules(text: str, offset: int) -> list[Token]:
             Token(
                 i=len(tokens),
                 text=m.group(0),
-                lemma=_fold(m.group(0)),
+                lemma=fold(m.group(0)),
                 upos=_rule_upos(kind, m.group(0)),
                 start=offset + m.start(),
                 end=offset + m.end(),

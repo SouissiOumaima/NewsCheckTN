@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from common.schemas import Claim, Document, Lang
-from linguistic_analysis import claim_extraction, preprocessing
+from linguistic_analysis import claim_extraction, factuality, preprocessing
 from linguistic_analysis.claim_extraction import (
     detect_modality,
     extract_claims,
@@ -27,6 +27,13 @@ from normalization.normalize import normalize
 from pipeline import check_text
 
 FIXTURES = Path(__file__).parent / "fixtures" / "linguistic_analysis"
+
+
+@pytest.fixture(autouse=True)
+def _rules_mode_unless_slow(request, monkeypatch):
+    """Hors tests « slow », l'analyse passe par les règles, comme en CI (sans spaCy/Stanza)."""
+    if request.node.get_closest_marker("slow") is None:
+        monkeypatch.setattr(preprocessing, "get_parser", lambda lang: None)
 
 
 def test_split_sentences_spans():
@@ -131,7 +138,7 @@ def test_opinions_are_not_filtered(monkeypatch):
 
 def test_reported_modality_triggers():
     (claim,) = extract_claims_detailed(normalize("Selon le ministère, les prix ont baissé."))
-    assert claim.modality == "rapporté" and claim.triggers == ["Selon"]
+    assert claim.modality == "rapporté" and "Selon" in claim.triggers
 
 
 def test_unknown_modality_rejected():
@@ -157,9 +164,8 @@ def test_parser_fallback_without_libraries(monkeypatch):
     preprocessing._load_spacy_fr.cache_clear()
     preprocessing._load_stanza_ar.cache_clear()
     try:
-        assert preprocessing.get_parser(Lang.FR) is None
-        assert preprocessing.get_parser(Lang.AR) is None
-        assert preprocessing.parser_name(Lang.FR) == "rules"
+        assert preprocessing._load_spacy_fr() is None
+        assert preprocessing._load_stanza_ar() is None
     finally:
         preprocessing._load_spacy_fr.cache_clear()
         preprocessing._load_stanza_ar.cache_clear()
@@ -305,3 +311,117 @@ def test_analyze_stanza_ar_multiword_tokens():
     first_span = (s.start, s.start + len("وقال"))
     assert spans.count(first_span) >= 2
     assert doc.text[first_span[0] : first_span[1]] == "وقال"
+
+
+# --- Tâche 3 : fait vs opinion ----------------------------------------------------------
+
+
+def _sentence(text):
+    (sentence,) = preprocessing.analyze(normalize(text))
+    return sentence
+
+
+FACT_OPINION_CASES = [
+    # Français
+    ("fait", "Le taux de chômage a atteint 16,4 % en 2023."),
+    ("fait", "Le ministre de la Santé a visité Sfax hier."),
+    ("opinion", "Je pense que cette réforme est une catastrophe pour les jeunes."),
+    ("opinion", "C'est scandaleux et totalement inacceptable."),
+    # Arabe standard
+    ("fait", "ارتفعت نسبة التضخم في تونس إلى 9,3 بالمئة خلال شهر جانفي."),
+    ("fait", "حسب المعهد الوطني للإحصاء، بلغ عدد السكان 12 مليون نسمة."),
+    ("opinion", "أعتقد أن هذا القرار سيضر بالاقتصاد الوطني."),
+    ("opinion", "للأسف، الوضع الاقتصادي كارثي."),
+    # Tunisien en lettres arabes
+    ("fait", "الحكومة قالت إلي الأسعار باش تنقص 5 بالمئة الشهر الجاي."),
+    ("fait", "الوزير زار صفاقس نهار الاثنين."),
+    ("opinion", "نحس اللي الوضع خايب برشا."),
+    ("opinion", "يا ريت الحكومة تعمل حاجة للشباب."),
+    # Tunisien en arabizi
+    ("fait", "El 7koma 9alet elli el as3ar bech tan9es 5 fel miya."),
+    ("fait", "El ministre zar Sfax nhar el thnin."),
+    ("opinion", "Ena n7ess elli el wadh3 khayeb barcha."),
+    ("opinion", "Fi ra2yi el qarar hedha ghalet."),
+]
+
+
+@pytest.mark.parametrize(("gold", "text"), FACT_OPINION_CASES)
+def test_classify_factuality_rules(gold, text):
+    is_opinion, confidence, triggers = factuality.classify_factuality(_sentence(text))
+    assert is_opinion == (gold == "opinion"), triggers
+    assert 0.5 <= confidence <= 1.0
+    assert all(t.split(":", 1)[0] in {"opinion", "question", "souhait", "fait"} for t in triggers)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_trigger"),
+    [
+        ("Est-ce que le chômage a baissé en 2024 ?", "question:?"),
+        ("هل ارتفعت الأسعار في تونس", "question:هل"),
+        ("Inchallah el 7koma tna9es el as3ar.", "souhait:inchallah"),
+    ],
+)
+def test_questions_and_wishes_are_not_factual(text, expected_trigger):
+    is_opinion, _, triggers = factuality.classify_factuality(_sentence(text))
+    assert is_opinion and expected_trigger in triggers
+
+
+def test_opinion_verb_third_person_is_not_opinion():
+    is_opinion, _, triggers = factuality.classify_factuality(
+        _sentence("Le ministre pense que la réforme avance bien.")
+    )
+    assert not is_opinion
+    assert not any(t.startswith("opinion:1re_personne") for t in triggers)
+
+
+def test_opinion_verb_with_precise_data_stays_factual():
+    is_opinion, _, triggers = factuality.classify_factuality(
+        _sentence("Je pense que le chômage a atteint 16 % en 2023.")
+    )
+    assert "opinion:1re_personne:pense" in triggers and not is_opinion
+
+
+def test_intensifier_ignored_when_number_present():
+    _, _, triggers = factuality.classify_factuality(
+        _sentence("Le chômage a très fortement augmenté de 5 % en 2024.")
+    )
+    assert not any(t.startswith("opinion:intensifieur") for t in triggers)
+
+
+def test_lexicons_load_for_all_languages():
+    for code in ("fr", "ar", "tn"):
+        factuality.load_lexicon.cache_clear()
+        lexicon = factuality.load_lexicon(code)
+        assert {"expressions", "evaluatifs", "souhaits"} <= set(lexicon)
+
+
+def test_detailed_claims_carry_factuality():
+    doc = normalize(
+        "Le chômage a atteint 16 % en 2023. Je pense que cette réforme est une catastrophe."
+    )
+    fact, opinion = extract_claims_detailed(doc)
+    assert not fact.is_opinion and "fait:nombre" in fact.triggers
+    assert opinion.is_opinion and opinion.parser == "rules"
+    assert len(extract_claims(doc)) == 2  # opinions transmises (point L5 non tranché)
+
+
+@pytest.mark.slow
+def test_factuality_tree_patterns_spacy():
+    pytest.importorskip("spacy")
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle fr_core_news_md absent")
+    s = _sentence("Je pense que cette réforme est une catastrophe pour les jeunes.")
+    assert s.parser == "spacy-fr"
+    is_opinion, _, triggers = factuality.classify_factuality(s)
+    assert is_opinion
+    assert "opinion:complétive" in triggers
+    assert "opinion:évaluatif:attribut:catastrophe" in triggers
+    _, _, triggers = factuality.classify_factuality(_sentence("Le taux de chômage a atteint 16 %."))
+    assert "fait:passé" in triggers
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("gold", "text"), FACT_OPINION_CASES)
+def test_classify_factuality_with_parsers(gold, text):
+    is_opinion, _, triggers = factuality.classify_factuality(_sentence(text))
+    assert is_opinion == (gold == "opinion"), triggers
