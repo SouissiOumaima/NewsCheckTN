@@ -8,25 +8,14 @@ filtrage éventuel relevant d'une décision d'équipe.
 
 from __future__ import annotations
 
-import re
-
 from common.schemas import Claim, Document
 from linguistic_analysis import coreference, factuality, modality, spo
+from linguistic_analysis.preprocessing import split_sentences
 from linguistic_analysis.types import ExtractedClaim
 
-_SENT_SPLIT = re.compile(r"(?<=[.!?؟])\s+")
+__all__ = ["detect_modality", "extract_claims", "extract_claims_detailed", "split_sentences"]
+
 MIN_TOKENS = 4
-
-
-def split_sentences(text: str) -> list[tuple[str, tuple[int, int]]]:
-    """Découpe en phrases avec leurs positions (début, fin) dans le texte."""
-    sentences, start = [], 0
-    for part in _SENT_SPLIT.split(text):
-        idx = text.find(part, start)
-        if part.strip():
-            sentences.append((part.strip(), (idx, idx + len(part))))
-        start = idx + len(part)
-    return sentences
 
 
 def detect_modality(sentence: str) -> str:

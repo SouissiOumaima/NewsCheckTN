@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from common.schemas import Claim, Lang
+from common.schemas import Claim, Document, Lang
 from linguistic_analysis import claim_extraction, preprocessing
 from linguistic_analysis.claim_extraction import (
     detect_modality,
@@ -187,3 +187,121 @@ def test_stanza_ar_parser():
         pytest.skip("modèle Stanza ar absent")
     words = [w for s in nlp("أعلن الوزير عن زيادة الأسعار.").sentences for w in s.words]
     assert any(w.deprel == "nsubj" for w in words) or any(w.deprel == "root" for w in words)
+
+
+# --- Tâche 2 : prétraitement (tokenisation, POS, dépendances) ----------------------------
+
+
+@pytest.fixture
+def rules_only(monkeypatch):
+    """Force le repli sur règles, quels que soient les modèles installés."""
+    monkeypatch.setattr(preprocessing, "get_parser", lambda lang: None)
+
+
+def _check_offsets(doc, sentences):
+    for s in sentences:
+        assert doc.text[s.start : s.end] == s.text
+        assert s.tokens, s.text
+        assert [t.i for t in s.tokens] == list(range(len(s.tokens)))
+        for t in s.tokens:
+            assert s.start <= t.start < t.end <= s.end
+
+
+def test_analyze_rules_offsets_all_languages(rules_only):
+    for doc in _mock_documents():
+        sentences = preprocessing.analyze(doc)
+        assert sentences and all(s.parser == "rules" for s in sentences)
+        _check_offsets(doc, sentences)
+        for s in sentences:
+            for t in s.tokens:
+                assert doc.text[t.start : t.end] == t.text  # pas de mwt en mode règles
+                assert t.head == -1 and t.deprel == "dep"
+
+
+def test_rules_tokenization_arabizi_and_numbers(rules_only):
+    doc = normalize("El ministre 9al que le taux a baissé de 2,5 % en 2024.")
+    (s,) = preprocessing.analyze(doc)
+    by_text = {t.text: t for t in s.tokens}
+    assert "9al" in by_text and by_text["9al"].upos == "VERB"
+    assert by_text["2,5"].upos == "NUM" and by_text["2024"].upos == "NUM"
+    assert by_text["%"].upos == "SYM" and by_text["."].upos == "PUNCT"
+    assert by_text["que"].upos == "SCONJ"
+
+
+def test_rules_lexicon_arabic_script(rules_only):
+    doc = normalize("الحكومة قالت إلي الأسعار باش تنقص برشا.")
+    (s,) = preprocessing.analyze(doc)
+    upos = {t.text: t.upos for t in s.tokens}
+    assert upos["قالت"] == "VERB" and upos["باش"] == "PART" and upos["برشا"] == "ADV"
+
+
+def test_rules_french_elision(rules_only):
+    (s,) = preprocessing.analyze(normalize("D'après l'INS, le chômage a baissé."))
+    assert [t.text for t in s.tokens][:4] == ["D'", "après", "l'", "INS"]
+
+
+def test_mixed_document_redetects_language_per_sentence(rules_only):
+    text = "Le chômage a baissé en 2024. ارتفعت الأسعار كثيرا."
+    doc = Document(raw_text=text, text=text, lang=Lang.AR, script="mixed")
+    langs = [s.lang for s in preprocessing.analyze(doc)]
+    assert langs == [Lang.FR, Lang.AR]
+
+
+@pytest.mark.parametrize(
+    ("text", "lang"),
+    [
+        ("Le taux de chômage a baissé.", Lang.FR),
+        ("ارتفعت الأسعار في تونس.", Lang.AR),
+        ("El 7koma 9alet elli el as3ar bech tan9es.", Lang.TN),
+        ("...", Lang.UNKNOWN),
+    ],
+)
+def test_detect_sentence_lang(text, lang):
+    assert preprocessing.detect_sentence_lang(text) == lang
+
+
+def test_unavailable_parser_falls_back_to_rules(rules_only):
+    (s,) = preprocessing.analyze(normalize("Le ministre a annoncé une hausse des prix."))
+    assert s.parser == "rules" and s.lang == Lang.FR
+
+
+def test_lexicon_has_no_conflicting_forms():
+    preprocessing._tn_lexicon.cache_clear()
+    assert len(preprocessing._tn_lexicon()) > 100
+
+
+@pytest.mark.slow
+def test_analyze_spacy_fr_tree():
+    pytest.importorskip("spacy")
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle fr_core_news_md absent")
+    doc = normalize("Le ministre a annoncé une hausse des prix. Il a visité Sfax.")
+    sentences = preprocessing.analyze(doc)
+    assert [s.parser for s in sentences] == ["spacy-fr", "spacy-fr"]
+    _check_offsets(doc, sentences)
+    for s in sentences:
+        roots = [t for t in s.tokens if t.deprel == "root"]
+        assert len(roots) == 1 and roots[0].head == -1
+        assert all(-1 <= t.head < len(s.tokens) for t in s.tokens)
+        assert all(doc.text[t.start : t.end] == t.text for t in s.tokens)
+    first = {t.text: t for t in sentences[0].tokens}
+    assert first["ministre"].deprel == "nsubj"
+    assert sentences[0].tokens[first["ministre"].head].text == "annoncé"
+
+
+@pytest.mark.slow
+def test_analyze_stanza_ar_multiword_tokens():
+    pytest.importorskip("stanza")
+    if preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèle Stanza ar absent")
+    doc = normalize("وقال الوزير إن الأسعار ارتفعت.")
+    (s,) = preprocessing.analyze(doc)
+    assert s.parser == "stanza-ar"
+    _check_offsets(doc, [s])
+    assert any(t.deprel == "root" and t.head == -1 for t in s.tokens)
+    assert all(-1 <= t.head < len(s.tokens) for t in s.tokens)
+    # « وقال » = و + قال : deux mots syntaxiques partageant le span du token d'origine.
+    spans = [(t.start, t.end) for t in s.tokens]
+    first_span = (s.start, s.start + len("وقال"))
+    assert spans.count(first_span) >= 2
+    assert doc.text[first_span[0] : first_span[1]] == "وقال"
