@@ -27,11 +27,14 @@ def detect_modality(sentence: str) -> str:
 
 def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
     """Sortie détaillée du Lot B (champs internes inclus), opinions comprises."""
-    sentences = [s for s in analyze(doc) if len(s.text.split()) >= MIN_TOKENS]
-    resolved = coreference.resolve([s.text for s in sentences])
+    sentences = analyze(doc)
+    # Coréférence sur toutes les phrases : un antécédent peut se trouver dans une phrase courte.
+    resolutions = coreference.resolve_with_log(sentences)
 
     claims = []
-    for sentence, resolved_text in zip(sentences, resolved, strict=True):
+    for sentence, resolution in zip(sentences, resolutions, strict=True):
+        if len(sentence.text.split()) < MIN_TOKENS:
+            continue
         is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
         triple = spo.extract_spo(sentence) or spo.SPO()
         label, certainty, modality_triggers = modality.detect_modality(
@@ -44,7 +47,7 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
                 text=sentence.text,
                 lang=doc.lang,  # TODO(Lot B): sentence.lang une fois le point L1 tranché
                 span=(sentence.start, sentence.end),
-                resolved_text=resolved_text,
+                resolved_text=resolution.resolved_text,
                 subject=triple.subject,
                 predicate=triple.predicate,
                 obj=triple.obj,
@@ -54,6 +57,7 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
                 confidence=max(triple.confidence, opinion_conf),
                 parser=sentence.parser,
                 triggers=opinion_triggers + modality_triggers,
+                resolution_log=resolution.log,
             )
         )
     return claims

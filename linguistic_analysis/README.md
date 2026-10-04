@@ -63,6 +63,12 @@ Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/lingu
 - **Tunisien** : aucun parseur mature. Règles lexicales et positionnelles, en lettres arabes et en arabizi.
 - **Chargement paresseux** : aucun import de spaCy/Stanza à l'import du module ; chaque pipeline est
   chargé une fois (`functools.lru_cache`) au premier appel.
+- **Coréférence** : règles uniquement, sans bibliothèque externe. Seul le pronom sujet de la
+  proposition principale (il/elle/ils/elles, هو/هي/هم, howa/hiya/houma) est remplacé par le sujet
+  compatible le plus récent des deux phrases précédentes ; sans candidat sûr, la phrase est laissée
+  inchangée. Le résultat est dans `ExtractedClaim.resolved_text` (avec `resolution_log`) ;
+  `Claim.text` reste la phrase d'origine. La bibliothèque `coreferee` (extension spaCy) sera
+  évaluée au palier Silver ; les pronoms affixes arabes (ـه، ـها، ـهم) restent à traiter.
 
 ## Conventions
 - Les `span` sont des positions de caractères dans `Document.text`.

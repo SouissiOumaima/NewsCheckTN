@@ -7,7 +7,14 @@ from pathlib import Path
 import pytest
 
 from common.schemas import Claim, Document, Lang
-from linguistic_analysis import claim_extraction, factuality, modality, preprocessing, spo
+from linguistic_analysis import (
+    claim_extraction,
+    coreference,
+    factuality,
+    modality,
+    preprocessing,
+    spo,
+)
 from linguistic_analysis.claim_extraction import (
     detect_modality,
     extract_claims,
@@ -691,3 +698,110 @@ def test_modality_conditional_morphology_spacy():
 def test_detect_modality_with_parsers(gold, text):
     label, _, triggers = modality.detect_modality(_sentence(text))
     assert label == gold, triggers
+
+
+# --- Tâche 6 : coréférence basique -----------------------------------------------------
+
+
+def _resolve_last(text):
+    """(phrase résolue, journal) pour la dernière phrase du texte."""
+    result = coreference.resolve_with_log(preprocessing.analyze(normalize(text)))[-1]
+    return result.resolved_text, result.log
+
+
+COREF_RESOLVED_CASES = [
+    # (texte, dernière phrase attendue après résolution)
+    ("Le ministre a visité Sfax. Il a annoncé 200 emplois.", "Le ministre a annoncé 200 emplois."),
+    ("La ministre a visité Sfax. Elle a annoncé 200 emplois.",
+     "La ministre a annoncé 200 emplois."),
+    ("Les syndicats ont rencontré le ministre. Ils ont obtenu une hausse de 5 %.",
+     "Les syndicats ont obtenu une hausse de 5 %."),
+    # Arabe et tunisien (valeurs attendues = texte normalisé par le Lot A2)
+    ("الوزير زار صفاقس. هو أعلن عن 200 موطن شغل.", "الوزير اعلن عن 200 موطن شغل."),
+    ("زار الوزير صفاقس. وهو أعلن عن 200 موطن شغل.", "والوزير اعلن عن 200 موطن شغل."),
+    ("الوزيرة زارت صفاقس. هي أعلنت عن مشروع جديد.", "الوزيره اعلنت عن مشروع جديد."),
+    ("El ministre zar Sfax. Howa a3len 200 khedma.", "El ministre a3len 200 khedma."),
+]
+
+
+@pytest.mark.parametrize(("text", "expected"), COREF_RESOLVED_CASES)
+def test_coreference_resolves_subject_pronoun(text, expected):
+    resolved, log = _resolve_last(text)
+    assert resolved == expected
+    assert len(log) == 1 and "→" in log[0]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Il a annoncé 200 emplois dans la région.",  # aucun antécédent
+        "Le ministre a visité Sfax. Il y a 200 chômeurs dans la région.",  # « il » impersonnel
+        "La ministre a visité Sfax. Il a annoncé 200 emplois.",  # genre incompatible
+        "Une délégation de Sfax est arrivée. Elle a rencontré le gouverneur.",  # sujet indéfini
+        # antécédent hors de la fenêtre de 2 phrases
+        "Le ministre a visité Sfax. La visite a duré deux heures. "
+        "Les habitants étaient nombreux. Il a annoncé 200 emplois.",
+    ],
+)
+def test_coreference_abstains_without_safe_antecedent(text):
+    doc = normalize(text)
+    resolved, log = _resolve_last(text)
+    assert resolved == preprocessing.analyze(doc)[-1].text and log == []
+
+
+def test_coreference_follows_chains():
+    resolved, log = _resolve_last(
+        "Le ministre a visité Sfax. Il a annoncé 200 emplois. Il a promis une nouvelle usine."
+    )
+    assert resolved == "Le ministre a promis une nouvelle usine."
+    assert log == ["Il → Le ministre"]
+
+
+def test_resolve_keeps_order_length_and_original_text():
+    doc = normalize("Le ministre a visité Sfax. Il a annoncé 200 emplois.")
+    sentences = preprocessing.analyze(doc)
+    resolved = coreference.resolve(sentences)
+    assert len(resolved) == len(sentences)
+    assert resolved[0] == sentences[0].text
+    assert doc.text[sentences[1].start : sentences[1].end] == "Il a annoncé 200 emplois."
+
+
+def test_detailed_claims_carry_resolution():
+    doc = normalize("Le ministre a visité Sfax hier. Il a annoncé 200 emplois.")
+    first, second = extract_claims_detailed(doc)
+    assert first.resolved_text == first.text and first.resolution_log == []
+    assert second.text == "Il a annoncé 200 emplois."
+    assert second.resolved_text == "Le ministre a annoncé 200 emplois."
+    assert second.resolution_log == ["Il → Le ministre"]
+    assert extract_claims(doc)[1].text == "Il a annoncé 200 emplois."  # contrat : phrase d'origine
+
+
+def test_short_sentence_still_provides_antecedent():
+    # « الوزير زار صفاقس. » (3 mots) est écartée des affirmations mais sert d'antécédent.
+    (claim,) = extract_claims_detailed(normalize("الوزير زار صفاقس. هو أعلن عن 200 موطن شغل."))
+    assert claim.text == "هو اعلن عن 200 موطن شغل."
+    assert claim.resolved_text == "الوزير اعلن عن 200 موطن شغل."
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Le ministre a visité Sfax. Il a annoncé 200 emplois.",
+         "Le ministre a annoncé 200 emplois."),
+        ("La ministre a visité Sfax. Elle a annoncé 200 emplois.",
+         "La ministre a annoncé 200 emplois."),
+        ("Kaïs Saïed a reçu le ministre. Il a demandé des chiffres précis.",
+         "Kaïs Saïed a demandé des chiffres précis."),
+        ("الوزير زار صفاقس. هو أعلن عن 200 موطن شغل.", "الوزير اعلن عن 200 موطن شغل."),
+    ],
+)
+def test_coreference_with_parsers(text, expected):
+    resolved, _ = _resolve_last(text)
+    assert resolved == expected
+
+
+@pytest.mark.slow
+def test_coreference_with_parsers_abstains_on_gender_mismatch():
+    resolved, log = _resolve_last("La ministre a visité Sfax. Il a annoncé 200 emplois.")
+    assert resolved == "Il a annoncé 200 emplois." and log == []

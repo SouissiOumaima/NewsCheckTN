@@ -43,6 +43,7 @@ class ExtractedClaim:
     confidence: float = 0.0  # confiance dans l'extraction
     parser: str = "rules"  # "spacy-fr" | "stanza-ar" | "rules"
     triggers: list[str] = field(default_factory=list)  # indices ayant déclenché les règles
+    resolution_log: list[str] = field(default_factory=list)  # coréférence : « il → Le ministre »
 
     def __post_init__(self) -> None:
         if not self.resolved_text:
