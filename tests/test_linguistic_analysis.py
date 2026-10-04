@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from common.schemas import Claim, Document, Lang
-from linguistic_analysis import claim_extraction, factuality, preprocessing
+from linguistic_analysis import claim_extraction, factuality, preprocessing, spo
 from linguistic_analysis.claim_extraction import (
     detect_modality,
     extract_claims,
@@ -425,3 +425,136 @@ def test_factuality_tree_patterns_spacy():
 def test_classify_factuality_with_parsers(gold, text):
     is_opinion, _, triggers = factuality.classify_factuality(_sentence(text))
     assert is_opinion == (gold == "opinion"), triggers
+
+
+# --- Tâche 4 : triplets sujet-prédicat-objet ---------------------------------------------
+
+
+def _check_exact_extraction(sentence, triple):
+    """Chaque élément (sauf prédicat implicite) est un extrait exact du texte du document."""
+    for value, span in (
+        (triple.subject, triple.subject_span),
+        (triple.predicate, triple.predicate_span),
+        (triple.obj, triple.obj_span),
+    ):
+        if span is not None:
+            assert sentence.text[span[0] - sentence.start : span[1] - sentence.start] == value
+
+
+SPO_RULES_CASES = [
+    # (texte, sujet, prédicat, objet, discours rapporté)
+    # Français (sans parseur)
+    ("Le taux de chômage a atteint 16,4 % en 2023.", "Le taux de chômage", "a atteint",
+     "16,4 % en 2023", False),
+    ("Le ministre a visité Sfax hier.", "Le ministre", "a visité", "Sfax hier", False),
+    ("Le gouvernement a signé un accord avec le FMI.", "Le gouvernement", "a signé",
+     "un accord avec le FMI", False),
+    # Tunisien en lettres arabes (valeurs attendues = texte normalisé par le Lot A2)
+    ("الحكومة قالت إلي الأسعار باش تنقص.", "الحكومه", "قالت", "الاسعار باش تنقص", True),
+    ("الوزير زار صفاقس نهار الاثنين.", "الوزير", "زار", "صفاقس نهار الاثنين", False),
+    ("الشركة عملت 200 خدمة جديدة.", "الشركه", "عملت", "200 خدمه جديده", False),
+    # Tunisien en arabizi
+    ("El 7koma 9alet elli el as3ar bech tan9es.", "El 7koma", "9alet",
+     "el as3ar bech tan9es", True),
+    ("El ministre zar Sfax nhar el thnin.", "El ministre", "zar", "Sfax nhar el thnin", False),
+    ("El cherka 3mlet 200 khedma jdida.", "El cherka", "3mlet", "200 khedma jdida", False),
+]
+
+
+@pytest.mark.parametrize(("text", "subject", "predicate", "obj", "reported"), SPO_RULES_CASES)
+def test_spo_rules(text, subject, predicate, obj, reported):
+    sentence = _sentence(text)
+    triple = spo.extract_spo(sentence)
+    assert (triple.subject, triple.predicate, triple.obj) == (subject, predicate, obj)
+    assert triple.reported is reported
+    assert triple.confidence <= 0.5
+    _check_exact_extraction(sentence, triple)
+
+
+def test_spo_rules_negation_and_passive():
+    neg = spo.extract_spo(_sentence("Le chômage n'a pas baissé en 2024."))
+    assert (neg.subject, neg.predicate, neg.obj) == ("Le chômage", "n'a pas baissé", "en 2024")
+    passive = spo.extract_spo(_sentence("120 nouveaux cas ont été enregistrés par le ministère."))
+    assert passive.voice == "passive" and passive.predicate == "ont été enregistrés"
+    assert passive.subject == "120 nouveaux cas" and passive.obj == "par le ministère"
+
+
+def test_spo_rules_arabic_verb_first():
+    triple = spo.extract_spo(_sentence("قال الوزير إن الأسعار ستنخفض."))
+    assert (triple.subject, triple.predicate, triple.obj) == ("الوزير", "قال", "الاسعار ستنخفض")
+    assert triple.reported
+
+
+def test_spo_rules_speech_verb_without_complementizer_is_not_reported():
+    triple = spo.extract_spo(_sentence("أعلن الوزير زيادة الأجور."))
+    assert triple.predicate == "اعلن" and not triple.reported
+
+
+def test_spo_rules_no_known_verb_returns_none():
+    assert spo.extract_spo(_sentence("ارتفعت نسبة التضخم في تونس.")) is None
+
+
+def test_claims_now_carry_spo():
+    (claim,) = extract_claims(normalize("Le taux de chômage a atteint 16,4 % en 2023."))
+    assert (claim.subject, claim.predicate, claim.obj) == (
+        "Le taux de chômage",
+        "a atteint",
+        "16,4 % en 2023",
+    )
+
+
+SPO_SPACY_CASES = [
+    ("Le taux de chômage a atteint 16,4 % en 2023.", "Le taux de chômage", "a atteint", "16,4 %"),
+    ("Le chômage est de 16 % en 2023.", "Le chômage", "est", "de 16 % en 2023"),
+    ("Le chômage n'a pas baissé en 2024.", "Le chômage", "n'a pas baissé", "en 2024"),
+    ("Le ministre a déclaré que les prix allaient baisser.", "Le ministre", "a déclaré",
+     "les prix allaient baisser"),
+]
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("text", "subject", "predicate", "obj"), SPO_SPACY_CASES)
+def test_spo_spacy_fr(text, subject, predicate, obj):
+    pytest.importorskip("spacy")
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle fr_core_news_md absent")
+    sentence = _sentence(text)
+    assert sentence.parser == "spacy-fr"
+    triple = spo.extract_spo(sentence)
+    assert (triple.subject, triple.predicate, triple.obj) == (subject, predicate, obj)
+    _check_exact_extraction(sentence, triple)
+
+
+@pytest.mark.slow
+def test_spo_spacy_passive():
+    pytest.importorskip("spacy")
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle fr_core_news_md absent")
+    triple = spo.extract_spo(_sentence("120 nouveaux cas ont été enregistrés par le ministère."))
+    assert triple.voice == "passive"
+    assert (triple.subject, triple.predicate, triple.obj) == (
+        "120 nouveaux cas",
+        "ont été enregistrés",
+        "par le ministère",
+    )
+
+
+@pytest.mark.slow
+def test_spo_stanza_ar():
+    pytest.importorskip("stanza")
+    if preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèle Stanza ar absent")
+    # Ordre verbe-sujet-objet + discours rapporté
+    reported = spo.extract_spo(_sentence("قال الوزير إن الأسعار ستنخفض."))
+    assert (reported.subject, reported.predicate, reported.obj) == (
+        "الوزير",
+        "قال",
+        "الاسعار ستنخفض",
+    )
+    assert reported.reported
+    # Phrase nominale : prédicat implicite, seul élément non extrait du texte
+    sentence = _sentence("البطالة مرتفعة في تونس.")
+    nominal = spo.extract_spo(sentence)
+    assert nominal.predicate == spo.IMPLICIT_PREDICATE and nominal.predicate_span is None
+    assert nominal.subject == "البطاله" and nominal.obj == "مرتفعه في تونس"
+    _check_exact_extraction(sentence, nominal)

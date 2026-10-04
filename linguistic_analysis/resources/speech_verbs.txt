@@ -1,0 +1,48 @@
+# Verbes de parole / de déclaration : le contenu rapporté devient l'objet du triplet.
+# Une entrée par ligne (lemme ou forme), '#' pour les commentaires. Comparaison repliée
+# (minuscules, arabe normalisé comme le texte du Lot A2).
+
+# Français (lemmes spaCy et formes fréquentes)
+dire
+déclarer
+annoncer
+affirmer
+indiquer
+préciser
+assurer
+expliquer
+souligner
+estimer
+dit
+déclaré
+annoncé
+affirmé
+indiqué
+précisé
+
+# Arabe standard (lemmes Stanza et formes fréquentes)
+قال
+قالت
+صرح
+صرحت
+أعلن
+أعلنت
+أكد
+أكدت
+أوضح
+أوضحت
+أفاد
+أفادت
+
+# Tunisien (lettres arabes et arabizi)
+قالو
+9al
+9alet
+9alou
+qal
+qalet
+kal
+sarra7
+sarra7et
+a3len
+a3lnet

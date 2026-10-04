@@ -31,7 +31,7 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
     claims = []
     for sentence, resolved_text in zip(sentences, resolved, strict=True):
         is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
-        triple = spo.extract_spo(sentence.text) or spo.SPO()
+        triple = spo.extract_spo(sentence) or spo.SPO()
         label, certainty, modality_triggers = modality.detect_modality(sentence.text)
         claims.append(
             ExtractedClaim(
