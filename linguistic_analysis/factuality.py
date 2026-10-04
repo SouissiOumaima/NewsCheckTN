@@ -68,7 +68,8 @@ _NUMBER = re.compile(r"^[\d٠-٩]+(?:[.,][\d٠-٩]+)*$")
 _ARABIC = re.compile(r"[؀-ۿ]")
 
 
-def _norm(text: str) -> str:
+def match_text(text: str) -> str:
+    """Forme de comparaison : repliée (voir `preprocessing.fold`), apostrophes unifiées."""
     return fold(text).replace("’", "'")
 
 
@@ -88,7 +89,7 @@ def load_lexicon(lang: str) -> dict[str, tuple[str, ...]]:
         elif current is None:
             raise ValueError(f"{path.name} : entrée {line!r} hors section")
         else:
-            sections[current].append(_norm(line))
+            sections[current].append(match_text(line))
     return {name: tuple(entries) for name, entries in sections.items()}
 
 
@@ -99,6 +100,7 @@ def _entries(lang: Lang, section: str) -> list[str]:
     return out
 
 
+@lru_cache(maxsize=None)
 def _pattern(entry: str, anchored: bool = False) -> re.Pattern[str]:
     """Entrée entourée de frontières de mot ; préfixes arabes و / ف tolérés."""
     prefix = "(?:[وف])?" if _ARABIC.search(entry) else ""
@@ -107,7 +109,8 @@ def _pattern(entry: str, anchored: bool = False) -> re.Pattern[str]:
     return re.compile(start + prefix + re.escape(entry) + end)
 
 
-def _find(text: str, entries: list[str], anchored: bool = False) -> str | None:
+def find_marker(text: str, entries: list[str], anchored: bool = False) -> str | None:
+    """Première entrée trouvée dans `text` (déjà passé par `match_text`), ou None."""
     for entry in entries:
         if _pattern(entry, anchored).search(text):
             return entry
@@ -123,7 +126,7 @@ def _children(sentence: Sentence, tok: Token) -> list[Token]:
 
 
 def _previous(sentence: Sentence, tok: Token, n: int = 2) -> set[str]:
-    return {_norm(t.text) for t in sentence.tokens[max(0, tok.i - n) : tok.i]}
+    return {match_text(t.text) for t in sentence.tokens[max(0, tok.i - n) : tok.i]}
 
 
 def _content_tokens(sentence: Sentence) -> list[Token]:
@@ -136,26 +139,26 @@ def _opinion_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
 
     if text.rstrip().endswith(("?", "؟")):
         cues.append(("question", "question:?"))
-    elif marker := _find(text, _entries(lang, "questions"), anchored=True):
+    elif marker := find_marker(text, _entries(lang, "questions"), anchored=True):
         cues.append(("question", f"question:{marker}"))
 
-    if marker := _find(text, _entries(lang, "souhaits")):
+    if marker := find_marker(text, _entries(lang, "souhaits")):
         cues.append(("souhait", f"souhait:{marker}"))
     elif _has_tree(sentence) and any(
         t.deprel == "root" and t.feats.get("Mood") == "Imp" for t in sentence.tokens
     ):
         cues.append(("souhait", "souhait:impératif"))
 
-    if marker := _find(text, _entries(lang, "expressions")):
+    if marker := find_marker(text, _entries(lang, "expressions")):
         cues.append(("expression", f"opinion:{marker}"))
 
     verbs = set(_entries(lang, "verbes"))
     for tok in sentence.tokens:
-        forms = {_norm(tok.text), _norm(tok.lemma)}
+        forms = {match_text(tok.text), match_text(tok.lemma)}
         if forms & verbs and (
             tok.feats.get("Person") == "1" or _previous(sentence, tok) & FIRST_PERSON
         ):
-            cues.append(("verbe_1re_personne", f"opinion:1re_personne:{_norm(tok.text)}"))
+            cues.append(("verbe_1re_personne", f"opinion:1re_personne:{match_text(tok.text)}"))
             if _has_tree(sentence) and any(c.deprel == "ccomp" for c in _children(sentence, tok)):
                 cues.append(("complétive", "opinion:complétive"))
             break
@@ -164,7 +167,7 @@ def _opinion_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
     content = _content_tokens(sentence)
     best = None
     for tok in content:
-        if _norm(tok.text) not in evaluatives and _norm(tok.lemma) not in evaluatives:
+        if match_text(tok.text) not in evaluatives and match_text(tok.lemma) not in evaluatives:
             continue
         if _has_tree(sentence):
             attribute = any(c.deprel == "cop" for c in _children(sentence, tok))
@@ -173,8 +176,8 @@ def _opinion_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
         attribute = attribute or tok is content[-1]
         category = "évaluatif_attribut" if attribute else "évaluatif"
         if best is None or WEIGHTS[category] > WEIGHTS[best[0]]:
-            best = (category, f"opinion:{category.replace('_', ':')}:{_norm(tok.text)}")
-    if best is None and (marker := _find(text, [e for e in evaluatives if " " in e])):
+            best = (category, f"opinion:{category.replace('_', ':')}:{match_text(tok.text)}")
+    if best is None and (marker := find_marker(text, [e for e in evaluatives if " " in e])):
         best = ("évaluatif", f"opinion:évaluatif:{marker}")
     if best:
         cues.append(best)
@@ -188,7 +191,8 @@ def _factual_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
         cues.append(("nombre", "fait:nombre"))
     if any(t.text in ("%", "٪") for t in sentence.tokens) or any(w in text for w in PERCENT_WORDS):
         cues.append(("pourcentage", "fait:pourcentage"))
-    if any(_YEAR.match(t.text) for t in numbers) or _find(text, _entries(sentence.lang, "dates")):
+    month = find_marker(text, _entries(sentence.lang, "dates"))
+    if any(_YEAR.match(t.text) for t in numbers) or month:
         cues.append(("date", "fait:date"))
     if _has_tree(sentence):
         entity = any(t.upos == "PROPN" for t in sentence.tokens)
@@ -210,11 +214,11 @@ def _factual_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
 
 def classify_factuality(sentence: Sentence) -> tuple[bool, float, list[str]]:
     """Retourne (is_opinion, confiance dans [0, 1], indices déclencheurs)."""
-    text = _norm(sentence.text)
+    text = match_text(sentence.text)
     opinion = _opinion_cues(sentence, text)
     factual = _factual_cues(sentence, text)
     has_number = any(category == "nombre" for category, _ in factual)
-    intensifier = _find(text, _entries(sentence.lang, "intensifieurs"))
+    intensifier = find_marker(text, _entries(sentence.lang, "intensifieurs"))
     if intensifier and not has_number:
         opinion.append(("intensifieur", f"opinion:intensifieur:{intensifier}"))
 

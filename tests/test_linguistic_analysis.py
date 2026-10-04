@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from common.schemas import Claim, Document, Lang
-from linguistic_analysis import claim_extraction, factuality, preprocessing, spo
+from linguistic_analysis import claim_extraction, factuality, modality, preprocessing, spo
 from linguistic_analysis.claim_extraction import (
     detect_modality,
     extract_claims,
@@ -138,7 +138,7 @@ def test_opinions_are_not_filtered(monkeypatch):
 
 def test_reported_modality_triggers():
     (claim,) = extract_claims_detailed(normalize("Selon le ministère, les prix ont baissé."))
-    assert claim.modality == "rapporté" and "Selon" in claim.triggers
+    assert claim.modality == "rapporté" and "rapporté:selon" in claim.triggers
 
 
 def test_unknown_modality_rejected():
@@ -558,3 +558,136 @@ def test_spo_stanza_ar():
     assert nominal.predicate == spo.IMPLICIT_PREDICATE and nominal.predicate_span is None
     assert nominal.subject == "البطاله" and nominal.obj == "مرتفعه في تونس"
     _check_exact_extraction(sentence, nominal)
+
+
+# --- Tâche 5 : modalité et incertitude -------------------------------------------------
+
+MODALITY_CASES = [
+    # Français
+    ("assertif", "Le taux de chômage a atteint 16,4 % en 2023."),
+    ("assertif", "Le ministre a visité Sfax hier."),
+    ("rapporté", "Selon le ministère, les prix ont baissé de 3 %."),
+    ("rapporté", "Le ministre a déclaré que les prix allaient baisser."),
+    ("conditionnel", "Le gouvernement aurait signé un accord avec le FMI."),
+    ("conditionnel", "Les prix pourraient augmenter de 5 % en 2025."),
+    ("hypothétique", "Si les prix augmentaient, la consommation baisserait."),
+    ("hypothétique", "Au cas où la réforme échoue, le chômage atteindra 20 %."),
+    ("opinion", "Je pense que cette réforme est une catastrophe pour les jeunes."),
+    ("opinion", "À mon avis, ce projet est ridicule."),
+    ("interrogatif", "Est-ce que le chômage a baissé en 2024 ?"),
+    ("interrogatif", "Le gouvernement a-t-il menti sur les chiffres ?"),
+    ("souhait", "Pourvu que les prix baissent l'an prochain."),
+    ("souhait", "J'espère que le chômage va baisser."),
+    # Arabe standard (pas de conditionnel morphologique)
+    ("assertif", "ارتفعت نسبة التضخم في تونس إلى 9,3 بالمئة."),
+    ("assertif", "بلغ عدد السكان 12 مليون نسمة."),
+    ("rapporté", "حسب المعهد الوطني للإحصاء، بلغ عدد السكان 12 مليون نسمة."),
+    ("rapporté", "نقلا عن مصادر رسمية، ارتفعت الأسعار بنسبة 5 بالمئة."),
+    ("hypothétique", "إذا ارتفعت الأسعار فإن الاستهلاك سينخفض."),
+    ("hypothétique", "لو انخفضت الضرائب لارتفع الاستثمار."),
+    ("opinion", "أعتقد أن هذا القرار سيضر بالاقتصاد الوطني."),
+    ("opinion", "للأسف، الوضع الاقتصادي كارثي."),
+    ("interrogatif", "هل ارتفعت الأسعار في تونس؟"),
+    ("interrogatif", "لماذا ارتفعت الأسعار في تونس؟"),
+    ("souhait", "أتمنى أن تنخفض الأسعار قريبا."),
+    ("souhait", "إن شاء الله تنخفض الأسعار السنة القادمة."),
+    # Tunisien (lettres arabes et arabizi)
+    ("assertif", "El cherka 3mlet 200 khedma jdida."),
+    ("assertif", "الشركة عملت 200 خدمة جديدة."),
+    ("rapporté", "9alou elli el as3ar bech tzid 10 fel miya."),
+    ("rapporté", "قالوا اللي الأسعار باش تزيد."),
+    ("rapporté", "El 7koma 9alet elli el as3ar bech tan9es."),
+    ("hypothétique", "Ken tzid el as3ar, ennes bech t3ani."),
+    ("hypothétique", "Law el 7koma t9os el adha, el as3ar tahbet."),
+    ("opinion", "Ena n7ess elli el wadh3 khayeb barcha."),
+    ("opinion", "نحس اللي الوضع خايب برشا."),
+    ("souhait", "Nchallah el as3ar tahbet."),
+    ("souhait", "يا ريت الحكومة تعمل حاجة للشباب."),
+    ("interrogatif", "3lech el as3ar tal3et ?"),
+    ("interrogatif", "علاش الأسعار طلعت؟"),
+]
+
+
+@pytest.mark.parametrize(("gold", "text"), MODALITY_CASES)
+def test_detect_modality_rules(gold, text):
+    label, certainty, triggers = modality.detect_modality(_sentence(text))
+    assert label == gold, triggers
+    assert label in MODALITY_LABELS and 0.0 <= certainty <= 1.0
+
+
+def test_modality_default_is_assertif():
+    assert modality.detect_modality(_sentence("Le taux de chômage a atteint 16,4 % en 2023.")) == (
+        "assertif",
+        1.0,
+        [],
+    )
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Le chômage a probablement baissé en 2024.",
+        "ربما ارتفعت الأسعار بنسبة 5 بالمئة.",
+        "قد ترتفع الأسعار في الأشهر القادمة.",
+        "Ymken el as3ar tzid el chhar ejjay.",
+    ],
+)
+def test_uncertainty_lowers_certainty_without_changing_label(text):
+    label, certainty, triggers = modality.detect_modality(_sentence(text))
+    assert label == "assertif" and certainty < 1.0
+    assert any(t.startswith("incertitude:") for t in triggers)
+
+
+def test_negated_certainty_lowers_certainty_further():
+    _, plain, _ = modality.detect_modality(_sentence("Le chômage a probablement baissé en 2024."))
+    _, negated, triggers = modality.detect_modality(
+        _sentence("Il n'est pas certain que le chômage ait probablement baissé en 2024.")
+    )
+    assert negated < plain
+    assert any(t.startswith("certitude_niée:") for t in triggers)
+
+
+def test_future_lowers_certainty_only():
+    label, certainty, triggers = modality.detect_modality(
+        _sentence("El 7koma bech tna9es el as3ar fel chhar ejjay.")
+    )
+    assert label == "assertif" and certainty < 1.0 and "futur:bech" in triggers
+
+
+def test_self_source_is_not_reported():
+    sentence = _sentence("Selon moi, le chômage a baissé de 2 %.")
+    label, _, triggers = modality.detect_modality(sentence)
+    assert label != "rapporté"
+    assert not any(t.startswith("rapporté:") for t in triggers)
+
+
+def test_modality_priority_question_over_reported():
+    label, _, triggers = modality.detect_modality(
+        _sentence("Selon le ministère, les prix ont-ils baissé ?")
+    )
+    assert label == "interrogatif" and "rapporté:selon" in triggers
+
+
+def test_claims_carry_new_modality_labels():
+    doc = normalize("Le gouvernement aurait signé un accord avec le FMI.")
+    (claim,) = extract_claims(doc)
+    assert claim.modality == "conditionnel"
+    (detailed,) = extract_claims_detailed(doc)
+    assert detailed.certainty == 0.5
+
+
+@pytest.mark.slow
+def test_modality_conditional_morphology_spacy():
+    pytest.importorskip("spacy")
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle fr_core_news_md absent")
+    # « baisserait » n'est pas dans le lexique : seul le trait Mood=Cnd le détecte.
+    label, _, triggers = modality.detect_modality(_sentence("Le chômage baisserait l'an prochain."))
+    assert label == "conditionnel" and "conditionnel:Mood=Cnd" in triggers
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("gold", "text"), MODALITY_CASES)
+def test_detect_modality_with_parsers(gold, text):
+    label, _, triggers = modality.detect_modality(_sentence(text))
+    assert label == gold, triggers

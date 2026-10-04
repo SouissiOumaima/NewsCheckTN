@@ -8,10 +8,10 @@ filtrage éventuel relevant d'une décision d'équipe.
 
 from __future__ import annotations
 
-from common.schemas import Claim, Document
+from common.schemas import Claim, Document, Lang
 from linguistic_analysis import coreference, factuality, modality, spo
 from linguistic_analysis.preprocessing import analyze, split_sentences
-from linguistic_analysis.types import ExtractedClaim
+from linguistic_analysis.types import DEFAULT_MODALITY, ExtractedClaim
 
 __all__ = ["detect_modality", "extract_claims", "extract_claims_detailed", "split_sentences"]
 
@@ -19,8 +19,10 @@ MIN_TOKENS = 4
 
 
 def detect_modality(sentence: str) -> str:
-    """Label de modalité seul (voir `modality.detect_modality` pour le score et les indices)."""
-    return modality.detect_modality(sentence)[0]
+    """Label de modalité d'une phrase isolée (voir `modality.detect_modality` pour le détail)."""
+    doc = Document(raw_text=sentence, text=sentence, lang=Lang.UNKNOWN, script="mixed")
+    analyzed = analyze(doc)
+    return modality.detect_modality(analyzed[0])[0] if analyzed else DEFAULT_MODALITY
 
 
 def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
@@ -32,7 +34,11 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
     for sentence, resolved_text in zip(sentences, resolved, strict=True):
         is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
         triple = spo.extract_spo(sentence) or spo.SPO()
-        label, certainty, modality_triggers = modality.detect_modality(sentence.text)
+        label, certainty, modality_triggers = modality.detect_modality(
+            sentence,
+            factual=(is_opinion, opinion_conf, opinion_triggers),
+            reported=triple.reported,
+        )
         claims.append(
             ExtractedClaim(
                 text=sentence.text,
