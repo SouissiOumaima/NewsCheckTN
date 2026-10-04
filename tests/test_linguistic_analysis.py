@@ -10,6 +10,7 @@ from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
     claim_extraction,
     coreference,
+    demo,
     evaluate,
     factuality,
     modality,
@@ -955,3 +956,34 @@ def test_error_categories_match_parser_errors():
         pytest.skip("modèles spaCy / Stanza absents")
     results = evaluate.evaluate(EVAL_ITEMS)
     assert _error_keys(results) == set(ERROR_CATEGORIES["parseurs"])
+
+
+# --- Script de démonstration ---------------------------------------------------------------
+
+
+def test_demo_describes_opinion(capsys):
+    demo.main(["Je pense que le gouvernement devrait agir plus vite."])
+    out = capsys.readouterr().out
+    assert "affirmation vérifiable : non" in out
+    assert "opinion / non factuel  : oui" in out
+    assert "opinion:1re_personne:pense" in out
+
+
+def test_demo_shows_coreference_and_examples(capsys):
+    demo.main([])  # exemples par défaut (FR, AR, tunisien)
+    out = capsys.readouterr().out
+    assert out.count("Texte :") == len(demo.EXAMPLES)
+    assert "coréférence            : Il → Le ministre" in out
+
+
+def test_demo_json(capsys):
+    demo.main(["--json", "Le taux de chômage a atteint 16 % en 2023."])
+    payload = json.loads(capsys.readouterr().out)
+    (claim,) = next(iter(payload.values()))
+    assert claim["is_claim"] is True and claim["is_opinion"] is False
+    assert {"subject", "predicate", "obj", "triggers", "resolved_text"} <= set(claim)
+
+
+def test_demo_short_text_has_no_candidate(capsys):
+    demo.main(["Bonjour Tunis."])
+    assert "Aucune phrase candidate" in capsys.readouterr().out

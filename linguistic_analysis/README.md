@@ -51,6 +51,18 @@ python -m linguistic_analysis.io_contract tests/fixtures/linguistic_analysis/moc
 Documents simulés : `tests/fixtures/linguistic_analysis/mock_documents.jsonl`, générés par
 `make_mock_documents.py` à partir de la normalisation du Lot A2.
 
+## Démonstration
+
+```bash
+python -m linguistic_analysis.demo "Je pense que le gouvernement devrait agir plus vite."
+python -m linguistic_analysis.demo            # exemples FR / AR / tunisien
+python -m linguistic_analysis.demo --rules "…"  # sans spaCy / Stanza ; --json pour la sortie brute
+```
+
+Affiche, phrase par phrase, l'affirmation vérifiable ou non, l'opinion, la modalité et la certitude,
+le triplet, la phrase résolue par coréférence et les indices déclencheurs. Contrairement à
+`pipeline.py`, les phrases non vérifiables sont affichées (elles ne passent pas par le filtre du Lot C).
+
 ## Évaluation
 
 Jeu annoté : `tests/fixtures/linguistic_analysis/eval_30.jsonl` (guide : `docs/lot-b_guide_annotation.md`).
