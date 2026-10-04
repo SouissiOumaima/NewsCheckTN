@@ -14,8 +14,9 @@ produit par la normalisation du Lot A2 ; les annotations restent lisibles.
 Usage (depuis la racine du dépôt) :
     python -m linguistic_analysis.evaluate            # parseurs disponibles (spaCy / Stanza)
     python -m linguistic_analysis.evaluate --rules    # règles seules, comme en CI
+    python -m linguistic_analysis.evaluate --errors   # + export des erreurs (analyse d'erreurs)
 Le résultat est écrit dans `evaluation/results/lot-b_extraction_<mode>_<AAAAMMJJ>.json`
-(format de `evaluation/README.md`).
+(format de `evaluation/README.md`), les erreurs dans `lot-b_erreurs_<mode>_<AAAAMMJJ>.json`.
 """
 
 from __future__ import annotations
@@ -187,6 +188,48 @@ def write_results(results: dict, out_dir: Path = RESULTS_DIR) -> Path:
     return path
 
 
+def find_errors(results: dict) -> list[dict]:
+    """Une entrée par (phrase, champ) en erreur, avec le contexte utile à l'analyse.
+
+    Champs examinés : `is_claim` et `modality` (toutes les phrases), `subject` / `predicate` /
+    `obj` (phrases `is_claim = true` du gold), `resolved_text` (phrases annotées).
+    """
+    errors = []
+    for it in results["items"]:
+        gold, pred = it["gold"], it["pred"]
+        fields = ["is_claim", "modality"]
+        if gold["is_claim"]:
+            fields += list(ROLES)
+        if gold.get("resolved_text"):
+            fields.append("resolved_text")
+        for field in fields:
+            if field in ("is_claim", "modality"):
+                wrong = gold[field] != pred[field]
+            else:
+                wrong = not exact_match(gold[field], pred[field])
+            if wrong:
+                errors.append({
+                    "id": it["id"],
+                    "group": it["group"],
+                    "field": field,
+                    "gold": gold[field],
+                    "pred": pred[field],
+                    "parser": pred["parser"],
+                    "triggers": pred["triggers"],
+                    "resolution_log": pred["resolution_log"],
+                })
+    return errors
+
+
+def write_errors(results: dict, errors: list[dict], out_dir: Path = RESULTS_DIR) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = results["date"].replace("-", "")
+    path = Path(out_dir) / f"lot-b_erreurs_{results['model']}_{stamp}.json"
+    payload = {"exp_id": results["exp_id"], "model": results["model"], "errors": errors}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
 def _summary(results: dict) -> str:
     m = results["metrics"]
     parsers = ", ".join(results["parsers_used"])
@@ -217,11 +260,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--rules", action="store_true", help="règles seules (comme en CI)")
     parser.add_argument("--eval-set", type=Path, default=EVAL_SET)
     parser.add_argument("--out-dir", type=Path, default=RESULTS_DIR)
+    parser.add_argument("--errors", action="store_true", help="exporte aussi les erreurs")
     args = parser.parse_args(argv)
     results = evaluate(load_eval_set(args.eval_set), rules=args.rules)
     path = write_results(results, args.out_dir)
     print(_summary(results))
     print(f"-> {path}")
+    if args.errors:
+        errors = find_errors(results)
+        print(f"{len(errors)} erreur(s) -> {write_errors(results, errors, args.out_dir)}")
+        for e in errors:
+            print(f"  {e['id']:<6} {e['group']:<11} {e['field']:<13} [{e['parser']}] "
+                  f"attendu={e['gold']!r} produit={e['pred']!r}")
 
 
 if __name__ == "__main__":

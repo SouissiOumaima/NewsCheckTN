@@ -906,3 +906,52 @@ def test_vso_reported_subject_up_to_complementizer():
     triple = spo.extract_spo(_sentence("قال وزير الفلاحة إن صابة الحبوب بلغت 2 مليون طن."))
     assert triple.subject == "وزير الفلاحه" and triple.reported
     assert triple.obj == "صابه الحبوب بلغت 2 مليون طن"
+
+
+# --- Tâche 9 : analyse d'erreurs ---------------------------------------------------------
+
+ERROR_CATEGORIES = json.loads((FIXTURES / "error_categories.json").read_text(encoding="utf-8"))
+VALID_CATEGORIES = {f"E{k}" for k in range(1, 9)}
+
+
+def _error_keys(results):
+    return {f"{e['id']}:{e['field']}" for e in evaluate.find_errors(results)}
+
+
+def test_error_categories_are_valid():
+    for mode in ("regles", "parseurs"):
+        for key, entry in ERROR_CATEGORIES[mode].items():
+            assert entry["cat"] in VALID_CATEGORIES and entry["cause"], (mode, key)
+
+
+def test_error_categories_match_rules_errors():
+    # Si le système change, l'analyse d'erreurs (docs/lot-b_analyse_erreurs_bronze.md)
+    # est à refaire.
+    results = evaluate.evaluate(EVAL_ITEMS, rules=True)
+    assert _error_keys(results) == set(ERROR_CATEGORIES["regles"])
+
+
+def test_find_errors_fields():
+    results = evaluate.evaluate(EVAL_ITEMS, rules=True)
+    expected = {"id", "group", "field", "gold", "pred", "parser", "triggers", "resolution_log"}
+    for error in evaluate.find_errors(results):
+        assert expected <= set(error)
+        assert error["field"] in {"is_claim", "modality", "resolved_text", *evaluate.ROLES}
+
+
+def test_cli_errors_export(tmp_path, capsys):
+    evaluate.main(["--rules", "--errors", "--out-dir", str(tmp_path)])
+    names = sorted(path.name for path in tmp_path.iterdir())
+    assert any(n.startswith("lot-b_erreurs_regles_") for n in names)
+    assert any(n.startswith("lot-b_extraction_regles_") for n in names)
+    assert "erreur(s)" in capsys.readouterr().out
+
+
+@pytest.mark.slow
+def test_error_categories_match_parser_errors():
+    pytest.importorskip("spacy")
+    pytest.importorskip("stanza")
+    if preprocessing.get_parser(Lang.FR) is None or preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèles spaCy / Stanza absents")
+    results = evaluate.evaluate(EVAL_ITEMS)
+    assert _error_keys(results) == set(ERROR_CATEGORIES["parseurs"])
