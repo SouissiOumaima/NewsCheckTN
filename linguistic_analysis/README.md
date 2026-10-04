@@ -19,6 +19,49 @@ Identifier dans un document normalisé les **affirmations candidates** et les an
 - Le score de vérifiabilité (`checkworthiness`) est ensuite calculé par le Lot C.
 - Les informations supplémentaires (texte résolu, certitude, confiance, parseur) sont portées par
   `types.ExtractedClaim`, interne au module ; `ExtractedClaim.to_claim()` projette vers le contrat partagé.
+- `extract_claims` ne filtre pas les opinions : la décision de les écarter n'est pas encore prise
+  au niveau de l'équipe (l'information reste disponible dans la sortie détaillée).
+
+## Sortie détaillée et contrat JSON
+
+`extract_claims_detailed(doc) -> list[ExtractedClaim]` renvoie, pour chaque phrase candidate
+(au moins 4 mots), les champs du contrat plus des champs **internes au Lot B** :
+
+| Champ | Sens |
+|-------|------|
+| `resolved_text` | phrase rendue autonome par la coréférence (« Il a annoncé… » → « Le ministre a annoncé… ») |
+| `resolution_log` | remplacements effectués (« Il → Le ministre ») |
+| `modality`, `certainty` | label de `types.MODALITY_LABELS` et certitude dans [0, 1] |
+| `is_opinion`, `confidence` | phrase non factuelle (opinion, question, souhait) et confiance |
+| `is_claim` (propriété) | affirmation vérifiable : ni opinion, ni question, ni souhait, ni hypothèse |
+| `parser`, `triggers` | parseur utilisé (`spacy-fr`, `stanza-ar`, `rules`) et indices déclencheurs |
+
+`extract_claims(doc)` = `[c.to_claim() for c in extract_claims_detailed(doc)]`.
+
+Contrat JSON (pour travailler sans les autres lots) — `io_contract.py` :
+- entrée : une ligne JSON par document, au format `asdict(Document)`
+  (`{"raw_text", "text", "lang", "script"}`), validée par `document_from_json` ;
+- sortie : `{"claims": [...]}` par document, au format `Claim` (contrat) ou `ExtractedClaim` (`--detailed`).
+
+```bash
+python -m linguistic_analysis.io_contract tests/fixtures/linguistic_analysis/mock_documents.jsonl sortie.jsonl
+python -m linguistic_analysis.io_contract tests/fixtures/linguistic_analysis/mock_documents.jsonl sortie.jsonl --detailed
+```
+
+Documents simulés : `tests/fixtures/linguistic_analysis/mock_documents.jsonl`, générés par
+`make_mock_documents.py` à partir de la normalisation du Lot A2.
+
+## Évaluation
+
+Jeu annoté : `tests/fixtures/linguistic_analysis/eval_30.jsonl` (guide : `docs/lot-b_guide_annotation.md`).
+
+```bash
+python -m linguistic_analysis.evaluate --rules --errors   # règles seules (conditions de la CI)
+python -m linguistic_analysis.evaluate --errors           # avec spaCy / Stanza
+```
+
+Résultats dans `evaluation/results/` ; analyse d'erreurs : `docs/lot-b_analyse_erreurs_bronze.md` ;
+expérience `EXP-B-001` dans `experiments.md`.
 
 ## Installation
 
@@ -43,15 +86,16 @@ que `requirements-dev.txt`.
 
 | Fichier | Contenu |
 |---------|---------|
-| `claim_extraction.py` | Point d'entrée `extract_claims`, segmentation, sélection des candidats |
-| `types.py` | `ExtractedClaim`, `MODALITY_LABELS`, adaptateur `to_claim()` |
+| `claim_extraction.py` | Points d'entrée `extract_claims` et `extract_claims_detailed` |
+| `types.py` | `ExtractedClaim`, `MODALITY_LABELS`, adaptateur `to_claim()`, propriété `is_claim` |
 | `preprocessing.py` | Chargement paresseux et mis en cache des pipelines spaCy / Stanza (`get_parser`) |
 | `factuality.py` | Fait vs opinion (lexiques + patrons syntaxiques) |
 | `spo.py` | Extraction SPO sur l'arbre de dépendances, repli positionnel |
 | `modality.py` | Modalité et score de certitude |
 | `coreference.py` | Résolution de coréférence par règles |
-| `io_contract.py` | (Dé)sérialisation JSON du contrat d'entrée/sortie |
-| `resources/` | Lexiques FR / AR / TN (verbes d'opinion, marqueurs de modalité…) |
+| `io_contract.py` | (Dé)sérialisation JSON du contrat d'entrée/sortie, ligne de commande |
+| `evaluate.py` | Évaluation sur le jeu annoté, export des résultats et des erreurs |
+| `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt` |
 
 Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/linguistic_analysis/`.
 
