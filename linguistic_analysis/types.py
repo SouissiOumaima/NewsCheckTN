@@ -24,6 +24,8 @@ MODALITY_LABELS = (
     "souhait",
 )
 DEFAULT_MODALITY = "assertif"
+# Modalités qui excluent une affirmation vérifiable (guide d'annotation, section 2).
+NON_FACTUAL_MODALITIES = frozenset({"interrogatif", "souhait", "hypothétique", "opinion"})
 
 
 @dataclass
@@ -50,6 +52,11 @@ class ExtractedClaim:
             self.resolved_text = self.text
         if self.modality not in MODALITY_LABELS:
             raise ValueError(f"Modalité inconnue : {self.modality!r} (attendu : {MODALITY_LABELS})")
+
+    @property
+    def is_claim(self) -> bool:
+        """Affirmation vérifiable : ni opinion / question / souhait, ni hypothèse."""
+        return not self.is_opinion and self.modality not in NON_FACTUAL_MODALITIES
 
     def to_claim(self) -> Claim:
         """Projette vers `common.schemas.Claim` (checkworthiness laissé au Lot C)."""

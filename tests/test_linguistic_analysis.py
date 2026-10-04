@@ -10,6 +10,7 @@ from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
     claim_extraction,
     coreference,
+    evaluate,
     factuality,
     modality,
     preprocessing,
@@ -805,3 +806,103 @@ def test_coreference_with_parsers(text, expected):
 def test_coreference_with_parsers_abstains_on_gender_mismatch():
     resolved, log = _resolve_last("La ministre a visité Sfax. Il a annoncé 200 emplois.")
     assert resolved == "Il a annoncé 200 emplois." and log == []
+
+
+# --- Tâche 8 : jeu d'évaluation annoté (eval_30) ------------------------------------------
+
+EVAL_ITEMS = evaluate.load_eval_set()
+REQUIRED_PHENOMENA = {
+    "fait_chiffré", "opinion", "question", "rapporté", "conditionnel_journalistique", "copule",
+    "phrase_nominale", "passif", "négation", "coréférence", "code_switching",
+}
+
+
+def _eval_params(items, field):
+    """Paramètres pytest ; `xfail(strict=False)` si le cas est marqué difficile pour `field`."""
+    params = []
+    for item in items:
+        reason = item.get("known_hard", {}).get(field)
+        marks = [pytest.mark.xfail(strict=False, reason=reason)] if reason else []
+        params.append(pytest.param(item, id=item["id"], marks=marks))
+    return params
+
+
+def test_eval_set_structure_and_coverage():
+    assert len(EVAL_ITEMS) >= 30
+    assert len({it["id"] for it in EVAL_ITEMS}) == len(EVAL_ITEMS)
+    groups = [evaluate.group_of(it) for it in EVAL_ITEMS]
+    minimum = {"fr-latin": 10, "ar-arabic": 10, "tn-arabic": 5, "tn-arabizi": 5, "tn-mixed": 3}
+    for group, n in minimum.items():
+        assert groups.count(group) >= n, group
+    assert REQUIRED_PHENOMENA <= {p for it in EVAL_ITEMS for p in it["phenomena"]}
+    for it in EVAL_ITEMS:
+        gold = it["gold"]
+        assert {"is_claim", "subject", "predicate", "obj", "modality"} <= set(gold), it["id"]
+        assert gold["modality"] in MODALITY_LABELS, it["id"]
+        if "coréférence" in it["phenomena"]:
+            assert it.get("context") and gold.get("resolved_text"), it["id"]
+
+
+@pytest.mark.parametrize("item", _eval_params(EVAL_ITEMS, "is_claim"))
+def test_eval_is_claim(item):
+    assert evaluate.predict(item)["is_claim"] is item["gold"]["is_claim"]
+
+
+@pytest.mark.parametrize("item", _eval_params(EVAL_ITEMS, "modality"))
+def test_eval_modality(item):
+    assert evaluate.predict(item)["modality"] == item["gold"]["modality"]
+
+
+@pytest.mark.parametrize(
+    "item", _eval_params([it for it in EVAL_ITEMS if it["gold"]["is_claim"]], "spo")
+)
+def test_eval_spo_exact(item):
+    pred = evaluate.predict(item)
+    for role in evaluate.ROLES:
+        assert evaluate.exact_match(item["gold"][role], pred[role]), (role, pred[role])
+
+
+@pytest.mark.parametrize(
+    "item", _eval_params([it for it in EVAL_ITEMS if it["gold"].get("resolved_text")], "coref")
+)
+def test_eval_coreference(item):
+    pred = evaluate.predict(item)
+    assert evaluate.exact_match(item["gold"]["resolved_text"], pred["resolved_text"])
+
+
+def test_eval_matching_helpers():
+    assert evaluate.exact_match("La Banque", "la banque.")
+    assert evaluate.exact_match("صابة الحبوب", "صابه الحبوب")  # forme repliée (ة→ه)
+    assert evaluate.exact_match(None, None) and not evaluate.exact_match("x", None)
+    assert evaluate.token_f1("de 12 %", "de 12 % en 2024") == pytest.approx(0.75)
+    assert evaluate.token_f1(None, None) == 1.0 and evaluate.token_f1("x", None) == 0.0
+
+
+def test_evaluate_writes_results(tmp_path):
+    results = evaluate.evaluate(EVAL_ITEMS, rules=True)
+    path = evaluate.write_results(results, tmp_path)
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert path.name.startswith("lot-b_extraction_regles_")
+    assert saved["lot"] == "B" and saved["exp_id"] == "EXP-B-001"
+    metrics = saved["metrics"]
+    groups = {"fr-latin", "ar-arabic", "tn-arabic", "tn-arabizi", "tn-mixed"}
+    assert set(metrics["by_lang"]) == groups
+    assert metrics["n"] == len(EVAL_ITEMS) and len(saved["items"]) == len(EVAL_ITEMS)
+    for key in ("is_claim_accuracy", "is_claim_macro_f1", "modality_accuracy", "coref_accuracy"):
+        assert 0.0 <= metrics[key] <= 1.0
+
+
+def test_hypothesis_is_not_a_claim():
+    (claim,) = extract_claims_detailed(normalize("إذا استمر الجفاف فإن الإنتاج الفلاحي سينخفض."))
+    assert claim.modality == "hypothétique" and not claim.is_opinion and not claim.is_claim
+
+
+def test_percent_kept_at_span_edge():
+    triple = spo.extract_spo(_sentence("Selon l'INS, l'inflation a reculé à 7 %."))
+    assert triple.obj == "à 7 %"
+
+
+def test_vso_reported_subject_up_to_complementizer():
+    triple = spo.extract_spo(_sentence("قال وزير الفلاحة إن صابة الحبوب بلغت 2 مليون طن."))
+    assert triple.subject == "وزير الفلاحه" and triple.reported
+    assert triple.obj == "صابه الحبوب بلغت 2 مليون طن"

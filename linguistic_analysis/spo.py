@@ -88,11 +88,11 @@ def _subtree(sentence: Sentence, tok: Token) -> list[Token]:
 
 
 def _span(tokens: list[Token]) -> tuple[int, int] | None:
-    """Span continu couvrant les tokens, ponctuation de bord retirée."""
+    """Span continu couvrant les tokens, ponctuation de bord retirée (« % », « € » conservés)."""
     ordered = sorted(tokens, key=lambda t: (t.start, t.i))
-    while ordered and ordered[0].upos in _PUNCT:
+    while ordered and ordered[0].upos == "PUNCT":
         ordered.pop(0)
-    while ordered and ordered[-1].upos in _PUNCT:
+    while ordered and ordered[-1].upos == "PUNCT":
         ordered.pop()
     if not ordered:
         return None
@@ -247,10 +247,16 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
 
     speech = any(fold(t.text) in speech_verbs() for t in predicate_tokens)
     subject_tokens = tokens[:start]
-    # Arabe verbe–sujet–objet : verbe en tête, sujet = mot suivant.
+    # Arabe verbe–sujet–objet : verbe en tête ; sujet = mots jusqu'au complémenteur pour un
+    # verbe de parole (« قال وزير الفلاحة إن … »), sinon le mot suivant.
     if start == 0 and re.search(r"[؀-ۿ]", tokens[verb_index].text):
+        window = range(after, min(after + 4, len(tokens)))
+        comp = next((k for k in window if fold(tokens[k].text) in _COMPLEMENTIZERS), None)
         nxt = tokens[after] if after < len(tokens) else None
-        if nxt is not None and nxt.upos not in (*_PUNCT, "ADP", "SCONJ", "NUM"):
+        if speech and comp is not None and comp > after:
+            subject_tokens = tokens[after:comp]
+            after = comp
+        elif nxt is not None and nxt.upos not in (*_PUNCT, "ADP", "SCONJ", "NUM"):
             subject_tokens = [nxt]
             after += 1
     # Discours rapporté : verbe de parole suivi d'un complémenteur (exclu de l'objet).
