@@ -1,0 +1,78 @@
+# Lexique fait / opinion — arabe standard
+# Une entrée par ligne, '#' pour les commentaires.
+# Les entrées sont repliées comme le texte du Lot A2 (diacritiques supprimés, alef / ya / ta marbuta
+# unifiés) avant comparaison : on peut donc les écrire sous leur forme orthographique habituelle.
+# Les verbes listés sont déjà à la 1re personne (préfixe a- / na-) : ils sont comptés comme expressions.
+# Sections : voir opinion_fr.txt.
+
+[expressions]
+أعتقد
+نعتقد
+أرى
+نرى
+أظن
+نظن
+أعتبر
+نعتبر
+في رأيي
+في نظري
+من وجهة نظري
+للأسف
+لحسن الحظ
+من الواضح أن
+
+[evaluatifs]
+كارثي
+كارثية
+كارثة
+مخجل
+مخجلة
+فضيحة
+رائع
+رائعة
+ممتاز
+ممتازة
+سيء
+سيئة
+مؤسف
+مؤسفة
+غير مقبول
+
+[intensifieurs]
+جدا
+للغاية
+أكثر
+أسوأ
+أفضل
+أبدا
+
+[questions]
+هل
+
+[souhaits]
+يا ليت
+ليت
+أتمنى
+نتمنى
+إن شاء الله
+
+[dates]
+جانفي
+فيفري
+مارس
+أفريل
+ماي
+جوان
+جويلية
+أوت
+سبتمبر
+أكتوبر
+نوفمبر
+ديسمبر
+يناير
+فبراير
+أبريل
+مايو
+يونيو
+يوليو
+أغسطس

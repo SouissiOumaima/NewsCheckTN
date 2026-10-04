@@ -1,0 +1,41 @@
+{
+  "_description": "Marqueurs de modalité (tunisien, lettres arabes et arabizi). label -> {marqueur: poids}. 'كان' (si) est volontairement absent : en arabe standard il signifie « était » et déclencherait de faux hypothétiques ; idem pour 'كي' (« pour que » en arabe standard).",
+  "rapporté": {
+    "9alou": 0.5,
+    "qalou": 0.5,
+    "kalou": 0.5,
+    "fama chkoun y9oul": 0.5,
+    "famma chkoun y9oul": 0.5,
+    "y9oulou": 0.5,
+    "قالو": 0.5,
+    "قالوا": 0.5,
+    "فما شكون يقول": 0.5,
+    "يقولو": 0.5
+  },
+  "hypothétique": {
+    "ken": 0.6,
+    "law": 0.6,
+    "ki": 0.4,
+    "لو": 0.6
+  },
+  "incertitude": {
+    "ymken": 0.5,
+    "imken": 0.5,
+    "yemken": 0.5,
+    "يمكن": 0.5,
+    "manich met2aked": 0.4,
+    "مانيش متأكد": 0.4
+  },
+  "futur": {
+    "bech": 0.3,
+    "bich": 0.3,
+    "besh": 0.3,
+    "باش": 0.3
+  },
+  "certitude_niée": {
+    "mouch akid": 0.3,
+    "mech akid": 0.3,
+    "موش أكيد": 0.3,
+    "مش أكيد": 0.3
+  }
+}
