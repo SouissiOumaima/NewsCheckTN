@@ -5,8 +5,12 @@ Usage (depuis la racine du dépôt) :
     python -m normalization.evaluate --errors        # + liste des erreurs
     python -m normalization.evaluate chemin/jeu.jsonl
 
-Le jeu est un fichier JSONL : une phrase par ligne, avec au moins les champs
-`id`, `text`, `lang` et `script` (les étiquettes de référence, posées à la main).
+Deux formats de jeu sont acceptés :
+- JSONL : une phrase par ligne, avec au moins les champs `id`, `text`, `lang`
+  et `script` (les étiquettes de référence, posées à la main) ;
+- TSV d'annotation (voir docs/lot-a2_guide_annotation.md) : étiquette `t`, `a`
+  ou `x`, une tabulation, puis le texte. Les lignes `x` (indécidables) et `?`
+  (non annotées) sont ignorées.
 
 Le script ne fait que lire et mesurer : il ne modifie aucun fichier.
 """
@@ -25,14 +29,28 @@ from normalization.normalize import normalize
 DEFAULT_DATASET = Path("tests/fixtures/linguistic_analysis/eval_30.jsonl")
 
 
+# Étiquettes du guide d'annotation -> codes de langue du projet.
+TSV_LABELS = {"t": "tn", "a": "ar"}
+
+
 def load_examples(path: Path) -> list[dict]:
-    """Lit un fichier JSONL : chaque ligne non vide est un objet JSON."""
+    """Lit un jeu JSONL, ou un fichier d'annotation TSV en lettres arabes."""
     examples = []
-    # encoding="utf-8" est indispensable sous Windows pour lire l'arabe.
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            if line.strip():
+    # encoding="utf-8-sig" lit l'UTF-8 avec ou sans marque d'ordre d'octets (BOM).
+    with path.open(encoding="utf-8-sig") as handle:
+        for number, line in enumerate(handle, 1):
+            if not line.strip():
+                continue
+            if path.suffix != ".tsv":
                 examples.append(json.loads(line))
+                continue
+            label, _, text = line.rstrip("\r\n").partition("\t")
+            if label.strip().lower() in TSV_LABELS:  # on saute x et ?
+                lang = TSV_LABELS[label.strip().lower()]
+                # Le numéro de ligne sert d'identifiant ; ces fichiers sont en lettres arabes.
+                examples.append(
+                    {"id": f"l{number}", "lang": lang, "script": "arabic", "text": text}
+                )
     return examples
 
 

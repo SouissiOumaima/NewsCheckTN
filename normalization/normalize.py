@@ -10,9 +10,11 @@ Règle d'or (projet de fact-checking) : la normalisation ne doit JAMAIS changer
 un nombre, une date, un sigle ou un nom propre, car ce sont eux qui portent
 l'affirmation à vérifier. Chaque règle ci-dessous a été choisie avec ce critère.
 
-Ce que cette version ne fait pas encore (prévu dans le plan du lot) :
-    - reconnaître le tunisien écrit en lettres arabes (il sort en `ar`) ;
-    - reconnaître l'arabizi sans chiffres (il sort en `fr`) ;
+Limites connues (mesurées, voir experiments.md) :
+    - le tunisien en lettres arabes n'est reconnu que s'il contient un mot du
+      lexique `resources/tn_markers.txt` (voir langid.py) : précision élevée,
+      rappel partiel ;
+    - l'arabizi sans chiffres n'est pas reconnu (il sort en `fr`) ;
     - convertir l'arabizi en lettres arabes (`arabizi_to_arabic` reste un stub).
 """
 
@@ -23,6 +25,7 @@ import re
 import unicodedata
 
 from common.schemas import Document, Lang
+from normalization.langid import is_dialectal_arabic
 
 # ---------------------------------------------------------------------------
 # 1. Motifs et tables de remplacement
@@ -189,23 +192,32 @@ def detect_script(text: str) -> str:
 
 
 def detect_language(text: str) -> Lang:
-    """Identifie la langue (heuristique provisoire fondée sur le script)."""
-    # TODO(Lot A2): remplacer par un classifieur (n-grammes de caractères)
-    # capable de séparer MSA / tunisien en lettres arabes, et français /
-    # arabizi sans chiffres.
+    """Identifie la langue : script, puis marques dialectales en lettres arabes."""
+    # TODO(Lot A2): classifieur appris pour le tunisien sans mot du lexique et
+    # pour l'arabizi sans chiffres (voir experiments.md).
     if sum(_count_letters(_PROTECTED.sub(" ", text))) == 0:
         return Lang.UNKNOWN  # vide, ou seulement chiffres / emojis / liens
     script = detect_script(text)
     if script == "arabizi":
         return Lang.TN
     if script in ("arabic", "mixed"):
-        return Lang.AR
+        # Même repli que dans normalize(), pour que la fonction donne la même
+        # réponse sur un texte brut et sur un texte déjà normalisé.
+        folded = normalize_arabic(_expand_presentation_forms(text))
+        return Lang.TN if is_dialectal_arabic(folded) else Lang.AR
     return Lang.FR
 
 
 # ---------------------------------------------------------------------------
 # 3. Normalisation
 # ---------------------------------------------------------------------------
+
+def _expand_presentation_forms(text: str) -> str:
+    """Remplace les lettres arabes "déjà dessinées" (ligature lam-alef...) par des lettres."""
+    return _ARABIC_PRESENTATION.sub(
+        lambda run: unicodedata.normalize("NFKC", run.group()), text
+    )
+
 
 def normalize_arabic(text: str) -> str:
     """Supprime diacritiques/tatweel et unifie alef, ya, ta marbuta.
@@ -258,9 +270,7 @@ def normalize(text: str) -> Document:
     #    "10²" en "102", ce qui change un nombre.
     text = unicodedata.normalize("NFC", text)
     #    Exception ciblée : les formes de présentation arabes, sans risque.
-    text = _ARABIC_PRESENTATION.sub(
-        lambda run: unicodedata.normalize("NFKC", run.group()), text
-    )
+    text = _expand_presentation_forms(text)
 
     # 2. Caractères invisibles.
     text = _INVISIBLE.sub("", text)

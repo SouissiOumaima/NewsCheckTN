@@ -5,6 +5,7 @@ import re
 import pytest
 
 from common.schemas import Document, Lang
+from normalization.langid import find_dialect_markers, load_markers
 from normalization.normalize import (
     detect_language,
     detect_script,
@@ -200,11 +201,69 @@ def test_is_arabizi_rule_ignores_one_ambiguous_word_in_long_text():
 #    code ne sait pas encore faire. Il passera au vert avec le classifieur.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="tunisien en lettres arabes : classifieur à venir")
-def test_tunisian_in_arabic_script_is_tn():
-    assert detect_language("الحكومة باش تزيد في الشهرية برشا") == Lang.TN
-
-
 @pytest.mark.xfail(reason="arabizi sans chiffres : classifieur à venir")
 def test_arabizi_without_digits_is_tn():
     assert detect_language("chnowa el jaw lyoum fi tounes") == Lang.TN
+
+
+# ---------------------------------------------------------------------------
+# 6. Tunisien en lettres arabes : règle à lexique de marques (langid.py).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "الحكومة باش تزيد في الشهرية برشا",
+        "علاش الأسعار طلعت هكا",
+        "الوزير قال اللي الزيادة موش توا",
+        "ما فهمتش شنوة صار",  # négation en deux mots : ما ... ش
+        "مانحبش نحكي في الموضوع هذا",  # négation collée en un seul mot
+        "برشااااا ناس خرجت اليوم",  # lettres étirées
+    ],
+)
+def test_tunisian_in_arabic_script_is_tn(text):
+    assert detect_language(text) == Lang.TN
+    assert normalize(text).lang == Lang.TN  # même réponse après normalisation
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "أعلنت الحكومة عن زيادة في الأجور",
+        "ذهب الرئيس إلى صفاقس لافتتاح المستشفى",  # "إلى" ne doit pas passer pour "اللي"
+        "هذا المشهد مدهش ومنعش",  # mots standard qui finissent par ش
+        "ما أجمل هذا اليوم",  # "ما" exclamatif, sans négation
+        "ما يناقش اليوم في البرلمان هو قانون المالية",  # verbe standard en ش
+        "لم يصدر أي بيان رسمي حتى الآن",
+    ],
+)
+def test_standard_arabic_stays_ar(text):
+    assert detect_language(text) == Lang.AR
+    assert find_dialect_markers(normalize(text).text) == []
+
+
+def test_find_dialect_markers_returns_the_words():
+    # Renvoyer les mots trouvés permet d'expliquer chaque décision.
+    assert find_dialect_markers(normalize("الحكومة باش تزيد برشا").text) == ["باش", "برشا"]
+
+
+def test_one_dialect_word_does_not_flip_a_long_standard_text():
+    # 60 mots standard + 1 mot dialectal cité : sous le seuil de 2 %, le texte reste "ar".
+    text = " ".join(["أعلنت الحكومة عن زيادة"] * 15) + " برشا"
+    assert len(text.split()) == 61
+    assert detect_language(text) == Lang.AR
+
+
+def test_marker_lexicon_is_well_formed():
+    markers = load_markers()
+    assert len(markers) >= 50
+    for word in markers:
+        # Le lexique doit être écrit dans la forme normalisée, sinon le mot ne serait jamais trouvé.
+        assert normalize_arabic(word) == word, word
+    # Mots volontairement exclus : trop ambigus avec l'arabe standard ou avec un prénom.
+    assert not markers & {"الي", "لي", "ياسر", "شنوا"}
+
+
+@pytest.mark.xfail(reason="tunisien sans mot du lexique : rappel mesuré 0.53, classifieur à venir")
+def test_tunisian_without_lexicon_word_is_tn():
+    assert detect_language("توحشتك يا صاحبي") == Lang.TN
