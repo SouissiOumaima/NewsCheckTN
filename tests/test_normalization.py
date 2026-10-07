@@ -1,11 +1,21 @@
 """Tests Lot A2."""
 
+import itertools
 import re
 
 import pytest
 
 from common.schemas import Document, Lang
-from normalization.langid import find_dialect_markers, load_markers
+from normalization.langid import (
+    _ARABIZI_MODEL_FILE,
+    arabizi_score,
+    char_ngrams,
+    find_dialect_markers,
+    load_arabizi_model,
+    load_markers,
+    load_neutral_words,
+    prepare_latin,
+)
 from normalization.normalize import (
     detect_language,
     detect_script,
@@ -201,9 +211,6 @@ def test_is_arabizi_rule_ignores_one_ambiguous_word_in_long_text():
 #    code ne sait pas encore faire. Il passera au vert avec le classifieur.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="arabizi sans chiffres : classifieur à venir")
-def test_arabizi_without_digits_is_tn():
-    assert detect_language("chnowa el jaw lyoum fi tounes") == Lang.TN
 
 
 # ---------------------------------------------------------------------------
@@ -267,3 +274,85 @@ def test_marker_lexicon_is_well_formed():
 @pytest.mark.xfail(reason="tunisien sans mot du lexique : rappel mesuré 0.53, classifieur à venir")
 def test_tunisian_without_lexicon_word_is_tn():
     assert detect_language("توحشتك يا صاحبي") == Lang.TN
+
+
+# ---------------------------------------------------------------------------
+# 7. Arabizi sans chiffres : modèle appris (langid.py, entraîné par train_langid.py).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "chnowa el jaw lyoum fi tounes",
+        "el hkouma kalet elli el asaar bech tonkos",
+        "bsaraha el barnamej hedha masset barcha",
+        "ena nheb tounes barcha w nheb ennes el kol",
+        "rabi yehdik ya weldi w yostor alik",
+    ],
+)
+def test_arabizi_without_digits_is_tn(text):
+    assert detect_script(text) == "arabizi"
+    assert detect_language(text) == Lang.TN
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Le gouvernement a annoncé une hausse des salaires.",
+        "Les prix ont augmenté de 12 % selon l'INS.",
+        "Je pense que cette réforme est une catastrophe pour les jeunes.",
+        "Kaïs Saïed a reçu Najla Bouden au palais de Carthage.",  # noms tunisiens, phrase française
+        "Merci beaucoup pour ce beau spectacle",  # français familier, sans accent ni article
+        "Très bon acteur, bravo",
+    ],
+)
+def test_french_is_not_arabizi(text):
+    assert detect_script(text) == "latin"
+    assert detect_language(text) == Lang.FR
+
+
+def test_prepare_latin_keeps_letters_and_drops_neutral_words():
+    # Chiffres, ponctuation et mots neutres ("bravo", "top") ne sont pas donnés au modèle.
+    assert prepare_latin("Bravooo !!! 123 c'est TOP") == "c'est"
+
+
+def test_char_ngrams_marks_word_boundaries():
+    # Le mot est entouré d'espaces : " a" = début de mot, "b " = fin de mot.
+    assert char_ngrams("ab", 1, 2) == ["a", "b", " a", "ab", "b "]
+
+
+@pytest.mark.parametrize("text", ["Bravo", "19h15.", "", "ok merci"])
+def test_model_gives_no_opinion_without_enough_words(text):
+    # Pas assez d'indices : le modèle ne se prononce pas, et le texte n'est pas déclaré arabizi.
+    assert arabizi_score(text) is None
+    assert detect_script(text) == "latin"
+
+
+def test_arabizi_model_file_is_well_formed():
+    model = load_arabizi_model()
+    assert model is not None, "normalization/resources/arabizi_ngrams.json est absent"
+    assert model["ngram_range"] == [1, 4]
+    assert 1000 <= len(model["weights"]) <= 20000
+    assert isinstance(model["intercept"], float)
+    assert model["threshold"] >= 0
+    # Le fichier est versionné : il doit rester petit (convention du README du lot).
+    assert _ARABIZI_MODEL_FILE.stat().st_size < 1_000_000
+
+
+def test_neutral_words_are_written_without_repeated_letters():
+    for word in load_neutral_words():
+        assert word == word.lower()
+        # pairwise("abc") donne (a, b), (b, c) : deux voisines ne doivent pas être identiques.
+        assert not any(a == b for a, b in itertools.pairwise(word)), word
+
+
+def test_arabic_presentation_forms_are_arabic_script():
+    # Lettres arabes "déjà dessinées" (anciens codes) : mêmes mots que "يحشم على روحو".
+    drawn = "ﻳﺤﺸﻢ ﻋﻠﻲ ﺭﻭﺣﻮ"
+    assert detect_script(drawn) == "arabic"
+    assert detect_language(drawn) == Lang.TN  # "روحو" est dans le lexique de marques
+
+
+@pytest.mark.xfail(reason="phrase française avec un seul mot tunisien : modèle insuffisant")
+def test_mostly_french_sentence_with_one_tunisian_word_is_tn():
+    assert detect_language("Honnêtement la décision hedhi n'est pas normale") == Lang.TN

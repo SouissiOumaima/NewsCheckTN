@@ -1,0 +1,24 @@
+# Mots "neutres" en lettres latines — Lot A2.
+# Mots français ou internationaux que les Tunisiens emploient tels quels dans leurs
+# commentaires en arabizi ("bravo ya m3alem"). Dans les corpus, ils apparaissent donc
+# presque uniquement du côté arabizi, et un modèle apprendrait à tort "bravo = tunisien".
+# Le modèle les ignore : ils ne comptent ni pour le français ni pour l'arabizi.
+# Un mot par ligne, en minuscules, sans lettres répétées ("bravooo" est reconnu comme "bravo").
+bravo
+merci
+top
+super
+ok
+oui
+non
+respect
+chapeau
+courage
+normal
+clip
+tv
+star
+lol
+mdr
+wow
+mr

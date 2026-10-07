@@ -1,6 +1,11 @@
-"""Lot A2 — Identification de langue : marques dialectales en lettres arabes.
+"""Lot A2 — Identification de langue : tunisien en lettres arabes et en arabizi.
 
-Ce module répond à une seule question : un texte en lettres arabes contient-il
+Deux outils, un par alphabet :
+  1. lettres arabes : une règle à lexique de marques dialectales ;
+  2. lettres latines sans chiffre d'arabizi : un petit modèle appris, qui
+     distingue le français de l'arabizi (voir la seconde moitié du fichier).
+
+Partie 1. La règle répond à une seule question : un texte en lettres arabes contient-il
 des formes qui ne sont pas de l'arabe standard ? Il ne lit que des mots-outils
 tunisiens très fréquents ("برشا", "باش", "موش", "اللي"...), rangés dans
 `resources/tn_markers.txt`, plus la négation en "ما ... ش".
@@ -15,6 +20,7 @@ cette même forme, ce qu'un test vérifie.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from functools import lru_cache
@@ -108,3 +114,100 @@ def is_dialectal_arabic(folded_text: str) -> bool:
     n_words = len(_ARABIC_WORD.findall(folded_text))
     n_found = len(find_dialect_markers(folded_text))
     return n_found > 0 and n_found >= math.ceil(_DIALECT_MIN_RATIO * n_words)
+
+
+# ---------------------------------------------------------------------------
+# Partie 2. Arabizi sans chiffres : modèle appris à n-grammes de caractères
+# ---------------------------------------------------------------------------
+#
+# Les règles de normalize.py reconnaissent l'arabizi à ses chiffres ("3lech").
+# Mais plus d'un tiers des textes en arabizi n'en contiennent aucun
+# ("chnowa el jaw lyoum"). Pour ceux-là, on utilise un modèle appris hors ligne
+# par `train_langid.py` (scikit-learn), puis exporté dans un petit fichier JSON :
+# un poids par n-gramme de caractères. Poids positif = "tire vers l'arabizi",
+# poids négatif = "tire vers le français".
+#
+# Ici, on ne fait que LIRE ce fichier et additionner des poids : aucune
+# dépendance, donc l'API et la CI fonctionnent sans scikit-learn.
+
+_ARABIZI_MODEL_FILE = Path(__file__).parent / "resources" / "arabizi_ngrams.json"
+_NEUTRAL_WORDS_FILE = Path(__file__).parent / "resources" / "neutral_latin_words.txt"
+
+# Toute lettre répétée ("bravooo", "merciii") : ramenée à une seule pour reconnaître un mot neutre.
+_ANY_RUN = re.compile(r"(.)\1+")
+
+# Il faut au moins 2 mots de 2 lettres ou plus pour que le modèle se prononce : sur "19h15"
+# ou sur un seul mot, il n'y a pas assez d'indices.
+_MIN_WORDS = 2
+
+
+@lru_cache(maxsize=1)
+def load_neutral_words() -> frozenset[str]:
+    """Mots communs au français et à l'arabizi des commentaires, ignorés par le modèle."""
+    words = set()
+    with _NEUTRAL_WORDS_FILE.open(encoding="utf-8") as handle:
+        for line in handle:
+            word = line.strip()
+            if word and not word.startswith("#"):
+                words.add(word)
+    return frozenset(words)
+
+
+def prepare_latin(text: str) -> str:
+    """Prépare un texte pour le modèle : minuscules, lettres et apostrophes seulement.
+
+    On retire les chiffres, la ponctuation et les emojis : ils décrivent le
+    genre du texte (un commentaire, un article) plus que sa langue, et le
+    modèle ne doit pas s'appuyer dessus. On retire aussi les mots neutres.
+    """
+    kept = [char if char.isalpha() or char == "'" else " " for char in text.lower()]
+    neutral = load_neutral_words()
+    words = [w for w in "".join(kept).split() if _ANY_RUN.sub(r"\1", w) not in neutral]
+    return " ".join(words)
+
+
+def char_ngrams(prepared: str, min_n: int, max_n: int) -> list[str]:
+    """Découpe chaque mot en morceaux de min_n à max_n caractères.
+
+    Chaque mot est entouré d'espaces, pour que le modèle distingue un début
+    ou une fin de mot : " ch" (début) n'est pas "ch " (fin). La même fonction
+    sert à l'entraînement et ici : les deux côtés découpent donc à l'identique.
+    """
+    grams = []
+    for word in prepared.split():
+        padded = f" {word} "
+        for size in range(min_n, max_n + 1):
+            grams.extend(padded[start:start + size] for start in range(len(padded) - size + 1))
+    return [gram for gram in grams if gram.strip()]  # on ignore les morceaux vides
+
+
+@lru_cache(maxsize=1)
+def load_arabizi_model() -> dict | None:
+    """Charge le modèle une seule fois. Renvoie None si le fichier est absent."""
+    if not _ARABIZI_MODEL_FILE.exists():
+        return None
+    with _ARABIZI_MODEL_FILE.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def arabizi_score(text: str) -> float | None:
+    """Score du texte : somme des poids des n-grammes présents, plus une constante.
+
+    Chaque n-gramme compte une seule fois, qu'il apparaisse 1 ou 10 fois : c'est
+    sa PRÉSENCE qui est un indice. Renvoie None quand le modèle ne peut pas se
+    prononcer : fichier absent, ou trop peu de mots.
+    """
+    model = load_arabizi_model()
+    prepared = prepare_latin(text)
+    if model is None or sum(1 for w in prepared.split() if len(w) >= 2) < _MIN_WORDS:
+        return None
+    min_n, max_n = model["ngram_range"]
+    weights = model["weights"]
+    present = set(char_ngrams(prepared, min_n, max_n))
+    return model["intercept"] + sum(weights.get(gram, 0.0) for gram in present)
+
+
+def is_arabizi_text(text: str) -> bool:
+    """Dit si un texte en lettres latines est de l'arabizi plutôt que du français."""
+    score = arabizi_score(text)
+    return score is not None and score >= load_arabizi_model()["threshold"]

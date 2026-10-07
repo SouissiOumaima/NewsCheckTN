@@ -14,7 +14,9 @@ Limites connues (mesurées, voir experiments.md) :
     - le tunisien en lettres arabes n'est reconnu que s'il contient un mot du
       lexique `resources/tn_markers.txt` (voir langid.py) : précision élevée,
       rappel partiel ;
-    - l'arabizi sans chiffres n'est pas reconnu (il sort en `fr`) ;
+    - l'arabizi sans chiffres est reconnu par un petit modèle appris (voir
+      langid.py et train_langid.py) : il se trompe surtout sur les textes très
+      courts et sur les phrases qui mélangent français et tunisien ;
     - convertir l'arabizi en lettres arabes (`arabizi_to_arabic` reste un stub).
 """
 
@@ -25,7 +27,7 @@ import re
 import unicodedata
 
 from common.schemas import Document, Lang
-from normalization.langid import is_dialectal_arabic
+from normalization.langid import is_arabizi_text, is_dialectal_arabic
 
 # ---------------------------------------------------------------------------
 # 1. Motifs et tables de remplacement
@@ -163,14 +165,19 @@ def _count_letters(text: str) -> tuple[int, int]:
     return len(_ARABIC_LETTER.findall(text)), len(_LATIN_LETTER.findall(text))
 
 
-def detect_script(text: str) -> str:
-    """Retourne arabic | latin | arabizi | mixed.
+def _mask(text: str) -> str:
+    """Retire ce qui n'est pas de la langue (liens, adresses) et déplie l'arabe "dessiné"."""
+    return _expand_presentation_forms(_PROTECTED.sub(" ", text))
 
-    Script = alphabet, pas langue : "latin" peut être du français, de
-    l'anglais ou du tunisien sans chiffres.
+
+def detect_script_by_rules(text: str) -> str:
+    """Retourne arabic | latin | arabizi | mixed, avec les RÈGLES seules.
+
+    L'arabizi n'est reconnu ici qu'à ses chiffres ("3lech"). Cette fonction ne
+    dépend d'aucun modèle appris : c'est elle que l'entraînement utilise pour
+    choisir ses exemples, afin de ne jamais apprendre de ses propres réponses.
     """
-    # Les liens et adresses ne sont pas de la langue : on les ignore ici.
-    masked = _PROTECTED.sub(" ", text)
+    masked = _mask(text)
     n_ar, n_lat = _count_letters(masked)
     total = n_ar + n_lat
 
@@ -191,11 +198,24 @@ def detect_script(text: str) -> str:
     return "latin"
 
 
+def detect_script(text: str) -> str:
+    """Retourne arabic | latin | arabizi | mixed.
+
+    "arabizi" désigne du tunisien écrit en lettres latines, reconnu soit à ses
+    chiffres ("3lech"), soit par le modèle appris de langid.py.
+    """
+    script = detect_script_by_rules(text)
+    # Lettres latines sans chiffre d'arabizi : on demande au modèle (français ou arabizi ?).
+    if script == "latin" and is_arabizi_text(_mask(text)):
+        return "arabizi"
+    return script
+
+
 def detect_language(text: str) -> Lang:
     """Identifie la langue : script, puis marques dialectales en lettres arabes."""
     # TODO(Lot A2): classifieur appris pour le tunisien sans mot du lexique et
     # pour l'arabizi sans chiffres (voir experiments.md).
-    if sum(_count_letters(_PROTECTED.sub(" ", text))) == 0:
+    if sum(_count_letters(_expand_presentation_forms(_PROTECTED.sub(" ", text)))) == 0:
         return Lang.UNKNOWN  # vide, ou seulement chiffres / emojis / liens
     script = detect_script(text)
     if script == "arabizi":

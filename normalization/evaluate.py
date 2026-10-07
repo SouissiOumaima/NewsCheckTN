@@ -8,9 +8,10 @@ Usage (depuis la racine du dépôt) :
 Deux formats de jeu sont acceptés :
 - JSONL : une phrase par ligne, avec au moins les champs `id`, `text`, `lang`
   et `script` (les étiquettes de référence, posées à la main) ;
-- TSV d'annotation (voir docs/lot-a2_guide_annotation.md) : étiquette `t`, `a`
-  ou `x`, une tabulation, puis le texte. Les lignes `x` (indécidables) et `?`
-  (non annotées) sont ignorées.
+- TSV d'annotation (voir docs/lot-a2_guide_annotation.md) : étiquette `t`
+  (tunisien), `a` (arabe standard) ou `f` (français), une tabulation, puis le
+  texte. Les lignes `x` (indécidables) et `?` (non annotées) sont ignorées.
+  Ces fichiers n'ont pas d'étiquette de script : seule la langue est mesurée.
 
 Le script ne fait que lire et mesurer : il ne modifie aucun fichier.
 """
@@ -30,7 +31,7 @@ DEFAULT_DATASET = Path("tests/fixtures/linguistic_analysis/eval_30.jsonl")
 
 
 # Étiquettes du guide d'annotation -> codes de langue du projet.
-TSV_LABELS = {"t": "tn", "a": "ar"}
+TSV_LABELS = {"t": "tn", "a": "ar", "f": "fr"}
 
 
 def load_examples(path: Path) -> list[dict]:
@@ -47,10 +48,8 @@ def load_examples(path: Path) -> list[dict]:
             label, _, text = line.rstrip("\r\n").partition("\t")
             if label.strip().lower() in TSV_LABELS:  # on saute x et ?
                 lang = TSV_LABELS[label.strip().lower()]
-                # Le numéro de ligne sert d'identifiant ; ces fichiers sont en lettres arabes.
-                examples.append(
-                    {"id": f"l{number}", "lang": lang, "script": "arabic", "text": text}
-                )
+                # Le numéro de ligne sert d'identifiant.
+                examples.append({"id": f"l{number}", "lang": lang, "text": text})
     return examples
 
 
@@ -103,13 +102,17 @@ def main() -> None:
     print(f"Jeu : {args.dataset} ({len(examples)} phrases)")
     print()
     report(examples, langs, "lang")
-    report(examples, scripts, "script")
+    # Le script n'est mesuré que si le jeu fournit cette étiquette (pas les fichiers TSV).
+    has_script = all("script" in example for example in examples)
+    if has_script:
+        report(examples, scripts, "script")
 
     if args.errors:
         print("== erreurs ==")
         for example, lang, script in zip(examples, langs, scripts, strict=True):
             gold_lang = example.get("lang", "?")
-            gold_script = example.get("script", "?")
+            # Sans étiquette de script, on considère le script trouvé comme correct.
+            gold_script = example.get("script", script)
             if (lang, script) != (gold_lang, gold_script):
                 print(
                     f"  {example.get('id', '?'):7} "
