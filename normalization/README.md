@@ -20,7 +20,7 @@ Transformer tout texte d'entrée en une forme propre et homogène, utilisée par
 |---------|---------|
 | `normalize.py` | Point d'entrée + règles de normalisation |
 | `arabizi.py` | Table de translittération et désambiguïsation |
-| `langid.py` | Identification de langue (fastText lid.176 + classifieur MSA/TN) |
+| `langid.py` | Identification de langue : marques dialectales en lettres arabes (lexique `resources/tn_markers.txt`) |
 | `perplexity.py` | Modèles de langue et calcul de perplexité |
 | `evaluate.py` | Évaluation langue / script sur un jeu JSONL (`python -m normalization.evaluate --errors`) |
 | `resources/` | Lexiques, tables de correspondance (petits fichiers uniquement) |

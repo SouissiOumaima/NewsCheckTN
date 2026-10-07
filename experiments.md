@@ -28,8 +28,45 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 | EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 (stub = v1) ; cas ciblés 0/5 → 5/5 | v1 retenue ; suite : classifieur TN |
+| EXP-A2-002 | 2026-10-07 | A2 | Tunisien en lettres arabes | règle : lexique de 78 marques + négation | langue TN sur eval_30 ; rappel TN sur échantillon annoté | 8/14 → 12/14 ; 41/78, standard 15/15 | règle retenue comme référence ; suite : classifieur |
 
 ## Entrées
+
+### EXP-A2-002 — Tunisien en lettres arabes : règle à lexique de marques
+- **Date** : 2026-10-07
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : reconnaître le tunisien écrit en lettres arabes (point E7 d'EXP-B-001),
+  jusque-là toujours classé `ar`. Hypothèse : quelques dizaines de mots-outils suffisent pour une règle
+  sans fausse alerte, qui servira de référence à tout classifieur.
+- **Données** : (a) `tests/fixtures/linguistic_analysis/eval_30.jsonl` du Lot B (34 phrases), non
+  utilisé pour construire la règle ; (b) 100 commentaires TSAC en lettres arabes (3 mots ou plus,
+  graine 13), annotés `t` / `a` / `x` par un annotateur selon `docs/lot-a2_guide_annotation.md` :
+  78 `t`, 15 `a`, 7 `x`. Cet échantillon a servi à écrire le guide et à choisir les mots : c'est un
+  jeu de mise au point, pas un jeu de test. Corpus brut non versionné (TSAC, licence LGPL-3.0).
+- **Méthode / configuration** : règle déterministe, sans graine (`normalization/langid.py`) : 78 formes
+  dans `resources/tn_markers.txt`, plus la négation en ما…ش (collée ou en deux mots, hors verbes
+  standard en ش). Texte déclaré dialectal s'il contient au moins un mot du lexique et au moins 2 % de
+  mots dialectaux. Lexique : mots fréquents dans TSAC et absents d'un corpus de presse en arabe
+  standard (UD Arabic-PADT), puis tri manuel ; formes ambiguës exclues (`الي`, `لي`, `ياسر`, `شنوا`).
+  Cette extraction a été faite hors dépôt : à rendre reproductible (EXP-A2-003).
+- **Code** : commit `9810bcd`, `normalization/langid.py` ; `normalization/evaluate.py` lit maintenant
+  aussi les fichiers d'annotation `.tsv`.
+- **Résultats** :
+  - (a) eval_30, avant (`e2fdbe7`) → après : FR 10/10 → 10/10 ; AR 10/10 → 10/10 ; TN 8/14 → 12/14 ;
+    exactitude 0.82 → 0.94 ; moyenne par classe 0.86 → 0.95. Script inchangé (0.88).
+  - (b) échantillon annoté, 93 lignes décidées : AR 15/15 ; TN 41/78 (0.53) ; moyenne par classe 0.76.
+    L'ancien code classait tout texte en lettres arabes en `ar`.
+  - Tests : 385 réussis, aucun échec ; `ruff check .` sans remarque.
+- **Analyse** : règle sûre (aucune des 25 phrases standard de (a) et (b) n'est classée tunisien) mais
+  rappel partiel : un lexique ne voit ni la morphologie (pronom en ـو, négation sans ما, verbes en نـ)
+  ni le vocabulaire ouvert. Erreurs restantes sur (a) : `tn-a3` (aucun mot du lexique) et `mx-4`
+  (arabizi sans chiffre). Effet de bord : la fixture `mock_documents.jsonl` du Lot B a été régénérée
+  par son propre script (1 ligne, `ar` → `tn`). Limites : 15 lignes standard seulement dans (b) ; un
+  seul annotateur ; (b) a servi à la mise au point, donc son score est optimiste ; `ديما` et `راني`
+  sont aussi des prénoms.
+- **Décision / suite** : règle retenue comme référence. Suite : double annotation et kappa sur (b) ;
+  contrôle des fausses alertes sur la presse et essai d'un classifieur à n-grammes de caractères, à
+  rendre reproductibles (EXP-A2-003) ; échantillon neuf pour un vrai test.
 
 ### EXP-A2-001 — Normalisation v1 et identification de langue par règles
 - **Date** : 2026-10-06
