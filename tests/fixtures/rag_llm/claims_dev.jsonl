@@ -1,0 +1,17 @@
+{"claim_id": "dev-c01", "text": "Le chômage en Tunisie a atteint 25 % en 2025.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev001", "dev-ev002"]}
+{"claim_id": "dev-c02", "text": "نسبة البطالة في تونس وصلت إلى 25 بالمائة", "lang": "ar", "script": "arabic", "gold_doc_ids": ["dev-ev002", "dev-ev001"]}
+{"claim_id": "dev-c03", "text": "Le prix de l'huile d'olive a doublé en un an.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev003", "dev-ev004"]}
+{"claim_id": "dev-c04", "text": "سوم زيت الزيتونة طلع الضعف هالعام", "lang": "tn", "script": "arabic", "gold_doc_ids": ["dev-ev004", "dev-ev003"]}
+{"claim_id": "dev-c05", "text": "soum zit zitouna tla3 dhe3f el 3am hedha", "lang": "tn", "script": "arabizi", "gold_doc_ids": ["dev-ev003", "dev-ev004"]}
+{"claim_id": "dev-c06", "text": "Une coupure d'eau générale est prévue à Tunis tout l'été.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev005", "dev-ev006"]}
+{"claim_id": "dev-c07", "text": "الصوناد باش تقص الماء على تونس الكل", "lang": "tn", "script": "arabic", "gold_doc_ids": ["dev-ev006", "dev-ev005"]}
+{"claim_id": "dev-c08", "text": "Seulement 20 % des candidats ont réussi le bac en 2025.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev007", "dev-ev008"]}
+{"claim_id": "dev-c09", "text": "nesbet nja7 fel bac 37 fil miya", "lang": "tn", "script": "arabizi", "gold_doc_ids": ["dev-ev008", "dev-ev007"]}
+{"claim_id": "dev-c10", "text": "Le prix du pain subventionné passe à 250 millimes.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev009", "dev-ev010"]}
+{"claim_id": "dev-c11", "text": "سعر الخبز المدعم ارتفع", "lang": "ar", "script": "arabic", "gold_doc_ids": ["dev-ev010", "dev-ev009"]}
+{"claim_id": "dev-c12", "text": "Les barrages sont remplis à 80 %.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev011", "dev-ev012"]}
+{"claim_id": "dev-c13", "text": "Cette vidéo montre une manifestation à Sfax cette semaine.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev013"]}
+{"claim_id": "dev-c14", "text": "شرب الماء الساخن يعالج الأنفلونزا", "lang": "ar", "script": "arabic", "gold_doc_ids": ["dev-ev015"]}
+{"claim_id": "dev-c15", "text": "La Tunisie a accueilli plus de 9 millions de touristes en 2024.", "lang": "fr", "script": "latin", "gold_doc_ids": ["dev-ev014"]}
+{"claim_id": "dev-c16", "text": "Le ministre a inauguré un nouvel aéroport à Kairouan.", "lang": "fr", "script": "latin", "gold_doc_ids": []}
+{"claim_id": "dev-c17", "text": "l'7koma bech tna7i el dzira 3al karhba", "lang": "tn", "script": "arabizi", "gold_doc_ids": []}

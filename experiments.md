@@ -26,9 +26,40 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 
 ## Entrées
+
+### EXP-D-001 — Retrieval BM25, baseline S1
+- **Date** : 2026-10-07
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : disposer d'une baseline lexicale mesurée avant le retrieval dense ;
+  vérifier où BM25 échoue (croisement FR ↔ AR, tunisien, arabizi).
+- **Données** : `tests/fixtures/rag_llm/` — 15 passages **fictifs** (8 FR, 7 AR) et 17 affirmations
+  (9 FR dont 1 sans preuve, 3 AR, 2 TN lettres arabes, 3 arabizi dont 1 sans preuve), preuves attendues
+  annotées par une seule personne. Jeu de développement, pas un jeu de test.
+- **Méthode / configuration** : BM25 Okapi en Python pur, k1 = 1.5, b = 0.75, IDF Lucene ;
+  normalisation de recherche (accents, harakat, hamzas, ة → ه, ى → ي, article ال retiré, mots vides
+  FR/AR) ; passages de score nul exclus. Déterministe.
+- **Code** : `rag_llm/retrieval/{text,bm25,hybrid}.py`, `python -m rag_llm.evaluate_retrieval`.
+- **Résultats** (top-10) :
+
+  | Groupe | n | Hit@1 | Hit@5 | Recall@5 | MRR |
+  |--------|---|-------|-------|----------|-----|
+  | Global | 15 | 0.87 | 0.93 | 0.60 | 0.89 |
+  | fr-latin | 8 | 1.00 | 1.00 | 0.63 | 1.00 |
+  | ar-arabic | 3 | 1.00 | 1.00 | 0.67 | 1.00 |
+  | tn-arabic | 2 | 0.50 | 1.00 | 0.50 | 0.67 |
+  | tn-arabizi | 2 | 0.50 | 0.50 | 0.50 | 0.50 |
+
+  Score BM25 du 1er passage : 1.07 à 11.7 quand il est correct ; 0.0 pour les 2 affirmations sans preuve.
+- **Analyse** : Recall@5 plafonne vers 0.6 car BM25 ne relie jamais une affirmation française à la
+  preuve arabe équivalente (et inversement) : aucun mot commun. L'arabizi n'aboutit que s'il partage un
+  chiffre avec la preuve (« 37 »). Le tunisien en lettres arabes passe partiellement grâce aux mots
+  communs avec l'arabe standard (« زيت », « الماء »). Jeu minuscule et fictif : chiffres optimistes.
+- **Décision / suite** : baseline retenue. S4 : retrieval dense multilingue (attendu : gain sur le
+  croisement FR ↔ AR) ; translittération arabizi du Lot A2 ; refaire l'évaluation sur le corpus réel A1.
 
 ### EXP-B-001 — Extracteur à règles, palier Bronze
 - **Date** : 2026-10-04
