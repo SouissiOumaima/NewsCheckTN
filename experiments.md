@@ -26,10 +26,48 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
 | EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 
 ## Entrées
+
+### EXP-D-002 — Verdict par gabarit, NLI par règles et abstention v1 (S2–S3)
+- **Date** : 2026-10-07
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : obtenir un verdict de bout en bout sans LLM ; vérifier que la politique
+  d'abstention empêche tout verdict inventé quand le corpus ne contient pas de preuve.
+- **Données** : `tests/fixtures/rag_llm/` v2 — 15 passages **fictifs** ; 20 affirmations avec `gold_label`
+  (12 faux, 5 vrai, 1 trompeur, 2 preuves_insuffisantes). Par rapport à v1 : + 3 affirmations vraies
+  (`dev-c18` à `dev-c20`). Une seule annotatrice.
+- **Méthode / configuration** : BM25 (EXP-D-001), top-5 → NLI par règles `rag_llm/baseline_stance.py`
+  (recouvrement de mots ≥ 0.5 sur radicaux de 5 lettres ; nombres hors années : égaux → soutient,
+  différents → contredit ; sinon marqueurs de démenti FR/AR → contredit) → verdict par gabarit
+  `rag_llm/verdict.py` (MIN_RETRIEVAL_SCORE = 1.0, MIN_CONFIDENCE = 0.6, CONFLICT_MARGIN = 0.25,
+  incertitude ≥ 0.1). Déterministe.
+- **Code** : `python -m rag_llm.evaluate_verdict` (`--stance rules`).
+- **Résultats** :
+
+  | Groupe | n | Exactitude | Couverture | Précision sélective | Abstention justifiée |
+  |--------|---|------------|------------|---------------------|----------------------|
+  | Global | 20 | 0.70 | 0.65 | 0.92 | 1.00 |
+  | fr-latin | 11 | 0.82 | 0.82 | 0.89 | 1.00 |
+  | ar-arabic | 4 | 1.00 | 1.00 | 1.00 | — |
+  | tn-arabic | 2 | 0.00 | 0.00 | — | — |
+  | tn-arabizi | 3 | 0.33 | 0.00 | — | 1.00 |
+
+  Macro-F1 (4 labels) 0.52 ; citations invalides 0 ; abstentions : 4 « preuves non décisives »,
+  3 « aucune preuve ». Avec `--stance lot-c` (stub neutre) : couverture 0, exactitude 0.10.
+  Retrieval re-mesuré sur v2 : Hit@1 0.89, Recall@5 0.67, MRR 0.91.
+- **Analyse** : quand le système tranche, il a presque toujours raison (12/13) ; la seule erreur est
+  `dev-c13` (`trompeur` attendu, `faux` prédit), label que le gabarit ne sait pas produire. Les
+  abstentions viennent du tunisien et de l'arabizi (vocabulaire différent de la preuve → recouvrement
+  < 0.5) et de `dev-c08` (« bac » ≠ « baccalauréat »). Aucune affirmation sans preuve n'a reçu de
+  verdict. Les règles ont été écrites en voyant le jeu de dev : résultats **optimistes**, à refaire sur
+  des données réelles et un jeu de test gelé.
+- **Décision / suite** : retenu comme verdict de la démo Bronze. S4–S5 : retrieval dense/hybride
+  (et recalibrer MIN_RETRIEVAL_SCORE) ; S6 : LLM avec prompt contraint, comparé à ce gabarit ;
+  remplacer le NLI par règles par le modèle du Lot C dès qu'il est disponible.
 
 ### EXP-D-001 — Retrieval BM25, baseline S1
 - **Date** : 2026-10-07

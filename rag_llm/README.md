@@ -26,7 +26,9 @@
 | `retrieval/dense.py`, `retrieval/rerank.py` | Composants (à créer, S4–S5) |
 | `evaluate_retrieval.py` | Recall@k, Hit@k, MRR par langue/script → `evaluation/results/` |
 | `prompts/` | Gabarits de prompt versionnés : `<tâche>_<langue>_v<N>.txt` |
-| `verdict.py` | Appel LLM, parsing JSON, vérification des citations, abstention |
+| `verdict.py` | Verdict par gabarit (FR / AR) + politique d'abstention v1 ; LLM en S6 |
+| `baseline_stance.py` | NLI par règles (nombres, démentis), même signature que le Lot C ; repli pour la démo |
+| `evaluate_verdict.py` | Évaluation bout-en-bout : exactitude, couverture, précision sélective, abstention |
 | `faithfulness.py` | Grille de fidélité (à créer) |
 | `index/` | Index BM25/FAISS construits — **non versionné** |
 
@@ -40,8 +42,8 @@
 | Semaine | Tâche | État |
 |---------|-------|------|
 | S1 | BM25 baseline + évaluation (EXP-D-001) | ✅ fait, sur jeu de dev **fictif** |
-| S2 | Verdict minimal par règles | stub existant (`verdict.py`) |
-| S3 | Verdict par gabarit + règle d'abstention v1 | à faire |
+| S2 | Baseline NLI par règles (`baseline_stance.py`) | ✅ fait (EXP-D-002) |
+| S3 | Verdict par gabarit + politique d'abstention v1 | ✅ fait (EXP-D-002) |
 | S4 | Retrieval dense multilingue | à faire |
 | S5 | Hybride BM25 + dense (RRF) + re-ranking | à faire |
 
@@ -53,9 +55,24 @@ python -m rag_llm.evaluate_retrieval --corpus data/processed/evidence_corpus.jso
 ```
 Format des affirmations : `{"claim_id", "text", "lang": "fr|ar|tn", "script", "gold_doc_ids": [...]}`.
 
+## Politique d'abstention v1 (`verdict.py`)
+Le système répond `preuves_insuffisantes` si : **A1** aucune preuve retrouvée ; **A2** aucune preuve
+de score ≥ `MIN_RETRIEVAL_SCORE` (1.0, BM25) ; **A3** aucune preuve décisive (soutient/contredit avec
+confiance ≥ `MIN_CONFIDENCE` = 0.6) ; **A4** preuves décisives contradictoires (écart < 0.25).
+Sinon : `vrai` ou `faux`, avec jusqu'à 3 citations recopiées mot pour mot et une incertitude ≥ 0.1.
+
+```bash
+python -m rag_llm.evaluate_verdict                  # NLI par règles
+python -m rag_llm.evaluate_verdict --stance lot-c   # NLI du Lot C (stub : toujours neutre)
+```
+
 ## Points ouverts avec les autres lots
 - **A1** : ajouter `lang` (et idéalement `script`) à `Evidence` dans `common/schemas.py` — le champ
   existe déjà dans `evidence_corpus.jsonl` mais est perdu au chargement. Utile pour ventiler les
   métriques et pour le retrieval croisé FR ↔ AR.
 - **A2** : translittération arabizi (`arabizi_to_arabic`) — sans elle, BM25 échoue sur l'arabizi.
+- **E** : ajouter `abstention_reason` à `Verdict` (pour l'instant fourni par
+  `generate_verdict_with_reason`) ; pour la démo Bronze, `rag_llm.baseline_stance.predict_stances`
+  peut remplacer le stub NLI du Lot C (même signature).
+- **C** : tant que le NLI renvoie toujours « neutre », le pipeline s'abstient sur tout.
 - **B** : exposer `resolved_text` (coréférence résolue) dans `Claim` : meilleure requête que `text`.
