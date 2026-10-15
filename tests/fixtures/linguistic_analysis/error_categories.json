@@ -1,9 +1,7 @@
 {
-  "_description": "Classement des erreurs du Lot B sur eval_30. Sections regles / parseurs : erreurs du système actuel (EXP-B-003) ; classement établi pour EXP-B-001 (2e passage), voir docs/lot-b_analyse_erreurs_bronze.md. Section corrigees_exp_b_002 : erreurs EXP-B-001 corrigées par le repérage des compléments de source / temps / lieu. Section corrigees_exp_b_003 : erreurs corrigées par le lexique verbal du mode règles et le sujet verbe-sujet-objet. Clé = '<id>:<champ>'. Une seule catégorie principale par erreur (E1-E8). Les tests vérifient que ce classement couvre exactement les erreurs produites par le système.",
+  "_description": "Classement des erreurs du Lot B sur eval_30. Sections regles / parseurs : erreurs du système actuel (EXP-B-004) ; classement établi pour EXP-B-001 (2e passage), voir docs/lot-b_analyse_erreurs_bronze.md. Section corrigees_exp_b_002 : erreurs EXP-B-001 corrigées par le repérage des compléments de source / temps / lieu. Section corrigees_exp_b_003 : erreurs corrigées par le lexique verbal du mode règles et le sujet verbe-sujet-objet. Section corrigees_exp_b_004 : erreurs corrigées par le complément du participe gardé dans le sujet. Clé = '<id>:<champ>'. Une seule catégorie principale par erreur (E1-E8). Les tests vérifient que ce classement couvre exactement les erreurs produites par le système.",
   "regles": {
     "mx-2:obj": {"cat": "E4", "cause": "verbe désormais reconnu : objet = reste de la phrase (adverbe « barcha », temps « had el chhar », apposition « surtout el 5odra ») ; objet nul auparavant faute de verbe"},
-    "ar-01:subject": {"cat": "E4", "cause": "verbe en tête intransitif : le sujet s'arrête à la préposition « على », alors que « على تونس » complète le participe « الوافدين »"},
-    "ar-01:obj": {"cat": "E4", "cause": "conséquence du sujet coupé : « على تونس » passe dans l'objet"},
     "ar-02:subject": {"cat": "E4", "cause": "phrase nominale : aucune règle sans verbe en mode règles"},
     "ar-02:predicate": {"cat": "E4", "cause": "phrase nominale : prédicat implicite non produit sans arbre"},
     "ar-02:obj": {"cat": "E4", "cause": "phrase nominale : aucune règle sans verbe en mode règles"}
@@ -58,5 +56,12 @@
       "mx-2:subject": {"cat": "E3", "cause": "mode règles (arabizi) : « tal3ou » absent du lexique"},
       "mx-2:predicate": {"cat": "E3", "cause": "« tal3ou » absent du lexique"}
     }
+  },
+  "corrigees_exp_b_004": {
+    "regles": {
+      "ar-01:subject": {"cat": "E4", "cause": "verbe en tête intransitif : le sujet s'arrête à la préposition « على », alors que « على تونس » complète le participe « الوافدين »"},
+      "ar-01:obj": {"cat": "E4", "cause": "conséquence du sujet coupé : « على تونس » passe dans l'objet"}
+    },
+    "parseurs": {}
   }
 }

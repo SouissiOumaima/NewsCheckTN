@@ -29,8 +29,41 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 | EXP-B-002 | 2026-10-07 | B | Extraction d'affirmations : compléments de source / temps / lieu hors objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.64 (règles) ; 0.77 (parseurs) | retenu ; suite : lexique verbal du mode règles |
 | EXP-B-003 | 2026-10-15 | B | Extraction d'affirmations : lexique verbal du mode règles, sujet verbe-sujet-objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.86 (règles) ; 0.77 (parseurs) | retenu ; suite : jeu d'environ 100 phrases |
+| EXP-B-004 | 2026-10-15 | B | Extraction d'affirmations : source du discours rapporté, complément du participe dans le sujet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.91 (règles) ; 0.77 (parseurs) | retenu ; jeu de dev saturé |
 
 ## Entrées
+
+### EXP-B-004 — Source du discours rapporté et complément du participe
+- **Date** : 2026-10-15
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : (1) remplir `source` pour tout discours rapporté (locuteur d'un verbe
+  de parole + complétive, incise « …, a déclaré X ») ; (2) garder dans le sujet d'un verbe arabe en
+  tête le complément d'un participe (« عدد السياح الوافدين على تونس »), dernière erreur de sujet
+  du mode règles sur `eval_30` (ar-01).
+- **Données** : `eval_30.jsonl` (gold inchangé), désormais jeu de **développement** : `eval_100`
+  (protocole `docs/lot-b_protocole_eval_100.md`) sera la référence.
+- **Méthode / configuration** : (1) source = sujet du verbe de parole (antécédent si pronom résolu) ;
+  incise après une virgule (règles : auxiliaire facultatif + verbe de parole + groupe nominal ;
+  spaCy : `parataxis` à tête verbe de parole) → source, retirée de l'objet, modalité `rapporté` ;
+  « حسب ما أفاد به X » → X. (2) Verbe intransitif en tête : préposition (على، إلى، من، في، عن،
+  مع) suivie d'un nom, après un participe défini reconnu à sa forme, gardée dans le sujet ; pas si
+  la préposition est suivie d'un nombre.
+- **Code** : branche `lot-b-linguistic`, commits `feat(lot-b): source du discours rapporté
+  (locuteur et incise)` et `feat(lot-b): complément du participe dans le sujet verbe-sujet-objet`.
+- **Résultats** (EXP-B-003 → EXP-B-004) :
+  - (1) aucune variation sur `eval_30` : le gold n'a pas de champ `source`, l'attribution n'est
+    donc **pas mesurée** ; vérifiée par 13 tests sur des phrases hors du jeu (dont 3 pièges sans incise) ;
+  - (2) règles : sujet / prédicat / objet 0.91 / 0.95 / 0.86 → 0.95 / 0.95 / 0.91 ; triplet
+    0.86 → 0.91 ; 6 → 4 erreurs ; parseurs inchangés (0.77, 7 erreurs) ;
+  - détection d'affirmation, modalité et coréférence inchangées (1.00).
+- **Analyse** : erreurs restantes en mode règles : phrase nominale arabe (ar-02, 3 erreurs) et objet
+  de mx-2 (adverbe, temps et apposition). Avec parseurs : arbres spaCy / Stanza faux (fr-02, tn-a4),
+  traitement amont (ar-01 « نسبة », tn-a1 : E7) et mx-2. Un premier essai de (2) a cassé le
+  regroupement auxiliaire + participe en français (constante de module redéfinie) : détecté par les
+  tests, corrigé, et un test garde-fou ajouté. Règles écrites en voyant `eval_30` : avec 4 et 7
+  erreurs sur 34 phrases, ce jeu ne mesure plus de différence fiable entre les modes.
+- **Décision / suite** : retenu. Plus de réglage sur `eval_30` ; la prochaine mesure de référence
+  se fera sur `eval_100` une fois verrouillé.
 
 ### EXP-B-003 — Lexique verbal du mode règles et sujet verbe-sujet-objet
 - **Date** : 2026-10-15

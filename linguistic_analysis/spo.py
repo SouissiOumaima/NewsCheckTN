@@ -528,6 +528,39 @@ def _is_nisba(word: str) -> bool:
     return word.startswith("ال") and word.endswith(("ي", "يه", "يين", "يون", "يات"))
 
 
+# Participe (radical sans article ni suffixe) : فاعل, مفعول, مستفعل, متفاعل / متفعل, منفعل, مفعل.
+_AR_PARTICIPLE = re.compile(r"^(?:.ا..|م..و.|مست...|مت.ا..|مت...|من...|م...)$")
+_PARTICIPLE_PREPOSITIONS = {"علي", "الي", "من", "في", "عن", "مع"}
+
+
+def _is_definite_participle(word: str) -> bool:
+    """Participe défini (« الوافدين », « المقيمين », « المستوردة ») d'après sa forme."""
+    key = fold(word)
+    if not key.startswith("ال"):
+        return False
+    stem = key[2:]
+    for suffix in ("ين", "ون", "ات", "ه"):
+        if stem.endswith(suffix) and len(stem) - len(suffix) >= 3:
+            stem = stem[: -len(suffix)]
+            break
+    return bool(_AR_PARTICIPLE.match(stem))
+
+
+def _participle_complement(tokens: list[Token], k: int) -> bool:
+    """`tokens[k]` est une préposition qui complète le participe précédent, suivie d'un nom
+    (« الوافدين على تونس ») ; pas d'un nombre (« الوافدين إلى 2 مليون » : c'est l'objet)."""
+    if k < 1 or k + 1 >= len(tokens):
+        return False
+    if fold(tokens[k].text) not in _PARTICIPLE_PREPOSITIONS:
+        return False
+    if not _is_definite_participle(tokens[k - 1].text):
+        return False
+    noun = tokens[k + 1]
+    return noun.upos not in (*_PUNCT, "NUM", "VERB", "ADP", "SCONJ", "PART") and not (
+        fold(noun.text) in _AR_PREPOSITIONS or noun.text.isdigit()
+    )
+
+
 def _vso_subject_end(tokens: list[Token], k0: int, intransitive: bool) -> int:
     """Fin (exclue) du sujet d'un verbe arabe en tête, sujet qui commence au mot `k0`.
 
@@ -535,9 +568,16 @@ def _vso_subject_end(tokens: list[Token], k0: int, intransitive: bool) -> int:
     complément…). Sinon, chaîne d'annexion : un nom sans article est suivi de son complément
     (« وزير الصحه », « نتائج الامتحانات ») ; après un mot défini, seuls les adjectifs de relation
     sont ajoutés (« الامتحانات الوطنيه »), pour ne pas absorber un objet défini.
+    Verbe intransitif : une préposition suivie d'un nom qui complète un participe défini reste
+    dans le sujet (« عدد السياح الوافدين على تونس »).
     """
     end = k0
-    while end < len(tokens) and end - k0 < _SUBJECT_MAX and not _subject_boundary(tokens, end):
+    while end < len(tokens) and end - k0 < _SUBJECT_MAX:
+        if intransitive and end > k0 and _participle_complement(tokens, end):
+            end += 2
+            continue
+        if _subject_boundary(tokens, end):
+            break
         if end > k0 and not intransitive:
             previous, current = fold(tokens[end - 1].text), fold(tokens[end].text)
             if previous.startswith("ال") and not _is_nisba(current):

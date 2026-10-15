@@ -74,8 +74,9 @@ python -m linguistic_analysis.evaluate --errors           # avec spaCy / Stanza
 ```
 
 Résultats dans `evaluation/results/` ; analyse d'erreurs : `docs/lot-b_analyse_erreurs_bronze.md` ;
-expériences `EXP-B-001` (Bronze), `EXP-B-002` (compléments hors objet) et `EXP-B-003` (lexique
-verbal du mode règles) dans `experiments.md`.
+expériences `EXP-B-001` (Bronze), `EXP-B-002` (compléments hors objet), `EXP-B-003` (lexique
+verbal du mode règles) et `EXP-B-004` (source du discours rapporté, complément du participe)
+dans `experiments.md`.
 
 ## Installation
 
@@ -126,9 +127,10 @@ Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/lingu
   déterminant n'est pas un verbe (« la baisse »). Modal + infinitif forment le prédicat.
   Verbe arabe en tête : sujet jusqu'à une préposition, un nombre ou un complément si le verbe
   est intransitif (« ارتفع », « تراجع ») ; sinon chaîne d'annexion (« وزير الصحه ») et adjectifs
-  de relation (« الوطنيه »). Limites : verbes absents de la liste, noms homographes d'un verbe
-  (« سجل », « تراجع » en tête de phrase), complément prépositionnel d'un participe dans le sujet
-  (« الوافدين على تونس »).
+  de relation (« الوطنيه »). Avec un verbe intransitif, le complément d'un participe défini reste
+  dans le sujet (« عدد السياح الوافدين على تونس »), sauf si la préposition est suivie d'un nombre.
+  Limites : verbes absents de la liste, noms homographes d'un verbe (« سجل », « تراجع » en tête
+  de phrase), participe reconnu à sa seule forme (noms de même forme : « الشارع »).
 - **Chargement paresseux** : aucun import de spaCy/Stanza à l'import du module ; chaque pipeline est
   chargé une fois (`functools.lru_cache`) au premier appel.
 - **Coréférence** : règles uniquement, sans bibliothèque externe. Seul le pronom sujet de la

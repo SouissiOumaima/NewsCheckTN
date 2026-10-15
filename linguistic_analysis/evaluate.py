@@ -38,7 +38,7 @@ from normalization.normalize import normalize
 ROOT = Path(__file__).resolve().parents[1]
 EVAL_SET = ROOT / "tests" / "fixtures" / "linguistic_analysis" / "eval_30.jsonl"
 RESULTS_DIR = ROOT / "evaluation" / "results"
-EXP_ID = "EXP-B-003"
+EXP_ID = "EXP-B-004"
 ROLES = ("subject", "predicate", "obj")
 _TOKEN = re.compile(r"\w+|[^\w\s]")
 

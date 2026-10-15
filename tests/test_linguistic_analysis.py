@@ -1142,6 +1142,32 @@ def test_spo_parsers_reported_source():
     assert speech.source == "Le ministre"
 
 
+# --- Silver : complément du participe dans le sujet (verbe arabe en tête) ------------------
+
+PARTICIPLE_RULES_CASES = [
+    # (texte, sujet, objet) — mode règles, verbe intransitif en tête, phrases hors du jeu
+    ("ارتفع عدد التونسيين المقيمين في فرنسا.", "عدد التونسيين المقيمين في فرنسا", None),
+    ("تراجع عدد العاملين في القطاع الفلاحي بنسبة 3 بالمئة.", "عدد العاملين في القطاع الفلاحي",
+     "بنسبه 3 بالمئه"),
+    ("انخفضت أسعار المواد المستوردة من الخارج.", "اسعار المواد المستورده من الخارج", None),
+    # Restent hors du sujet : nombre après la préposition, nom qui n'est pas un participe
+    ("وصل عدد الوافدين إلى 2 مليون.", "عدد الوافدين", "الي 2 مليون"),
+    ("ارتفع عدد المشاريع في الجهة.", "عدد المشاريع", "في الجهه"),
+]
+
+
+@pytest.mark.parametrize(("text", "subject", "obj"), PARTICIPLE_RULES_CASES)
+def test_spo_rules_participle_complement_in_subject(text, subject, obj):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.subject, triple.obj) == (subject, obj)
+
+
+def test_french_participle_endings_unaffected():
+    # Garde-fou : le motif des participes arabes ne doit pas remplacer celui du français.
+    triple = spo.extract_spo(_sentence("Les exportations ont progressé de 5 %."))
+    assert (triple.predicate, triple.obj) == ("ont progressé", "de 5 %")
+
+
 # --- Script de démonstration ---------------------------------------------------------------
 
 
