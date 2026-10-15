@@ -11,6 +11,10 @@ Avec arbre UD (spaCy FR, Stanza AR) :
   seul élément qui n'est pas extrait du texte (`predicate_span = None`) ;
 - verbe de parole (`resources/speech_verbs.txt`) : la complétive devient l'objet, `reported = True`.
 
+Discours rapporté (`reported = True`) : verbe de parole + complétive, ou incise placée après une
+virgule (« Les prix vont baisser, a déclaré le ministre »). Source (`source`) : « selon X » → X ;
+incise → son groupe nominal (retiré de l'objet) ; verbe de parole + complétive → le sujet du verbe.
+
 Compléments circonstanciels (`resources/adjuncts.json`) : la source (« selon X », « حسب X »),
 le temps (« en 2024 », « depuis janvier », « يوم الجمعة ») et le lieu (« à Sfax », « fi Gafsa »)
 ne font pas partie de l'objet. Ils sont rangés dans `source`, `time` et `location`. Avec arbre,
@@ -86,7 +90,7 @@ class SPO:
     voice: str = "active"  # "active" | "passive"
     reported: bool = False
     confidence: float = 0.0
-    source: str | None = None  # « selon X » : X
+    source: str | None = None  # « selon X », incise ou sujet du verbe de parole
     time: str | None = None  # complément de temps, préposition comprise
     location: str | None = None  # complément de lieu, préposition comprise
 
@@ -235,13 +239,58 @@ def _leading_source(tokens: list[Token]) -> tuple[list[Token], int]:
     return tokens[:comma], comma + 1
 
 
+_RESUMPTIVE = {"به", "بها", "عنه", "عنها", "فيه", "فيها"}
+
+
 def _adjunct_text(sentence: Sentence, kind: str, tokens: list[Token]) -> str | None:
-    """Texte du complément ; pour une source, le marqueur (selon, حسب…) est retiré."""
+    """Texte du complément. Pour une source, le marqueur (selon, حسب…) est retiré, ainsi qu'un
+    verbe de parole et son pronom de rappel (« حسب ما افاد به المعهد » → « المعهد »)."""
     tokens = [t for t in sorted(tokens, key=lambda t: (t.start, t.i)) if t.upos not in _PUNCT]
     if kind == "source":
         words = [_key(t.text) for t in tokens]
         tokens = tokens[_prefix_len(words, adjunct_lexicon()["source_markers"]) :]
+        if len(tokens) > 1 and (tokens[0].upos == "VERB" or _is_speech_form(tokens[0].text)):
+            tokens = tokens[1:]
+            # Mot graphique d'origine : Stanza découpe « به » en ب + ه.
+            while len(tokens) > 1 and fold(_surface(sentence, tokens[0])) in _RESUMPTIVE:
+                tokens = [t for t in tokens if (t.start, t.end) != (tokens[0].start, tokens[0].end)]
     return _text(sentence, _span(tokens)) if tokens else None
+
+
+def _surface(sentence: Sentence, tok: Token) -> str:
+    """Texte du token graphique d'origine (identique à `tok.text` hors mots multi-tokens)."""
+    return sentence.text[tok.start - sentence.start : tok.end - sentence.start]
+
+
+def _is_speech_form(word: str) -> bool:
+    """Verbe de parole : forme ou lemme de la liste, ou présent en -e (« affirme », « déclare »)."""
+    key = fold(word)
+    return key in speech_verbs() or key + "r" in speech_verbs()
+
+
+def _split_incise(tokens: list[Token]) -> tuple[list[Token], list[Token]]:
+    """Incise finale après une virgule (« …, a déclaré le ministre », « …, affirme l'INS ») :
+    (tokens avant la virgule, groupe nominal de l'incise), ou (tokens, []) s'il n'y en a pas.
+    L'incise = auxiliaire facultatif + verbe de parole + groupe nominal sans verbe ni complémenteur.
+    """
+    ordered = sorted(tokens, key=lambda t: (t.start, t.i))
+    end = len(ordered)
+    while end and ordered[end - 1].upos == "PUNCT":
+        end -= 1
+    comma = max((k for k in range(end) if ordered[k].text in (",", "،")), default=None)
+    if comma is None:
+        return tokens, []
+    k = comma + 1
+    if k < end and fold(ordered[k].text) in _FR_AUX:
+        k += 1
+    if not (k < end and _is_speech_form(ordered[k].text)):
+        return tokens, []
+    phrase = ordered[k + 1 : end]
+    if not phrase or any(
+        t.upos in ("VERB", "SCONJ") or fold(t.text) in _COMPLEMENTIZERS for t in phrase
+    ):
+        return tokens, []
+    return ordered[:comma], phrase
 
 
 def _adjunct_fields(sentence: Sentence, found: dict[str, list[Token]]) -> dict[str, str | None]:
@@ -335,6 +384,27 @@ def _trim_object(tokens: list[Token], found: dict[str, list[Token]]) -> list[Tok
     return kept
 
 
+def _tree_incise(sentence: Sentence, root: Token) -> list[Token]:
+    """Incise rattachée au prédicat (parataxis, verbe de parole, après une virgule) : son groupe
+    nominal (sujet inversé, ou objet quand le parseur analyse mal l'inversion)."""
+    for child in _children(sentence, root):
+        if not child.deprel.startswith("parataxis") or child.start < root.start:
+            continue
+        if not (_is_speech_form(child.lemma) or _is_speech_form(child.text)):
+            continue
+        first = min(_subtree(sentence, child), key=lambda t: (t.start, t.i))
+        if first.text not in (",", "،"):  # virgule rattachée à l'incise, ou juste avant elle
+            before = [t for t in sentence.tokens if t.end <= first.start]
+            if not before or before[-1].text not in (",", "،"):
+                continue
+        nominal = next(
+            (c for c in _children(sentence, child) if c.deprel.startswith(("nsubj", "obj"))), None
+        )
+        if nominal is not None:
+            return _subtree(sentence, nominal)
+    return []
+
+
 def _pick_object(sentence: Sentence, root: Token, passive: bool, reported: bool) -> Token | None:
     children = [
         c for c in _children(sentence, root)
@@ -407,6 +477,11 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
     else:
         return None
 
+    incise = _tree_incise(sentence, root)
+    if incise:
+        adjuncts.setdefault("source", incise)
+    elif reported and subject_tokens:  # verbe de parole + complétive : le locuteur est la source
+        adjuncts.setdefault("source", subject_tokens)
     obj = _text(sentence, obj_span)
     subject = _text(sentence, subject_span)
     return SPO(
@@ -417,7 +492,7 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
         obj_span=obj_span,
         predicate_span=predicate_span,
         voice="passive" if passive else "active",
-        reported=reported,
+        reported=reported or bool(incise),
         confidence=_confidence(sentence.parser, subject, predicate, obj),
         **_adjunct_fields(sentence, adjuncts),
     )
@@ -530,8 +605,15 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
         after += 1
 
     obj_tokens = tokens[after:]
+    incise: list[Token] = []
     if not reported:  # la complétive rapportée reste entière
+        obj_tokens, incise = _split_incise(obj_tokens)
         obj_tokens = _trim_object(obj_tokens, adjuncts)
+    if incise:
+        adjuncts.setdefault("source", incise)
+    elif reported and subject_tokens:  # verbe de parole + complétive : le locuteur est la source
+        adjuncts.setdefault("source", subject_tokens)
+    reported = reported or bool(incise)
     subject_span = _span(subject_tokens)
     predicate_span = _span(predicate_tokens)
     obj_span = _span(obj_tokens)

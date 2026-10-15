@@ -25,6 +25,15 @@ def detect_modality(sentence: str) -> str:
     return modality.detect_modality(analyzed[0])[0] if analyzed else DEFAULT_MODALITY
 
 
+def _resolved_source(source: str | None, log: list[str]) -> str | None:
+    """Source pronominale remplacée par son antécédent (« Il » → « Le ministre »)."""
+    for entry in log:
+        pronoun, _, antecedent = entry.partition(" → ")
+        if source is not None and source == pronoun:
+            return antecedent
+    return source
+
+
 def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
     """Sortie détaillée du Lot B (champs internes inclus), opinions comprises."""
     sentences = analyze(doc)
@@ -37,6 +46,7 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
             continue
         is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
         triple = spo.extract_spo(sentence) or spo.SPO()
+        source = _resolved_source(triple.source, resolution.log)
         label, certainty, modality_triggers = modality.detect_modality(
             sentence,
             factual=(is_opinion, opinion_conf, opinion_triggers),
@@ -51,7 +61,7 @@ def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
                 subject=triple.subject,
                 predicate=triple.predicate,
                 obj=triple.obj,
-                source=triple.source,
+                source=source,
                 time=triple.time,
                 location=triple.location,
                 modality=label,

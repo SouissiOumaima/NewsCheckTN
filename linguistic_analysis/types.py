@@ -40,7 +40,7 @@ class ExtractedClaim:
     subject: str | None = None
     predicate: str | None = None
     obj: str | None = None
-    source: str | None = None  # « selon X » : X (hors objet)
+    source: str | None = None  # « selon X », incise ou locuteur du discours rapporté
     time: str | None = None  # complément de temps (hors objet)
     location: str | None = None  # complément de lieu (hors objet)
     modality: str = DEFAULT_MODALITY

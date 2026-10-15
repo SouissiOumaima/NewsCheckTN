@@ -1088,6 +1088,60 @@ def test_coreference_rules_arabic_annexation_antecedent():
     assert claims[-1].resolution_log == ["وهو → وزير الصحه"]
 
 
+# --- Silver : source du discours rapporté --------------------------------------------------
+
+SOURCE_RULES_CASES = [
+    # (texte, objet, source, discours rapporté) — mode règles, phrases hors du jeu d'évaluation
+    ("Le porte-parole du gouvernement a annoncé que les salaires seront augmentés.",
+     "les salaires seront augmentés", "Le porte-parole du gouvernement", True),
+    ("Les prix vont baisser, a déclaré le ministre du Commerce.", None,
+     "le ministre du Commerce", True),
+    ("Le chômage a reculé à 15 %, affirme l'Institut national de la statistique.", "à 15 %",
+     "l'Institut national de la statistique", True),
+    ("صرح وزير التجارة بأن الأسعار ستنخفض.", "الاسعار ستنخفض", "وزير التجاره", True),
+    ("ارتفعت الصادرات بنسبة 5 بالمئة حسب ما أفاد به المعهد الوطني للإحصاء.", "بنسبه 5 بالمئه",
+     "المعهد الوطني للاحصاء", False),
+    ("El wali 9al elli el mashrou3 bech yabda.", "el mashrou3 bech yabda", "El wali", True),
+    ("9alou elli el banka bech tzid el faida.", "el banka bech tzid el faida", None, True),
+    # Pas de discours rapporté : pas de complétive, ou virgule suivie d'autre chose qu'une incise
+    ("Le ministre a annoncé la fermeture de trois usines.", "la fermeture de trois usines",
+     None, False),
+    ("Le contrat a été signé, annonce publiée hier par la société.",
+     "annonce publiée hier par la société", None, False),
+    ("Les ventes ont baissé, ce qui inquiète les commerçants.",
+     "ce qui inquiète les commerçants", None, False),
+]
+
+
+@pytest.mark.parametrize(("text", "obj", "source", "reported"), SOURCE_RULES_CASES)
+def test_spo_rules_reported_source(text, obj, source, reported):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.obj, triple.source, triple.reported) == (obj, source, reported)
+
+
+def test_incise_gives_reported_modality():
+    (claim,) = extract_claims_detailed(normalize("Les prix vont baisser, a déclaré le ministre."))
+    assert claim.modality == "rapporté" and claim.source == "le ministre"
+
+
+def test_pronoun_source_replaced_by_antecedent():
+    text = "La ministre de la Santé a visité Sfax. Elle a affirmé que 40 lits seront ajoutés."
+    claim = extract_claims_detailed(normalize(text))[-1]
+    assert claim.subject == "Elle" and claim.source == "La ministre de la Santé"
+
+
+@pytest.mark.slow
+def test_spo_parsers_reported_source():
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle spaCy absent")
+    incise = spo.extract_spo(_sentence("Les prix vont baisser, a déclaré le ministre du Commerce."))
+    assert incise.reported and incise.source == "le ministre du Commerce"
+    inverted = spo.extract_spo(_sentence("Le chômage a reculé à 15 %, affirme l'INS."))
+    assert (inverted.obj, inverted.source) == ("à 15 %", "l'INS")
+    speech = spo.extract_spo(_sentence("Le ministre a affirmé que le déficit avait baissé."))
+    assert speech.source == "Le ministre"
+
+
 # --- Script de démonstration ---------------------------------------------------------------
 
 

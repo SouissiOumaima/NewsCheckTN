@@ -31,7 +31,7 @@ Identifier dans un document normalisé les **affirmations candidates** et les an
 |-------|------|
 | `resolved_text` | phrase rendue autonome par la coréférence (« Il a annoncé… » → « Le ministre a annoncé… ») |
 | `resolution_log` | remplacements effectués (« Il → Le ministre ») |
-| `source`, `time`, `location` | compléments retirés de l'objet : source sans son marqueur (« selon l'INS » → `l'INS`), temps (« en 2024 ») et lieu (« fi Gafsa ») avec leur préposition |
+| `source`, `time`, `location` | source de l'information : « selon l'INS » → `l'INS`, incise (« …, a déclaré le ministre » → `le ministre`), sinon locuteur d'un verbe de parole + complétive (antécédent si c'est un pronom résolu) ; temps (« en 2024 ») et lieu (« fi Gafsa ») retirés de l'objet, avec leur préposition |
 | `modality`, `certainty` | label de `types.MODALITY_LABELS` et certitude dans [0, 1] |
 | `is_opinion`, `confidence` | phrase non factuelle (opinion, question, souhait) et confiance |
 | `is_claim` (propriété) | affirmation vérifiable : ni opinion, ni question, ni souhait, ni hypothèse |
@@ -144,6 +144,11 @@ Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/lingu
   précédée d'une préposition, un lieu doit figurer dans la liste (gouvernorats et villes de
   Tunisie). La complétive d'un verbe de parole reste entière. Limites : lieux absents de la liste
   (« au palais de Carthage »), préposition arabe collée (« بصفاقس »), compléments en milieu d'objet.
+- **Source du discours rapporté** : « selon X » → X ; incise finale après une virgule
+  (auxiliaire facultatif + verbe de parole + groupe nominal ; avec spaCy, `parataxis` dont la tête
+  est un verbe de parole) → son groupe nominal, retiré de l'objet, modalité `rapporté` ; verbe de
+  parole + complétive → le sujet. « حسب ما أفاد به X » → X. Sujet absent (« 9alou elli … ») :
+  pas de source. Non mesuré sur `eval_30` (pas de source dans le gold) : tests ciblés seulement.
 
 ## Conventions
 - Les `span` sont des positions de caractères dans `Document.text`.
