@@ -66,12 +66,32 @@ le triplet et ses compléments (source, temps, lieu), la phrase résolue par cor
 
 ## Évaluation
 
-Jeu annoté : `tests/fixtures/linguistic_analysis/eval_30.jsonl` (guide : `docs/lot-b_guide_annotation.md`).
+Jeux annotés : `eval_30.jsonl` (développement) et `eval_100.jsonl` (référence, à venir ; protocole
+`docs/lot-b_protocole_eval_100.md`), dans `tests/fixtures/linguistic_analysis/` (guide :
+`docs/lot-b_guide_annotation.md`).
 
 ```bash
 python -m linguistic_analysis.evaluate --rules --errors   # règles seules (conditions de la CI)
 python -m linguistic_analysis.evaluate --errors           # avec spaCy / Stanza
+python -m linguistic_analysis.evaluate --compare          # règles vs parseurs, bootstrap apparié
+# eval_100 : validation sans exécuter le système, empreinte, évaluation du jeu verrouillé
+python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_analysis/eval_100.jsonl --validate
+python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_analysis/eval_100.jsonl --sha256
+python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_analysis/eval_100.jsonl --check-lock --compare
+# accord inter-annotateurs (double annotation)
+python -m linguistic_analysis.agreement annotation_a.jsonl annotation_b.jsonl
 ```
+
+- Le fichier est toujours validé avant l'évaluation (`validate_eval_set` : champs obligatoires,
+  langues / écritures / groupes, phénomènes connus, `id` uniques, aucune valeur de gabarit `<…>`).
+- Scores globaux, par groupe langue/écriture et par phénomène, avec les effectifs (`n` phrases,
+  `nS` affirmations pour le SPO, `nC` coréférence) ; `*` signale une cellule de moins de 5 exemples.
+- Intervalles de confiance à 95 % par bootstrap percentile sur les phrases : 1000 tirages, graine
+  fixe `20261015` (`BOOTSTRAP_SEED`), modifiables par `--bootstrap` et `--seed`.
+- `--compare` : bootstrap apparié (mêmes tirages de phrases pour les deux modes), différence
+  parseurs − règles et son intervalle ; « IC contient 0 » = différence non établie.
+- `--check-lock` : refuse d'évaluer si l'empreinte SHA-256 du jeu (fins de ligne ramenées à LF)
+  diffère de la dernière notée dans le protocole (section 7).
 
 Résultats dans `evaluation/results/` ; analyse d'erreurs : `docs/lot-b_analyse_erreurs_bronze.md` ;
 expériences `EXP-B-001` (Bronze), `EXP-B-002` (compléments hors objet), `EXP-B-003` (lexique
@@ -109,7 +129,8 @@ que `requirements-dev.txt`.
 | `modality.py` | Modalité et score de certitude |
 | `coreference.py` | Résolution de coréférence par règles |
 | `io_contract.py` | (Dé)sérialisation JSON du contrat d'entrée/sortie, ligne de commande |
-| `evaluate.py` | Évaluation sur le jeu annoté, export des résultats et des erreurs |
+| `evaluate.py` | Évaluation sur un jeu annoté : validation, verrou, scores ventilés, bootstrap, comparaison des modes, export |
+| `agreement.py` | Accord inter-annotateurs (kappa de Cohen, désaccords) |
 | `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt`, `adjuncts.json` (marqueurs de source, noms de temps, lieux), `verbs.json` (lexique verbal du mode règles) |
 
 Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/linguistic_analysis/`.

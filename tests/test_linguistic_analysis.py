@@ -1,6 +1,8 @@
 """Tests Lot B."""
 
+import hashlib
 import json
+import random
 from dataclasses import asdict, fields
 from pathlib import Path
 
@@ -8,6 +10,7 @@ import pytest
 
 from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
+    agreement,
     claim_extraction,
     coreference,
     demo,
@@ -1166,6 +1169,207 @@ def test_french_participle_endings_unaffected():
     # Garde-fou : le motif des participes arabes ne doit pas remplacer celui du français.
     triple = spo.extract_spo(_sentence("Les exportations ont progressé de 5 %."))
     assert (triple.predicate, triple.obj) == ("ont progressé", "de 5 %")
+
+
+# --- Outillage eval_100 : validation, verrou, ventilation, bootstrap, accord ---------------
+
+TEMPLATE = FIXTURES / "eval_100_template.jsonl"
+
+
+def _item(item_id="fr-001", **changes):
+    """Ligne valide minimale (phrase synthétique), modifiable champ par champ."""
+    item = {
+        "id": item_id, "lang": "fr", "script": "latin", "text": "Le prix a baissé de 5 %.",
+        "phenomena": ["fait_chiffré"], "origin": {"type": "rédigée"},
+        "gold": {"is_claim": True, "subject": "Le prix", "predicate": "a baissé",
+                 "obj": "de 5 %", "modality": "assertif"},
+    }
+    item.update(changes)
+    return item
+
+
+def test_validate_accepts_eval_30_and_a_valid_line():
+    assert evaluate.validate_eval_set(EVAL_ITEMS) == []
+    assert evaluate.validate_eval_set([_item()]) == []
+
+
+def test_validate_rejects_template_lines():
+    problems = evaluate.validate_eval_set(evaluate.load_eval_set(TEMPLATE))
+    assert any("_commentaire" in p for p in problems)
+    assert any("valeurs de gabarit" in p for p in problems)
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({"lang": "en"}, "langue"),
+        ({"script": "cyrillic"}, "écriture"),
+        ({"lang": "fr", "script": "arabic"}, "groupe"),
+        ({"phenomena": ["fait_chifre"]}, "phénomènes inconnus"),
+        ({"phenomena": []}, "phenomena"),
+        ({"gold": {"is_claim": True, "subject": None, "predicate": "a"}}, "champs manquants"),
+        ({"gold": {"is_claim": "oui", "subject": None, "predicate": None, "obj": None,
+                   "modality": "assertif"}}, "is_claim"),
+        ({"gold": {"is_claim": True, "subject": None, "predicate": None, "obj": None,
+                   "modality": "certain"}}, "modality"),
+        ({"phenomena": ["coréférence"]}, "coréférence"),
+        ({"origin": {"type": "blog"}}, "origin.type"),
+        ({"text": "<phrase à écrire>"}, "gabarit"),
+    ],
+)
+def test_validate_rejects_invalid_lines(changes, expected):
+    problems = evaluate.validate_eval_set([_item(**changes)])
+    assert any(expected in p for p in problems), problems
+
+
+def test_validate_rejects_duplicate_ids():
+    problems = evaluate.validate_eval_set([_item("fr-001"), _item("fr-001")])
+    assert any("id en double" in p for p in problems)
+
+
+def _lock_files(tmp_path, recorded):
+    data = tmp_path / "eval_100.jsonl"
+    data.write_text(json.dumps(_item(), ensure_ascii=False) + "\n", encoding="utf-8")
+    protocol = tmp_path / "protocole.md"
+    protocol.write_text(
+        "# Protocole\n\n## 7. Verrouillage et historique\n\n"
+        "| Date | Événement | `id` concernés | SHA-256 |\n|---|---|---|---|\n"
+        f"| 2026-11-01 | verrouillage | tous | {recorded} |\n",
+        encoding="utf-8",
+    )
+    return data, protocol
+
+
+def test_lock_accepts_recorded_hash(tmp_path):
+    expected = hashlib.sha256(
+        (json.dumps(_item(), ensure_ascii=False) + "\n").encode("utf-8")
+    ).hexdigest()
+    data, protocol = _lock_files(tmp_path, expected)
+    assert evaluate.check_lock(data, protocol) == expected
+    # Même empreinte avec des fins de ligne CRLF (copie de travail Windows).
+    data.write_bytes(data.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert evaluate.check_lock(data, protocol) == expected
+
+
+def test_lock_refuses_modified_file_or_missing_hash(tmp_path):
+    data, protocol = _lock_files(tmp_path, "0" * 64)
+    with pytest.raises(evaluate.LockError, match="a changé"):
+        evaluate.check_lock(data, protocol)
+    protocol.write_text("# Protocole\n\n## 7. Verrouillage\n\n| — | — |\n", encoding="utf-8")
+    with pytest.raises(evaluate.LockError, match="aucune empreinte"):
+        evaluate.check_lock(data, protocol)
+
+
+def test_cli_refuses_to_evaluate_unlocked_set(tmp_path, capsys):
+    data, protocol = _lock_files(tmp_path, "0" * 64)
+    with pytest.raises(SystemExit) as stop:
+        evaluate.main(["--eval-set", str(data), "--protocol", str(protocol), "--check-lock",
+                       "--out-dir", str(tmp_path)])
+    assert stop.value.code == 2 and "refusée" in capsys.readouterr().err
+    assert not list(tmp_path.glob("lot-b_extraction_*"))
+
+
+def test_cli_sha256_and_invalid_set(tmp_path, capsys):
+    data, _ = _lock_files(tmp_path, "0" * 64)
+    evaluate.main(["--eval-set", str(data), "--sha256"])
+    assert evaluate.sha256_file(data) in capsys.readouterr().out
+    with pytest.raises(SystemExit) as stop:
+        evaluate.main(["--eval-set", str(TEMPLATE), "--out-dir", str(tmp_path)])
+    assert stop.value.code == 2 and "invalide" in capsys.readouterr().err
+
+
+def test_cli_validate_does_not_run_the_system(tmp_path, capsys, monkeypatch):
+    def forbidden(_item):
+        raise AssertionError("le système ne doit pas être exécuté pendant la validation")
+
+    monkeypatch.setattr(evaluate, "predict", forbidden)
+    data, _ = _lock_files(tmp_path, "0" * 64)
+    evaluate.main(["--eval-set", str(data), "--validate", "--out-dir", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert "Jeu valide : 1 phrases" in out and "fr-latin 1" in out
+    assert not list(tmp_path.glob("lot-b_extraction_*"))
+
+
+def test_breakdown_by_phenomenon_with_counts():
+    metrics = evaluate.evaluate(EVAL_ITEMS, rules=True)["metrics"]
+    counts = {}
+    for it in EVAL_ITEMS:
+        for phenomenon in it["phenomena"]:
+            counts[phenomenon] = counts.get(phenomenon, 0) + 1
+    assert {ph: m["n"] for ph, m in metrics["by_phenomenon"].items()} == counts
+    rapporte = metrics["by_phenomenon"]["rapporté"]
+    assert rapporte["spo_n"] == sum(
+        it["gold"]["is_claim"] for it in EVAL_ITEMS if "rapporté" in it["phenomena"]
+    )
+
+
+def _record(item_id, correct):
+    """Phrase synthétique : sortie identique au gold (correct) ou fausse sur tous les champs."""
+    gold = {"is_claim": True, "subject": "le prix", "predicate": "a baissé", "obj": "de 5 %",
+            "modality": "assertif"}
+    wrong = {"is_claim": True, "subject": "x", "predicate": "y", "obj": "z",
+             "modality": "opinion"}
+    return {"id": item_id, "gold": gold, "pred": dict(gold) if correct else wrong}
+
+
+def test_bootstrap_interval_contains_true_value():
+    rng = random.Random(7)  # population synthétique : 70 % de phrases correctes
+    records = [_record(f"s{k:03d}", rng.random() < 0.7) for k in range(200)]
+    ci = evaluate.bootstrap_ci(records, resamples=300)["modality_accuracy"]
+    assert ci["low"] <= 0.7 <= ci["high"] and ci["high"] - ci["low"] < 0.2
+    again = evaluate.bootstrap_ci(records, resamples=300)["modality_accuracy"]
+    assert again == ci  # graine fixe : résultat reproductible
+
+
+def test_paired_bootstrap_detects_obvious_difference():
+    good = [_record(f"s{k:02d}", True) for k in range(30)]
+    bad = [_record(f"s{k:02d}", False) for k in range(30)]
+    result = evaluate.paired_bootstrap(bad, good, resamples=200)["spo_all_exact"]
+    assert result["diff"] == 1.0 and result["low"] > 0 and result["contains_zero"] is False
+
+
+def test_paired_bootstrap_identical_outputs_show_no_difference():
+    rng = random.Random(3)
+    records = [_record(f"s{k:02d}", rng.random() < 0.6) for k in range(30)]
+    result = evaluate.paired_bootstrap(records, records, resamples=200)
+    computed = [r for r in result.values() if r["diff"] is not None]
+    assert computed and all(r["diff"] == 0 and r["contains_zero"] for r in computed)
+
+
+def test_paired_bootstrap_requires_same_sentences():
+    with pytest.raises(ValueError):
+        evaluate.paired_bootstrap([_record("a", True)], [_record("b", True)], resamples=10)
+
+
+def test_cohen_kappa_known_values():
+    labels = ["assertif", "opinion", "rapporté", "assertif", "interrogatif"]
+    assert agreement.cohen_kappa(labels, labels) == 1.0
+    # Cas d'école : 20 oui/oui, 5 oui/non, 10 non/oui, 15 non/non → po = 0.70, pe = 0.50
+    a = [True] * 25 + [False] * 25
+    b = [True] * 20 + [False] * 5 + [True] * 10 + [False] * 15
+    assert agreement.cohen_kappa(a, b) == pytest.approx(0.4)
+
+
+def test_agreement_lists_disagreements(tmp_path, capsys):
+    a = [_item("fr-001"), _item("fr-002"), _item("fr-003")]
+    b = [_item("fr-001"),
+         _item("fr-002", gold={"is_claim": False, "subject": None, "predicate": None,
+                               "obj": None, "modality": "opinion"}),
+         _item("fr-004")]
+    report = agreement.agreement(a, b)
+    assert report["n"] == 2 and report["only_a"] == ["fr-003"] and report["only_b"] == ["fr-004"]
+    assert {(d["id"], d["field"]) for d in report["disagreements"]} == {
+        ("fr-002", "is_claim"), ("fr-002", "modality")
+    }
+    files = []
+    for name, items in (("a", a), ("b", b)):
+        path = tmp_path / f"{name}.jsonl"
+        path.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items),
+                        encoding="utf-8")
+        files.append(str(path))
+    agreement.main(files)
+    out = capsys.readouterr().out
+    assert "Phrases comparées : 2" in out and "fr-002" in out
 
 
 # --- Script de démonstration ---------------------------------------------------------------

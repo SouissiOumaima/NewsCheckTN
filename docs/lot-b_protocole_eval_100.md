@@ -126,26 +126,38 @@ ou `/check`, ni notebook qui les appelle. Ne pas consulter non plus les fichiers
 
 ### 4.4 Relecture croisée et verrouillage
 1. **Double annotation** : une deuxième personne annote **sans voir** la première annotation au
-   moins 30 phrases (6 par groupe, tirées au hasard). Mesures : accord sur `is_claim` (exactitude et
-   kappa de Cohen), sur `modality` (exactitude), sur `subject` / `predicate` / `obj`
-   (correspondance exacte, formes repliées).
+   moins 30 phrases (6 par groupe, tirées au hasard). Mesures : accord sur `is_claim` et sur
+   `modality` (exactitude et kappa de Cohen), sur `subject` / `predicate` / `obj` (correspondance
+   exacte, formes repliées), calculées sans exécuter le système par
+   `python -m linguistic_analysis.agreement annotation_a.jsonl annotation_b.jsonl`, qui liste aussi
+   les désaccords.
    - Seuil : kappa ≥ 0.7 sur `is_claim`. En dessous, clarifier le guide puis réviser l'annotation.
    - Les désaccords sont tranchés à deux et ajoutés aux « Cas discutés » du guide.
-2. **Contrôles automatiques sur le fichier seul** (sans exécuter le système) : JSON valide,
-   champs obligatoires, `id` uniques, `modality` dans `MODALITY_LABELS`, `context` +
-   `resolved_text` présents pour `coréférence`, répartition et minimums atteints.
+2. **Contrôles automatiques sur le fichier seul** (sans exécuter le système) :
+   `python -m linguistic_analysis.evaluate --eval-set <fichier> --validate`. Vérifie le format
+   (JSON valide, champs obligatoires, langues / écritures autorisées, phénomènes connus, `id`
+   uniques, `modality` dans `MODALITY_LABELS`, `context` + `resolved_text` pour `coréférence`,
+   aucune valeur de gabarit `<…>` ni champ `_commentaire`) et affiche les effectifs par groupe,
+   modalité et phénomène, à comparer aux minimums des sections 2 et 3.
 3. **Verrouillage** :
    - placer le fichier dans `tests/fixtures/linguistic_analysis/eval_100.jsonl` ;
-   - calculer son empreinte SHA-256 (`sha256sum eval_100.jsonl`, ou sous Windows
-     `certutil -hashfile eval_100.jsonl SHA256`) et la noter dans la section 7 de ce document ;
+   - calculer son empreinte SHA-256 avec
+     `python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_analysis/eval_100.jsonl --sha256`
+     et la noter dans la section 7 de ce document. Cette empreinte est calculée après avoir ramené
+     les fins de ligne à LF : elle ne dépend pas du système (Windows ou Linux) ; elle peut donc
+     différer de `sha256sum` ou `certutil` appliqués à une copie Windows en CRLF ;
    - un commit qui ne contient que ce fichier et la mise à jour de ce document :
      `test(lot-b): jeu d'évaluation eval_100 (verrouillé)`.
 
 ### 4.5 Après le verrouillage
-- **Première exécution** : `evaluate.py` est adapté pour lire `eval_100.jsonl` (commit séparé), puis
-  on lance les deux modes **une fois**. Le résultat est consigné tel quel dans une nouvelle entrée
-  `EXP-B-NNN` de `experiments.md`, avec l'empreinte du fichier, le commit du code et la version de
-  la normalisation du Lot A2 utilisée.
+- **Première exécution** : une seule fois, les deux modes et leur comparaison :
+  `python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_analysis/eval_100.jsonl --check-lock --compare`.
+  L'évaluation est refusée si le fichier a changé depuis son verrouillage. Le résultat (scores
+  par groupe et par phénomène avec effectifs, intervalles de confiance, différence parseurs −
+  règles et son intervalle) est consigné tel quel dans une nouvelle entrée `EXP-B-NNN` de
+  `experiments.md`, avec l'empreinte du fichier, le commit du code, la graine du bootstrap et la
+  version de la normalisation du Lot A2 utilisée. Une différence dont l'intervalle contient 0
+  est rapportée comme « non établie ».
 - **Corrections du gold** : seulement pour une erreur d'annotation au regard du guide, jamais
   parce que le système produit autre chose. Chaque correction fait l'objet d'un commit séparé qui
   liste les `id`, la raison et la nouvelle empreinte (section 7).
@@ -197,10 +209,12 @@ au gabarit et ne doit pas figurer dans `eval_100.jsonl`.
 - [ ] Aucune phrase reprise de `eval_30`, des tests, de la démo ou des documents du Lot B
 - [ ] Annotation faite sans avoir exécuté le système sur ces phrases (déclaration de l'annotateur
       dans le commit de verrouillage)
-- [ ] Double annotation d'au moins 30 phrases ; kappa `is_claim` ≥ 0.7 ; désaccords tranchés et reportés au guide
-- [ ] Contrôles automatiques du fichier passés (format, `id` uniques, labels, coréférence)
+- [ ] Double annotation d'au moins 30 phrases (`agreement.py`) ; kappa `is_claim` ≥ 0.7 ;
+      désaccords tranchés et reportés au guide
+- [ ] `evaluate.py --validate` sans erreur (format, `id` uniques, labels, coréférence, gabarit)
 - [ ] Champs `_commentaire` et lignes d'exemple du gabarit supprimés
-- [ ] Fichier verrouillé : empreinte SHA-256 notée (section 7), commit dédié
+- [ ] Fichier verrouillé : empreinte (`evaluate.py --sha256`) notée en section 7, commit dédié,
+      `evaluate.py --check-lock --validate` accepté
 
 ## 7. Verrouillage et historique
 
