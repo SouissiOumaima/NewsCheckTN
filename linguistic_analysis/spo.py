@@ -11,6 +11,13 @@ Avec arbre UD (spaCy FR, Stanza AR) :
   seul élément qui n'est pas extrait du texte (`predicate_span = None`) ;
 - verbe de parole (`resources/speech_verbs.txt`) : la complétive devient l'objet, `reported = True`.
 
+Compléments circonstanciels (`resources/adjuncts.json`) : la source (« selon X », « حسب X »),
+le temps (« en 2024 », « depuis janvier », « يوم الجمعة ») et le lieu (« à Sfax », « fi Gafsa »)
+ne font pas partie de l'objet. Ils sont rangés dans `source`, `time` et `location`. Avec arbre,
+un complément de ce type n'est jamais choisi comme objet ; dans les deux modes, un complément
+placé en fin d'objet en est retiré. La complétive d'un verbe de parole reste entière.
+Une source en tête de phrase suivie d'une virgule est retirée du sujet (mode règles).
+
 Sans arbre (tunisien, ou parseur absent) : patron `[groupe nominal] [verbe du lexique] [reste]`.
 Verbe de parole suivi d'un complémenteur (elli, que, إن…) : `reported = True`, complémenteur
 exclu de l'objet. En français, un auxiliaire suivi d'un participe est regroupé avec la négation
@@ -25,6 +32,7 @@ complétude 1.0 si S, P et O sont trouvés, 0.8 avec deux éléments, 0.6 avec l
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -60,6 +68,9 @@ class SPO:
     voice: str = "active"  # "active" | "passive"
     reported: bool = False
     confidence: float = 0.0
+    source: str | None = None  # « selon X » : X
+    time: str | None = None  # complément de temps, préposition comprise
+    location: str | None = None  # complément de lieu, préposition comprise
 
 
 @lru_cache(maxsize=1)
@@ -67,6 +78,156 @@ def speech_verbs() -> frozenset[str]:
     lines = (RESOURCES / "speech_verbs.txt").read_text(encoding="utf-8").splitlines()
     entries = (line.split("#", 1)[0].strip() for line in lines)
     return frozenset(fold(entry) for entry in entries if entry)
+
+
+# ---------------------------------------------------------------------------
+# Compléments circonstanciels : source, temps, lieu
+# ---------------------------------------------------------------------------
+
+_YEAR = re.compile(r"^(1[89]|20)\d\d$")
+
+
+def _key(word: str) -> str:
+    """Forme repliée, article arabe « ال » retiré (« الشهر » → « شهر »)."""
+    return re.sub(r"^ال(?=..)", "", fold(word))
+
+
+def _words(tokens: list[Token]) -> list[str]:
+    """Mots repliés hors ponctuation (« % » gardé). Les mots d'un même token d'origine
+    (Stanza `mwt`, ex. « الجمعه » découpé en الجمع + ه) sont recollés."""
+    words: list[str] = []
+    previous = None
+    for t in sorted(tokens, key=lambda t: (t.start, t.i)):
+        if t.upos == "PUNCT":
+            continue
+        if previous is not None and (t.start, t.end) == previous and t.end > t.start:
+            words[-1] = _key(words[-1] + t.text)
+        else:
+            words.append(_key(t.text))
+        previous = (t.start, t.end)
+    return words
+
+
+@lru_cache(maxsize=1)
+def adjunct_lexicon() -> dict[str, frozenset[tuple[str, ...]]]:
+    """Listes de `resources/adjuncts.json`, chaque entrée découpée en mots repliés."""
+    data = json.loads((RESOURCES / "adjuncts.json").read_text(encoding="utf-8"))
+    return {
+        name: frozenset(tuple(_key(w) for w in entry.split()) for entry in entries)
+        for name, entries in data.items()
+        if not name.startswith("_")
+    }
+
+
+def _prefix_len(words: list[str], entries: frozenset[tuple[str, ...]]) -> int:
+    """Nombre de mots de la plus longue entrée qui commence `words` (0 si aucune)."""
+    return max((len(e) for e in entries if tuple(words[: len(e)]) == e), default=0)
+
+
+def adjunct_kind(tokens: list[Token]) -> str | None:
+    """« source », « time » ou « location » si `tokens` forment en entier un tel complément.
+
+    Source : marqueur en tête (selon, حسب…). Temps : préposition de durée (depuis, منذ…) suivie
+    d'au moins un mot, ou, après d'éventuels mots-outils (en, la, في, el…), un nom de temps en tête
+    (janvier, semaine, يوم…) suivi uniquement de mots de temps, de nombres ou de mots-outils, ou une
+    année précédée d'une préposition (« en 2024 »). Lieu : préposition de lieu puis un lieu connu.
+    Un nombre en tête (« 100 jours ») n'est pas un complément de temps : c'est souvent l'objet.
+    """
+    words = _words(tokens)
+    if not words:
+        return None
+    lex = adjunct_lexicon()
+    if _prefix_len(words, lex["source_markers"]):
+        return "source"
+    time_prep = _prefix_len(words, lex["time_preps"])
+    if time_prep and len(words) > time_prep:
+        return "time"
+    k = 0
+    while k < len(words) and (n := _prefix_len(words[k:], lex["lead_words"])):
+        k += n
+    lead, content = words[:k], words[k:]
+    if not content or len(content) > 3:
+        return None
+    if _prefix_len(content, lex["time_nouns"]):
+        allowed = lex["time_nouns"] | lex["time_modifiers"] | lex["lead_words"] | lex["time_links"]
+        k = 0
+        while k < len(content) and (n := _prefix_len(content[k:], allowed) or content[k].isdigit()):
+            k += n
+        if k == len(content):
+            return "time"
+    year_prep = any((w,) in lex["year_preps"] for w in lead)
+    if content == [content[0]] and _YEAR.match(content[0]) and year_prep:
+        return "time"
+    place = _prefix_len(content, lex["places"])
+    if place == len(content) and any((w,) in lex["location_preps"] for w in lead):
+        return "location"
+    return None
+
+
+def split_trailing_adjuncts(tokens: list[Token]) -> tuple[list[Token], dict[str, list[Token]]]:
+    """Retire de la fin de `tokens` les compléments de source, de temps ou de lieu.
+
+    Retourne (tokens restants, {type: tokens du complément}). Pour chaque complément, on cherche
+    le plus court suffixe reconnu, puis on l'étend vers la gauche tant qu'il reste du même type
+    (« semaine dernière » → « la semaine dernière »). Un suffixe précédé d'un nombre n'est pas
+    coupé (« 100 jours » reste entier). Deux compléments du même type sont réunis. Si l'objet
+    entier est un complément, la liste restante est vide.
+    """
+    kept = sorted(tokens, key=lambda t: (t.start, t.i))
+    found: dict[str, list[Token]] = {}
+    while kept:
+        end = len(kept)
+        while end and kept[end - 1].upos == "PUNCT":
+            end -= 1
+        cut = next(
+            ((k, kind) for k in range(end - 1, -1, -1) if (kind := adjunct_kind(kept[k:end]))),
+            None,
+        )
+        if cut is None:
+            break
+        k, kind = cut
+        while k > 0 and adjunct_kind(kept[k - 1 : end]) == kind:
+            k -= 1
+        if k > 0 and (kept[k - 1].upos == "NUM" or kept[k - 1].text.isdigit()):
+            break
+        found[kind] = kept[k:end] + found.get(kind, [])
+        kept = kept[:k]
+    return kept, found
+
+
+def decompose_adjuncts(tokens: list[Token]) -> dict[str, list[Token]] | None:
+    """Découpe `tokens` en compléments successifs (« à Sousse en 2023 » → lieu + temps).
+
+    Retourne None si une partie n'est pas un complément de source, de temps ou de lieu.
+    """
+    kept, found = split_trailing_adjuncts(tokens)
+    if _words(kept):
+        kind = adjunct_kind(kept)
+        if kind is None:
+            return None
+        found[kind] = kept + found.get(kind, [])
+    return found
+
+
+def _leading_source(tokens: list[Token]) -> tuple[list[Token], int]:
+    """Source en tête suivie d'une virgule (« Selon l'INS, … ») : (tokens, indice après virgule)."""
+    comma = next((k for k, t in enumerate(tokens) if t.text in (",", "،")), None)
+    if comma is None or adjunct_kind(tokens[:comma]) != "source":
+        return [], 0
+    return tokens[:comma], comma + 1
+
+
+def _adjunct_text(sentence: Sentence, kind: str, tokens: list[Token]) -> str | None:
+    """Texte du complément ; pour une source, le marqueur (selon, حسب…) est retiré."""
+    tokens = [t for t in sorted(tokens, key=lambda t: (t.start, t.i)) if t.upos not in _PUNCT]
+    if kind == "source":
+        words = [_key(t.text) for t in tokens]
+        tokens = tokens[_prefix_len(words, adjunct_lexicon()["source_markers"]) :]
+    return _text(sentence, _span(tokens)) if tokens else None
+
+
+def _adjunct_fields(sentence: Sentence, found: dict[str, list[Token]]) -> dict[str, str | None]:
+    return {kind: _adjunct_text(sentence, kind, found[kind]) for kind in found}
 
 
 # ---------------------------------------------------------------------------
@@ -131,8 +292,36 @@ def _predicate_tokens(sentence: Sentence, head: Token, core: Token) -> list[Toke
     return tokens
 
 
+def _is_adjunct(sentence: Sentence, tok: Token) -> bool:
+    """Complément de source / temps / lieu, ou déterminant isolé (« هذا » de « الشهر هذا »)."""
+    tokens = _subtree(sentence, tok)
+    return decompose_adjuncts(tokens) is not None or all(t.upos in ("DET", *_PUNCT) for t in tokens)
+
+
+def _root_adjuncts(sentence: Sentence, root: Token) -> dict[str, list[Token]]:
+    """Compléments de source / temps / lieu rattachés directement au prédicat."""
+    found: dict[str, list[Token]] = {}
+    for child in _children(sentence, root):
+        if child.deprel.startswith(("nsubj", "ccomp", "punct", "aux", "cop", "mark")):
+            continue
+        for kind, tokens in (decompose_adjuncts(_subtree(sentence, child)) or {}).items():
+            found.setdefault(kind, tokens)
+    return found
+
+
+def _trim_object(tokens: list[Token], found: dict[str, list[Token]]) -> list[Token]:
+    """Retire les compléments en fin d'objet et les ajoute à `found` (sans écraser)."""
+    kept, tails = split_trailing_adjuncts(tokens)
+    for kind, adjunct in tails.items():
+        found.setdefault(kind, adjunct)
+    return kept
+
+
 def _pick_object(sentence: Sentence, root: Token, passive: bool, reported: bool) -> Token | None:
-    children = _children(sentence, root)
+    children = [
+        c for c in _children(sentence, root)
+        if c.deprel in ("ccomp", "obl:agent") or not _is_adjunct(sentence, c)
+    ]
     order = [
         lambda d: d == "ccomp" and reported,
         lambda d: d == "obl:agent" and passive,
@@ -160,6 +349,7 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
     subject_span = _span(subject_tokens) if subj else None
     passive = root.feats.get("Voice") == "Pass" or any(c.deprel.endswith(":pass") for c in children)
     cop = next((c for c in children if c.deprel == "cop"), None)
+    adjuncts = _root_adjuncts(sentence, root)
 
     if root.upos in ("VERB", "AUX") and cop is None:
         predicate_tokens = _predicate_tokens(sentence, root, root)
@@ -171,6 +361,8 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
             obj_tokens = [
                 t for t in obj_tokens if not (t.deprel == "mark" and t.head == obj_head.i)
             ]
+        elif obj_tokens:  # la complétive rapportée reste entière
+            obj_tokens = _trim_object(obj_tokens, adjuncts)
         obj_span = _span(obj_tokens) if obj_tokens else None
         predicate_span = _span(predicate_tokens)
         predicate = _text(sentence, predicate_span)
@@ -187,7 +379,9 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
             predicate_span, predicate = None, IMPLICIT_PREDICATE
         else:
             return None
+        excluded |= {t.i for tokens in adjuncts.values() for t in tokens}
         attribute = [t for t in _subtree(sentence, root) if t.i not in excluded]
+        attribute = _trim_object(attribute, adjuncts)
         obj_span = _span(attribute)
         if _overlaps(obj_span, subject_span):  # attribut de part et d'autre du sujet
             after = [t for t in attribute if subject_span and t.start >= subject_span[1]]
@@ -207,6 +401,7 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
         voice="passive" if passive else "active",
         reported=reported,
         confidence=_confidence(sentence.parser, subject, predicate, obj),
+        **_adjunct_fields(sentence, adjuncts),
     )
 
 
@@ -246,10 +441,13 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
     passive = any(fold(t.text) == "été" for t in predicate_tokens[:-1])
 
     speech = any(fold(t.text) in speech_verbs() for t in predicate_tokens)
-    subject_tokens = tokens[:start]
-    # Arabe verbe–sujet–objet : verbe en tête ; sujet = mots jusqu'au complémenteur pour un
-    # verbe de parole (« قال وزير الفلاحة إن … »), sinon le mot suivant.
-    if start == 0 and re.search(r"[؀-ۿ]", tokens[verb_index].text):
+    source_tokens, lead = _leading_source(tokens[:start])
+    adjuncts = {"source": source_tokens} if source_tokens else {}
+    subject_tokens = tokens[lead:start]
+    # Arabe verbe–sujet–objet : verbe en tête (après une éventuelle source) ; sujet = mots
+    # jusqu'au complémenteur pour un verbe de parole (« قال وزير الفلاحة إن … »), sinon le mot
+    # suivant.
+    if start == lead and re.search(r"[؀-ۿ]", tokens[verb_index].text):
         window = range(after, min(after + 4, len(tokens)))
         comp = next((k for k in window if fold(tokens[k].text) in _COMPLEMENTIZERS), None)
         nxt = tokens[after] if after < len(tokens) else None
@@ -264,9 +462,12 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
     if reported:
         after += 1
 
+    obj_tokens = tokens[after:]
+    if not reported:  # la complétive rapportée reste entière
+        obj_tokens = _trim_object(obj_tokens, adjuncts)
     subject_span = _span(subject_tokens)
     predicate_span = _span(predicate_tokens)
-    obj_span = _span(tokens[after:])
+    obj_span = _span(obj_tokens)
     subject, predicate, obj = (
         _text(sentence, subject_span),
         _text(sentence, predicate_span),
@@ -282,6 +483,7 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
         voice="passive" if passive else "active",
         reported=reported,
         confidence=_confidence("rules", subject, predicate, obj),
+        **_adjunct_fields(sentence, adjuncts),
     )
 
 

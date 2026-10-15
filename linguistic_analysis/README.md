@@ -31,6 +31,7 @@ Identifier dans un document normalisé les **affirmations candidates** et les an
 |-------|------|
 | `resolved_text` | phrase rendue autonome par la coréférence (« Il a annoncé… » → « Le ministre a annoncé… ») |
 | `resolution_log` | remplacements effectués (« Il → Le ministre ») |
+| `source`, `time`, `location` | compléments retirés de l'objet : source sans son marqueur (« selon l'INS » → `l'INS`), temps (« en 2024 ») et lieu (« fi Gafsa ») avec leur préposition |
 | `modality`, `certainty` | label de `types.MODALITY_LABELS` et certitude dans [0, 1] |
 | `is_opinion`, `confidence` | phrase non factuelle (opinion, question, souhait) et confiance |
 | `is_claim` (propriété) | affirmation vérifiable : ni opinion, ni question, ni souhait, ni hypothèse |
@@ -60,7 +61,7 @@ python -m linguistic_analysis.demo --rules "…"  # sans spaCy / Stanza ; --json
 ```
 
 Affiche, phrase par phrase, l'affirmation vérifiable ou non, l'opinion, la modalité et la certitude,
-le triplet, la phrase résolue par coréférence et les indices déclencheurs. Contrairement à
+le triplet et ses compléments (source, temps, lieu), la phrase résolue par coréférence et les indices déclencheurs. Contrairement à
 `pipeline.py`, les phrases non vérifiables sont affichées (elles ne passent pas par le filtre du Lot C).
 
 ## Évaluation
@@ -73,7 +74,7 @@ python -m linguistic_analysis.evaluate --errors           # avec spaCy / Stanza
 ```
 
 Résultats dans `evaluation/results/` ; analyse d'erreurs : `docs/lot-b_analyse_erreurs_bronze.md` ;
-expérience `EXP-B-001` dans `experiments.md`.
+expériences `EXP-B-001` (Bronze) et `EXP-B-002` (compléments hors objet) dans `experiments.md`.
 
 ## Installation
 
@@ -107,7 +108,7 @@ que `requirements-dev.txt`.
 | `coreference.py` | Résolution de coréférence par règles |
 | `io_contract.py` | (Dé)sérialisation JSON du contrat d'entrée/sortie, ligne de commande |
 | `evaluate.py` | Évaluation sur le jeu annoté, export des résultats et des erreurs |
-| `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt` |
+| `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt`, `adjuncts.json` (marqueurs de source, noms de temps, lieux) |
 
 Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/linguistic_analysis/`.
 
@@ -125,6 +126,13 @@ Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/lingu
   inchangée. Le résultat est dans `ExtractedClaim.resolved_text` (avec `resolution_log`) ;
   `Claim.text` reste la phrase d'origine. La bibliothèque `coreferee` (extension spaCy) sera
   évaluée au palier Silver ; les pronoms affixes arabes (ـه، ـها، ـهم) restent à traiter.
+- **Compléments hors objet** : la source, le temps et le lieu sont repérés par un lexique
+  (`resources/adjuncts.json`), identique dans les deux modes : avec arbre, un tel complément n'est
+  jamais choisi comme objet ; dans tous les cas, il est retiré de la fin de l'objet. Garde-fous :
+  un nombre en tête (« 100 jours », « 2024 voitures ») reste dans l'objet, une année doit être
+  précédée d'une préposition, un lieu doit figurer dans la liste (gouvernorats et villes de
+  Tunisie). La complétive d'un verbe de parole reste entière. Limites : lieux absents de la liste
+  (« au palais de Carthage »), préposition arabe collée (« بصفاقس »), compléments en milieu d'objet.
 
 ## Conventions
 - Les `span` sont des positions de caractères dans `Document.text`.

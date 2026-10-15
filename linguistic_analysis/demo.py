@@ -55,6 +55,9 @@ def describe(text: str) -> str:
             f"    prédicat               : {c.predicate or '—'}",
             f"    objet                  : {c.obj or '—'}",
         ]
+        for label, value in (("source", c.source), ("temps", c.time), ("lieu", c.location)):
+            if value:
+                lines.append(f"    {label:<23}: {value}")
         if c.resolution_log:
             lines.append(f"    phrase autonome        : {c.resolved_text}")
             lines.append(f"    coréférence            : {', '.join(c.resolution_log)}")

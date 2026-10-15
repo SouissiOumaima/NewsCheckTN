@@ -1,7 +1,8 @@
 """Structures internes du Lot B.
 
 `ExtractedClaim` porte des informations plus riches que `common.schemas.Claim`
-(texte résolu, score de certitude, confiance, parseur utilisé). Ces champs restent
+(texte résolu, source / temps / lieu, score de certitude, confiance, parseur utilisé). Ces
+champs restent
 internes au module tant que l'équipe n'a pas validé leur ajout au schéma partagé ;
 `to_claim()` projette vers le contrat actuel.
 """
@@ -39,6 +40,9 @@ class ExtractedClaim:
     subject: str | None = None
     predicate: str | None = None
     obj: str | None = None
+    source: str | None = None  # « selon X » : X (hors objet)
+    time: str | None = None  # complément de temps (hors objet)
+    location: str | None = None  # complément de lieu (hors objet)
     modality: str = DEFAULT_MODALITY
     certainty: float = 1.0  # 0 = très incertain, 1 = asserté sans réserve
     is_opinion: bool = False

@@ -3,9 +3,9 @@
 Entrée : `asdict(Document)` tel que produit par `normalization.normalize.normalize`.
 Sortie : `asdict(Claim)` (contrat du dépôt) ou `asdict(ExtractedClaim)` (sortie détaillée).
 
-Les champs supplémentaires de `ExtractedClaim` (resolved_text, certainty, is_opinion,
-confidence, parser, triggers) sont internes au Lot B, en attendant la validation de
-l'équipe ; seule la sortie au format `Claim` fait partie du contrat partagé.
+Les champs supplémentaires de `ExtractedClaim` (resolved_text, source, time, location,
+certainty, is_opinion, confidence, parser, triggers) sont internes au Lot B, en attendant la
+validation de l'équipe ; seule la sortie au format `Claim` fait partie du contrat partagé.
 
 Usage en ligne de commande (depuis la racine du dépôt) :
     python -m linguistic_analysis.io_contract entree.jsonl sortie.jsonl [--detailed]

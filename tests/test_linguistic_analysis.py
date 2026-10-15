@@ -451,21 +451,21 @@ def _check_exact_extraction(sentence, triple):
 
 
 SPO_RULES_CASES = [
-    # (texte, sujet, prédicat, objet, discours rapporté)
+    # (texte, sujet, prédicat, objet, discours rapporté) ; les compléments de temps sont hors objet
     # Français (sans parseur)
     ("Le taux de chômage a atteint 16,4 % en 2023.", "Le taux de chômage", "a atteint",
-     "16,4 % en 2023", False),
-    ("Le ministre a visité Sfax hier.", "Le ministre", "a visité", "Sfax hier", False),
+     "16,4 %", False),
+    ("Le ministre a visité Sfax hier.", "Le ministre", "a visité", "Sfax", False),
     ("Le gouvernement a signé un accord avec le FMI.", "Le gouvernement", "a signé",
      "un accord avec le FMI", False),
     # Tunisien en lettres arabes (valeurs attendues = texte normalisé par le Lot A2)
     ("الحكومة قالت إلي الأسعار باش تنقص.", "الحكومه", "قالت", "الاسعار باش تنقص", True),
-    ("الوزير زار صفاقس نهار الاثنين.", "الوزير", "زار", "صفاقس نهار الاثنين", False),
+    ("الوزير زار صفاقس نهار الاثنين.", "الوزير", "زار", "صفاقس", False),
     ("الشركة عملت 200 خدمة جديدة.", "الشركه", "عملت", "200 خدمه جديده", False),
     # Tunisien en arabizi
     ("El 7koma 9alet elli el as3ar bech tan9es.", "El 7koma", "9alet",
      "el as3ar bech tan9es", True),
-    ("El ministre zar Sfax nhar el thnin.", "El ministre", "zar", "Sfax nhar el thnin", False),
+    ("El ministre zar Sfax nhar el thnin.", "El ministre", "zar", "Sfax", False),
     ("El cherka 3mlet 200 khedma jdida.", "El cherka", "3mlet", "200 khedma jdida", False),
 ]
 
@@ -482,7 +482,8 @@ def test_spo_rules(text, subject, predicate, obj, reported):
 
 def test_spo_rules_negation_and_passive():
     neg = spo.extract_spo(_sentence("Le chômage n'a pas baissé en 2024."))
-    assert (neg.subject, neg.predicate, neg.obj) == ("Le chômage", "n'a pas baissé", "en 2024")
+    assert (neg.subject, neg.predicate, neg.obj) == ("Le chômage", "n'a pas baissé", None)
+    assert neg.time == "en 2024"
     passive = spo.extract_spo(_sentence("120 nouveaux cas ont été enregistrés par le ministère."))
     assert passive.voice == "passive" and passive.predicate == "ont été enregistrés"
     assert passive.subject == "120 nouveaux cas" and passive.obj == "par le ministère"
@@ -508,14 +509,14 @@ def test_claims_now_carry_spo():
     assert (claim.subject, claim.predicate, claim.obj) == (
         "Le taux de chômage",
         "a atteint",
-        "16,4 % en 2023",
+        "16,4 %",
     )
 
 
 SPO_SPACY_CASES = [
     ("Le taux de chômage a atteint 16,4 % en 2023.", "Le taux de chômage", "a atteint", "16,4 %"),
-    ("Le chômage est de 16 % en 2023.", "Le chômage", "est", "de 16 % en 2023"),
-    ("Le chômage n'a pas baissé en 2024.", "Le chômage", "n'a pas baissé", "en 2024"),
+    ("Le chômage est de 16 % en 2023.", "Le chômage", "est", "de 16 %"),
+    ("Le chômage n'a pas baissé en 2024.", "Le chômage", "n'a pas baissé", None),
     ("Le ministre a déclaré que les prix allaient baisser.", "Le ministre", "a déclaré",
      "les prix allaient baisser"),
 ]
@@ -565,7 +566,8 @@ def test_spo_stanza_ar():
     sentence = _sentence("البطالة مرتفعة في تونس.")
     nominal = spo.extract_spo(sentence)
     assert nominal.predicate == spo.IMPLICIT_PREDICATE and nominal.predicate_span is None
-    assert nominal.subject == "البطاله" and nominal.obj == "مرتفعه في تونس"
+    assert nominal.subject == "البطاله" and nominal.obj == "مرتفعه"
+    assert nominal.location == "في تونس"  # complément de lieu hors attribut
     _check_exact_extraction(sentence, nominal)
 
 
@@ -884,7 +886,7 @@ def test_evaluate_writes_results(tmp_path):
     path = evaluate.write_results(results, tmp_path)
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert path.name.startswith("lot-b_extraction_regles_")
-    assert saved["lot"] == "B" and saved["exp_id"] == "EXP-B-001"
+    assert saved["lot"] == "B" and saved["exp_id"] == evaluate.EXP_ID
     metrics = saved["metrics"]
     groups = {"fr-latin", "ar-arabic", "tn-arabic", "tn-arabizi", "tn-mixed"}
     assert set(metrics["by_lang"]) == groups
@@ -956,6 +958,81 @@ def test_error_categories_match_parser_errors():
         pytest.skip("modèles spaCy / Stanza absents")
     results = evaluate.evaluate(EVAL_ITEMS)
     assert _error_keys(results) == set(ERROR_CATEGORIES["parseurs"])
+
+
+# --- Silver : compléments de source / temps / lieu hors objet --------------------------------
+
+ADJUNCT_RULES_CASES = [
+    # (texte, objet, source, temps, lieu) — mode règles, phrases hors du jeu d'évaluation
+    ("Le chômage a atteint 16 % au premier trimestre, selon l'INS.", "16 %", "l'INS",
+     "au premier trimestre", None),
+    ("La société a recruté 300 ingénieurs à Sousse en 2023.", "300 ingénieurs", None,
+     "en 2023", "à Sousse"),
+    ("Les pluies ont endommagé les routes la semaine dernière à Kasserine.", "les routes", None,
+     "la semaine dernière", "à Kasserine"),
+    ("Les prix ont baissé de 5 % depuis le mois de mars.", "de 5 %", None,
+     "depuis le mois de mars", None),
+    ("Le taux de chômage était de 15 % en 2022.", "de 15 %", None, "en 2022", None),
+    ("El cherka 3mlet 200 khedma jdida fi Sfax.", "200 khedma jdida", None, None, "fi Sfax"),
+    # Restent dans l'objet : nombre + nom de temps, nombre seul, lieu non répertorié, personne
+    ("Le ministre est resté 100 jours en poste.", "100 jours en poste", None, None, None),
+    ("L'usine a produit 2024 voitures.", "2024 voitures", None, None, None),
+    ("Le tribunal a condamné l'ancien ministre à dix ans de prison.",
+     "l'ancien ministre à dix ans de prison", None, None, None),
+    ("Le gouvernement a écrit au Président de la République.",
+     "au Président de la République", None, None, None),
+]
+
+
+@pytest.mark.parametrize(("text", "obj", "source", "time", "location"), ADJUNCT_RULES_CASES)
+def test_spo_rules_adjuncts_out_of_object(text, obj, source, time, location):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.obj, triple.source, triple.time, triple.location) == (
+        obj, source, time, location
+    )
+
+
+def test_spo_rules_leading_source_removed_from_subject():
+    triple = spo.extract_spo(_sentence("D'après la Banque mondiale, la croissance a atteint 2 %."))
+    assert (triple.subject, triple.obj) == ("la croissance", "2 %")
+    assert triple.source == "la Banque mondiale"
+
+
+def test_spo_rules_reported_clause_kept_whole():
+    triple = spo.extract_spo(_sentence("El wali 9al elli el mashrou3 bech yabda fi Sfax."))
+    assert triple.reported and triple.obj == "el mashrou3 bech yabda fi Sfax"
+    assert triple.location is None
+
+
+def test_adjunct_kind_lexicon():
+    def kind(text):
+        return spo.adjunct_kind(_sentence(text).tokens)
+
+    assert kind("en 2024.") == "time" and kind("2024.") is None  # année : préposition requise
+    assert kind("يوم الجمعة.") == "time" and kind("منذ شهر جانفي.") == "time"
+    assert kind("في صفاقس.") == "location" and kind("صفاقس.") is None
+    assert kind("حسب البنك المركزي.") == "source"
+    assert kind("100 jours.") is None and kind("à 7 %.") is None
+
+
+def test_detailed_claim_carries_adjuncts():
+    (claim,) = extract_claims_detailed(normalize("Selon l'INS, le chômage a atteint 16 % en 2023."))
+    assert (claim.obj, claim.source, claim.time) == ("16 %", "l'INS", "en 2023")
+    assert {"source", "time", "location"} <= set(asdict(claim))
+    assert "source" not in {f.name for f in fields(Claim)}  # contrat partagé inchangé
+
+
+@pytest.mark.slow
+def test_spo_parsers_adjuncts():
+    if preprocessing.get_parser(Lang.FR) is None or preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèles spaCy / Stanza absents")
+    fr = spo.extract_spo(_sentence("La société a recruté 300 ingénieurs à Sousse en 2023."))
+    assert (fr.obj, fr.time, fr.location) == ("300 ingénieurs", "en 2023", "à Sousse")
+    ar = spo.extract_spo(_sentence("افتتحت الوزارة مستشفى جديدا في صفاقس يوم الاثنين."))
+    assert (ar.subject, ar.obj) == ("الوزاره", "مستشفي جديدا")
+    assert (ar.time, ar.location) == ("يوم الاثنين", "في صفاقس")
+    duration = spo.extract_spo(_sentence("Le ministre est resté 100 jours en poste."))
+    assert duration.obj == "100 jours" and duration.time is None
 
 
 # --- Script de démonstration ---------------------------------------------------------------
