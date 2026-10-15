@@ -28,8 +28,49 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 | EXP-B-002 | 2026-10-07 | B | Extraction d'affirmations : compléments de source / temps / lieu hors objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.64 (règles) ; 0.77 (parseurs) | retenu ; suite : lexique verbal du mode règles |
+| EXP-B-003 | 2026-10-15 | B | Extraction d'affirmations : lexique verbal du mode règles, sujet verbe-sujet-objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.86 (règles) ; 0.77 (parseurs) | retenu ; suite : jeu d'environ 100 phrases |
 
 ## Entrées
+
+### EXP-B-003 — Lexique verbal du mode règles et sujet verbe-sujet-objet
+- **Date** : 2026-10-15
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : priorités 2 et 6 de l'analyse d'erreurs Bronze. Sans parseur (CI,
+  tunisien), la plupart des erreurs viennent de verbes inconnus (E3) ; une fois le verbe trouvé,
+  le sujet d'un verbe arabe en tête limité à un mot devient la cause principale. Étendre le
+  lexique et le sujet doit améliorer le mode règles sans dégrader le mode parseurs.
+- **Données** : identiques à EXP-B-001 / EXP-B-002 (`eval_30.jsonl`, gold inchangé).
+- **Méthode / configuration** : `linguistic_analysis/resources/verbs.json` ; formes générées à
+  partir de 94 lemmes français en -er (3e personne, participes) et de 94 verbes de l'arabe standard
+  au passé (passé, présent, futur ; conjonction و / ف collée retirée), plus des formes listées
+  (irrégulières, auxiliaires au conditionnel, modaux, tunisien en lettres arabes et en arabizi) ;
+  ش / ch final de la négation ما…ش retiré. Mot précédé d'un déterminant : pas un verbe. Modal +
+  infinitif regroupés. Verbe arabe en tête : sujet jusqu'à une préposition, un nombre ou un
+  complément pour les verbes intransitifs listés, sinon chaîne d'annexion et adjectifs de relation.
+  Coréférence : une annexion dont le complément porte l'article est un antécédent défini.
+- **Code** : branche `lot-b-linguistic`, commit `feat(lot-b): lexique verbal du mode règles et
+  sujet verbe-sujet-objet` ; `python -m linguistic_analysis.evaluate [--rules] --errors`.
+- **Résultats** (EXP-B-002 → EXP-B-003) :
+  - règles : sujet / prédicat / objet 0.64 / 0.68 / 0.77 → 0.91 / 0.95 / 0.86 ; triplet 0.64 → 0.86 ;
+    coréférence 0.67 → 1.00 ; 21 → 6 erreurs ;
+  - parseurs : 0.91 / 0.86 / 0.86 → 0.95 / 0.91 / 0.82 ; triplet 0.77 → 0.77 ; 8 → 7 erreurs
+    (seul le cas mixte mx-2, toujours analysé par règles, change) ;
+  - triplet exact par groupe (règles / parseurs) : FR 1.00 / 0.88 ; AR 0.71 / 0.86 ;
+    TN lettres arabes 1.00 / 0.00 ; arabizi 1.00 / 1.00 ; mixte 0.50 / 0.50 ;
+  - détection d'affirmation et modalité inchangées (1.00).
+- **Analyse** : erreurs corrigées dans la section `corrigees_exp_b_003` de
+  `tests/fixtures/linguistic_analysis/error_categories.json`. Une erreur nouvelle : l'objet de mx-2,
+  juste auparavant par hasard (aucun triplet, gold `null`) ; maintenant que « tal3ou » est reconnu,
+  l'adverbe, le temps et l'apposition passent dans l'objet (E4). Restent en mode règles : phrase
+  nominale arabe (ar-02) et complément du participe dans le sujet (ar-01). Le tunisien en lettres
+  arabes reste à 0.00 avec parseurs parce que l'amont l'étiquette `ar` et l'envoie à Stanza (E7,
+  point de réunion) : en mode règles il est à 1.00. Comme pour EXP-B-002, règles écrites en voyant
+  le jeu : gains optimistes ; vérification sur 14 phrases hors du jeu (tests), avec des pièges
+  (nom après déterminant, verbe absent du lexique). Limites : verbes absents de la liste, noms
+  homographes d'un verbe (« سجل », « تراجع » en tête de phrase).
+- **Décision / suite** : retenu. Le jeu de 34 phrases ne départage plus les deux modes (6 et 7
+  erreurs) : priorité au jeu d'environ 100 phrases, en partie tiré d'articles réels et annoté sans
+  voir les sorties, pour mesurer la généralisation.
 
 ### EXP-B-002 — Compléments de source, de temps et de lieu hors de l'objet
 - **Date** : 2026-10-07

@@ -18,7 +18,9 @@ un complément de ce type n'est jamais choisi comme objet ; dans les deux modes,
 placé en fin d'objet en est retiré. La complétive d'un verbe de parole reste entière.
 Une source en tête de phrase suivie d'une virgule est retirée du sujet (mode règles).
 
-Sans arbre (tunisien, ou parseur absent) : patron `[groupe nominal] [verbe du lexique] [reste]`.
+Sans arbre (tunisien, ou parseur absent) : patron `[groupe nominal] [verbe du lexique] [reste]`
+(lexique : `resources/verbs.json` et formes générées, voir `preprocessing.verb_lexicon` ; un mot
+précédé d'un déterminant n'est pas pris pour un verbe ; modal + infinitif forment le prédicat).
 Verbe de parole suivi d'un complémenteur (elli, que, إن…) : `reported = True`, complémenteur
 exclu de l'objet. En français, un auxiliaire suivi d'un participe est regroupé avec la négation
 (« n'a pas baissé ») et « été » marque le passif. Verbe arabe en tête de phrase
@@ -38,7 +40,13 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from linguistic_analysis.preprocessing import Sentence, Token, fold
+from linguistic_analysis.preprocessing import (
+    Sentence,
+    Token,
+    fold,
+    is_intransitive_verb,
+    verb_lexicon,
+)
 
 RESOURCES = Path(__file__).resolve().parent / "resources"
 
@@ -48,13 +56,23 @@ IMPLICIT_PREDICATE = "est"
 
 _PUNCT = ("PUNCT", "SYM")
 _NOMINAL = ("NOUN", "PROPN", "ADJ", "NUM", "PRON")
-_NEGATION = {"ne", "n'", "pas", "plus", "jamais", "لا", "لم", "لن", "ما", "ليس"}
+_NEGATION = {"ne", "n'", "pas", "plus", "jamais", "لا", "لم", "لن", "ما", "ليس", "ma"}
 # Auxiliaires français (mode règles) et terminaisons de participe passé.
 _FR_AUX = {
-    "a", "ont", "avait", "avaient", "est", "sont", "était", "étaient", "été", "sera", "seront"
+    "a", "ont", "avait", "avaient", "aura", "auront", "aurait", "auraient",
+    "est", "sont", "était", "étaient", "été", "sera", "seront", "serait", "seraient",
 }
+_INFINITIVE = re.compile(r"(er|ir|re|oir)$")
 _PARTICIPLE = re.compile(r"(é|ée|és|ées|i|is|ie|ies|it|its|u|us|ue|ues|t|ts)$")
 _COMPLEMENTIZERS = {"que", "qu'", "elli", "illi", "eli", "اللي", "الي", "ان", "انه", "بان"}
+# Prépositions de l'arabe standard (limites du sujet quand le verbe est en tête).
+_AR_PREPOSITIONS = {
+    "عن", "حتي", "بين", "ضد", "نحو", "منذ", "خلال", "حول", "عبر", "لدي", "عند", "بعد", "قبل",
+    "امام", "دون", "ضمن", "الي", "علي", "في", "من", "مع", "مقابل", "بسبب", "حسب", "وفق",
+}
+# Préposition collée suivie d'une quantité (« بنسبه 10 », « بقيمه 5 مليون »).
+_AR_ATTACHED_PREPOSITIONS = {"بنسبه", "بقيمه", "بحوالي", "بنحو", "بمعدل", "بمبلغ", "بعدد"}
+_SUBJECT_MAX = 6
 
 
 @dataclass
@@ -410,13 +428,52 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
 # ---------------------------------------------------------------------------
 
 
-def _is_verb(tok: Token) -> bool:
+def _is_verb(tokens: list[Token], k: int) -> bool:
+    """Verbe du lexique, sauf juste après un déterminant (« la baisse », « La visite »)."""
+    tok = tokens[k]
+    if k > 0 and tokens[k - 1].upos == "DET":
+        return False
     return tok.upos == "VERB" or fold(tok.text) in speech_verbs()
+
+
+def _subject_boundary(tokens: list[Token], k: int) -> bool:
+    """Le mot `k` ne peut pas appartenir au sujet : mot-outil, nombre, verbe, ponctuation,
+    préposition, ou début de compléments de temps / lieu / source qui vont jusqu'à la fin."""
+    tok = tokens[k]
+    if tok.upos in (*_PUNCT, "ADP", "SCONJ", "NUM", "VERB", "PART", "CCONJ"):
+        return True
+    key = fold(tok.text)
+    if key in _AR_PREPOSITIONS or key in _COMPLEMENTIZERS or key in _AR_ATTACHED_PREPOSITIONS:
+        return True
+    return bool(decompose_adjuncts(tokens[k:]))
+
+
+def _is_nisba(word: str) -> bool:
+    """Adjectif de relation défini (« الوطنيه », « المركزي »)."""
+    return word.startswith("ال") and word.endswith(("ي", "يه", "يين", "يون", "يات"))
+
+
+def _vso_subject_end(tokens: list[Token], k0: int, intransitive: bool) -> int:
+    """Fin (exclue) du sujet d'un verbe arabe en tête, sujet qui commence au mot `k0`.
+
+    Verbe intransitif (« ارتفع », « تراجع ») : jusqu'à la première limite (préposition, nombre,
+    complément…). Sinon, chaîne d'annexion : un nom sans article est suivi de son complément
+    (« وزير الصحه », « نتائج الامتحانات ») ; après un mot défini, seuls les adjectifs de relation
+    sont ajoutés (« الامتحانات الوطنيه »), pour ne pas absorber un objet défini.
+    """
+    end = k0
+    while end < len(tokens) and end - k0 < _SUBJECT_MAX and not _subject_boundary(tokens, end):
+        if end > k0 and not intransitive:
+            previous, current = fold(tokens[end - 1].text), fold(tokens[end].text)
+            if previous.startswith("ال") and not _is_nisba(current):
+                break
+        end += 1
+    return end
 
 
 def _extract_with_rules(sentence: Sentence) -> SPO | None:
     tokens = sentence.tokens
-    verb_index = next((k for k, t in enumerate(tokens) if _is_verb(t)), None)
+    verb_index = next((k for k in range(len(tokens)) if _is_verb(tokens, k)), None)
     if verb_index is None:
         return None
     start = verb_index
@@ -438,6 +495,15 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
             break
         predicate_tokens.extend(tokens[after : k + 1])
         after = k + 1
+    # Modal + infinitif (« pourraient augmenter », « va construire ») : prédicat commun.
+    modals = verb_lexicon()["modals"]
+    if (
+        fold(predicate_tokens[-1].text) in modals
+        and after < len(tokens)
+        and _INFINITIVE.search(fold(tokens[after].text))
+    ):
+        predicate_tokens.append(tokens[after])
+        after += 1
     passive = any(fold(t.text) == "été" for t in predicate_tokens[:-1])
 
     speech = any(fold(t.text) in speech_verbs() for t in predicate_tokens)
@@ -445,18 +511,19 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
     adjuncts = {"source": source_tokens} if source_tokens else {}
     subject_tokens = tokens[lead:start]
     # Arabe verbe–sujet–objet : verbe en tête (après une éventuelle source) ; sujet = mots
-    # jusqu'au complémenteur pour un verbe de parole (« قال وزير الفلاحة إن … »), sinon le mot
-    # suivant.
+    # jusqu'au complémenteur pour un verbe de parole (« قال وزير الفلاحة إن … »), sinon voir
+    # `_vso_subject_end`.
     if start == lead and re.search(r"[؀-ۿ]", tokens[verb_index].text):
         window = range(after, min(after + 4, len(tokens)))
         comp = next((k for k in window if fold(tokens[k].text) in _COMPLEMENTIZERS), None)
-        nxt = tokens[after] if after < len(tokens) else None
         if speech and comp is not None and comp > after:
             subject_tokens = tokens[after:comp]
             after = comp
-        elif nxt is not None and nxt.upos not in (*_PUNCT, "ADP", "SCONJ", "NUM"):
-            subject_tokens = [nxt]
-            after += 1
+        else:
+            intransitive = is_intransitive_verb(tokens[verb_index].text)
+            end = _vso_subject_end(tokens, after, intransitive)
+            subject_tokens = tokens[after:end]
+            after = end
     # Discours rapporté : verbe de parole suivi d'un complémenteur (exclu de l'objet).
     reported = speech and after < len(tokens) and fold(tokens[after].text) in _COMPLEMENTIZERS
     if reported:

@@ -74,7 +74,8 @@ python -m linguistic_analysis.evaluate --errors           # avec spaCy / Stanza
 ```
 
 Résultats dans `evaluation/results/` ; analyse d'erreurs : `docs/lot-b_analyse_erreurs_bronze.md` ;
-expériences `EXP-B-001` (Bronze) et `EXP-B-002` (compléments hors objet) dans `experiments.md`.
+expériences `EXP-B-001` (Bronze), `EXP-B-002` (compléments hors objet) et `EXP-B-003` (lexique
+verbal du mode règles) dans `experiments.md`.
 
 ## Installation
 
@@ -108,7 +109,7 @@ que `requirements-dev.txt`.
 | `coreference.py` | Résolution de coréférence par règles |
 | `io_contract.py` | (Dé)sérialisation JSON du contrat d'entrée/sortie, ligne de commande |
 | `evaluate.py` | Évaluation sur le jeu annoté, export des résultats et des erreurs |
-| `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt`, `adjuncts.json` (marqueurs de source, noms de temps, lieux) |
+| `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt`, `adjuncts.json` (marqueurs de source, noms de temps, lieux), `verbs.json` (lexique verbal du mode règles) |
 
 Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/linguistic_analysis/`.
 
@@ -118,6 +119,16 @@ Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/lingu
 - **AR (MSA)** : Stanza, entraîné sur l'Universal Dependencies arabe (PADT), avec un étiquetage UD
   cohérent avec celui du français, ce qui permet de partager les règles SPO.
 - **Tunisien** : aucun parseur mature. Règles lexicales et positionnelles, en lettres arabes et en arabizi.
+- **Verbes sans parseur** (`resources/verbs.json`, `preprocessing.verb_lexicon`) : formes générées
+  à partir de lemmes français en -er et de verbes de l'arabe standard au passé (passé, présent,
+  futur ; و / ف collés retirés), plus des formes listées (irrégulières, auxiliaires, modaux,
+  tunisien). Le ش / ch final de la négation ما…ش est retiré à la recherche. Un mot précédé d'un
+  déterminant n'est pas un verbe (« la baisse »). Modal + infinitif forment le prédicat.
+  Verbe arabe en tête : sujet jusqu'à une préposition, un nombre ou un complément si le verbe
+  est intransitif (« ارتفع », « تراجع ») ; sinon chaîne d'annexion (« وزير الصحه ») et adjectifs
+  de relation (« الوطنيه »). Limites : verbes absents de la liste, noms homographes d'un verbe
+  (« سجل », « تراجع » en tête de phrase), complément prépositionnel d'un participe dans le sujet
+  (« الوافدين على تونس »).
 - **Chargement paresseux** : aucun import de spaCy/Stanza à l'import du module ; chaque pipeline est
   chargé une fois (`functools.lru_cache`) au premier appel.
 - **Coréférence** : règles uniquement, sans bibliothèque externe. Seul le pronom sujet de la

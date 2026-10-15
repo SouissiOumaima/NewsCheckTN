@@ -501,7 +501,7 @@ def test_spo_rules_speech_verb_without_complementizer_is_not_reported():
 
 
 def test_spo_rules_no_known_verb_returns_none():
-    assert spo.extract_spo(_sentence("ارتفعت نسبة التضخم في تونس.")) is None
+    assert spo.extract_spo(_sentence("تفاقمت أزمة المياه في الجنوب.")) is None
 
 
 def test_claims_now_carry_spo():
@@ -1033,6 +1033,59 @@ def test_spo_parsers_adjuncts():
     assert (ar.time, ar.location) == ("يوم الاثنين", "في صفاقس")
     duration = spo.extract_spo(_sentence("Le ministre est resté 100 jours en poste."))
     assert duration.obj == "100 jours" and duration.time is None
+
+
+# --- Silver : lexique verbal du mode règles et sujet verbe-sujet-objet ----------------------
+
+VERB_RULES_CASES = [
+    # (texte, sujet, prédicat, objet) — mode règles, phrases hors du jeu d'évaluation
+    # Français : formes conjuguées générées, auxiliaire au conditionnel, modal + infinitif
+    ("La production de phosphate progresse depuis mars.", "La production de phosphate",
+     "progresse", None),
+    ("Les autorités auraient arrêté trois suspects.", "Les autorités", "auraient arrêté",
+     "trois suspects"),
+    ("Le déficit commercial pourrait dépasser 20 milliards de dinars.", "Le déficit commercial",
+     "pourrait dépasser", "20 milliards de dinars"),
+    ("Le gouvernement va construire un nouvel hôpital.", "Le gouvernement", "va construire",
+     "un nouvel hôpital"),
+    # Arabe standard, verbe en tête : intransitif (jusqu'à la limite) ou chaîne d'annexion
+    ("انخفض سعر صرف الدينار مقابل الأورو.", "سعر صرف الدينار", "انخفض", "مقابل الاورو"),
+    ("تراجعت صادرات زيت الزيتون بنسبة 10 بالمئة.", "صادرات زيت الزيتون", "تراجعت",
+     "بنسبه 10 بالمئه"),
+    ("سجلت الشركة الوطنية أرباحا قياسية.", "الشركه الوطنيه", "سجلت", "ارباحا قياسيه"),
+    ("افتتحت الوزارة مستشفى جديدا.", "الوزاره", "افتتحت", "مستشفي جديدا"),
+    ("قرر البنك المركزي رفع نسبة الفائدة.", "البنك المركزي", "قرر", "رفع نسبه الفائده"),
+    # Tunisien : flexions et négation ما…ش
+    ("الحكومة ما زادتش في الشهرية.", "الحكومه", "ما زادتش", "في الشهريه"),
+    ("El as3ar ma hbatetch.", "El as3ar", "ma hbatetch", None),
+    ("Les loyers tal3ou barcha.", "Les loyers", "tal3ou", "barcha"),
+]
+
+
+@pytest.mark.parametrize(("text", "subject", "predicate", "obj"), VERB_RULES_CASES)
+def test_spo_rules_verb_lexicon(text, subject, predicate, obj):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.subject, triple.predicate, triple.obj) == (subject, predicate, obj)
+
+
+def test_rules_verb_forms_generated():
+    def upos(word):
+        return _sentence(f"{word} x y z.").tokens[0].upos
+
+    for word in ("progresse", "baissaient", "lança", "يرتفع", "سترتفع", "وارتفعت", "هبطتش"):
+        assert upos(word) == "VERB", word
+    assert upos("tunis") == "X" and upos("بين") != "VERB"
+
+
+def test_spo_rules_noun_after_determiner_is_not_a_verb():
+    triple = spo.extract_spo(_sentence("La visite du ministre a duré deux heures."))
+    assert (triple.subject, triple.predicate) == ("La visite du ministre", "a duré")
+
+
+def test_coreference_rules_arabic_annexation_antecedent():
+    text = "استقبل وزير الصحة وفدا أجنبيا. وهو أكد أهمية التعاون."
+    claims = extract_claims_detailed(normalize(text))
+    assert claims[-1].resolution_log == ["وهو → وزير الصحه"]
 
 
 # --- Script de démonstration ---------------------------------------------------------------
