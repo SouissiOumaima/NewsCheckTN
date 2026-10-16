@@ -165,60 +165,58 @@ def save_interim_json(article: dict, filename: str) -> Path:
 
     return path
 # ============================================================
-# TEST MANUEL SUR UN ARTICLE
+
 # ============================================================
+# TEST MANUEL SUR UN ARTICLE ARABE
+# ============================================================
+
 if __name__ == "__main__":
 
-    # URL de l'article Tunifact utilisé pour notre premier test.
+    # Deuxième article Tunifact : article en arabe
     url = (
-        "https://tunifact.org/articles/698/"
-        "Est-il-vrai-que-39000-ing%C3%A9nieurs-et-3000-m%C3%A9decins-"
-        "ont-quitt%C3%A9-la-Tunisie-entre-2015-et-2020---/"
+        "https://tunifact.org/articles/937/"
+        "%D9%87%D9%84-%D8%AA%D8%B3%D8%A8%D8%A8%D8%AA-"
+        "%D9%85%D9%88%D8%AC%D8%A9-%D8%A7%D9%84%D8%AD%D8%B1-"
+        "%D9%81%D9%8A-%D8%A7%D9%86%D9%82%D8%B7%D8%A7%D8%B9-"
+        "%D8%A7%D9%84%D8%AA%D9%8A%D8%A7%D8%B1-"
+        "%D8%A7%D9%84%D9%83%D9%87%D8%B1%D8%A8%D8%A7%D8%A6%D9%8A-"
+        "%D8%B9%D9%86-13-%D8%A3%D9%84%D9%81-"
+        "%D9%85%D9%86%D8%B2%D9%84-%D9%81%D9%8A-"
+        "%D9%81%D8%B1%D9%86%D8%B3%D8%A7%D8%9F-/"
     )
 
     print("1. Téléchargement...")
-
     html = fetch_page(url)
 
     print("2. Extraction...")
-
     article = parse_article(html, url)
+
+    # Langue de cet article, à vérifier dans le texte extrait
+    article["lang"] = "ar"
 
     print("\nSOURCE :", article["source"])
     print("TITRE  :", article["title"])
-    print("URL    :", article["url"])
     print("DOC ID :", article["doc_id"])
     print("LANG   :", article["lang"])
     print("DATE   :", article["date"])
-    # Afficher le début du texte.
-    print("\n--- DÉBUT DU TEXTE ---\n")
-    print(article["text"][:1500])
 
-    # Afficher la fin du texte.
-    # Cela permet de vérifier s'il y a du contenu parasite.
-    print("\n--- FIN DU TEXTE ---\n")
-    print(article["text"][-1000:])
+    print("\n--- TEXTE EXTRAIT ---\n")
+    print(article["text"])
 
-    # Afficher quelques statistiques sur l'extraction.
     print("\n--- STATISTIQUES ---")
     print("Nombre de caractères :", len(article["text"]))
     print("Nombre de paragraphes :", len(article["text"].splitlines()))
 
-    # Sauvegarder la page HTML brute.
-    print("\n3. Sauvegarde du HTML brut...")
-
-    saved_path = save_raw_html(
+    # Sauvegarde HTML : nom différent de l'article français
+    html_path = save_raw_html(
         html,
-        "tunifact_0001.html",
+        "tunifact_0937.html",
     )
+    print("HTML sauvegardé :", html_path)
 
-    print("Fichier sauvegardé :", saved_path)
-    
-    print("\n4. Sauvegarde des données extraites...")
-
-json_path = save_interim_json(
-    article,
-    "tunifact_698.json",
-)
-
-print("JSON sauvegardé :", json_path)
+    # Sauvegarde JSON : nom différent de l'article français
+    json_path = save_interim_json(
+        article,
+        "tunifact_937.json",
+    )
+    print("JSON sauvegardé :", json_path)
