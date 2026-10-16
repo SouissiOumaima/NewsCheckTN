@@ -43,9 +43,65 @@ Proportionnelle à `eval_30` (10 / 10 / 5 / 5 / 4) :
 - aucune data card remplie, aucun fichier dans `data/processed/` ;
 - **aucune liste de sources en arabe ou en tunisien** (fact-checkers ou presse) n'est encore disponible.
 
-Conséquence : les sources des phrases réelles en arabe et en tunisien **sont à fixer avec le
-Lot A1** (point de réunion). On n'en improvise pas ici. En attendant, seules les phrases
-françaises peuvent s'appuyer sur la source déjà retenue par le Lot A1.
+Inventaire des sources publiques (relevé le 2026-10-16 sur les pages de présentation, fiches de
+jeux de données et conditions d'utilisation ; à valider avec le Lot A1 et l'encadrement) :
+
+| Source | Langue / écriture | Contenu | Licence / conditions | Taille | Nature |
+|--------|-------------------|---------|----------------------|--------|--------|
+| Tunifact (SNJT) | ar, fr | vérifications avec verdict | « All rights reserved », aucune réutilisation prévue | ~1 400 vérifications (2021-2023) | faits |
+| BN Check (Business News) | fr | vérifications | « All Rights Reserved » | non trouvée | faits |
+| Misbar | ar | vérifications, articles d'opinion | extraits limités autorisés pour la recherche non commerciale avec la source ; articles d'opinion exclus | non trouvée | faits |
+| AFP Factuel (fr, ar) | fr, ar | vérifications | conditions générales de l'AFP : reproduction interdite sans accord | non trouvée | faits |
+| AraFacts (gitlab.com/bigirqu/AraFacts) | ar | affirmations de Misbar, Fatabyyano, AFP Factuel (ar), Verify-sy, Maharat-news | CC BY-NC 4.0, citation de l'article demandée | 18 598 affirmations (2016-2024), dont 5 255 textuelles | faits |
+| X-FACT (github.com/utahnlp/x-fact) | ar, fr (+ 23 langues) | affirmations vérifiées | MIT (licence du dépôt) | ar : 2 090 (toutes de Misbar) ; fr : 198 (toutes de fr.africacheck.org) | faits |
+| MultiClaim v2 (Zenodo) | 39 langues dont ar, fr | affirmations + publications | accès restreint, recherche, pas de redistribution | 435 000 affirmations | faits |
+| CheckThat! 2021 | ar (+ 4 langues) | tweets annotés (à vérifier ou non) | « free for general research use » | non vérifiée | mélangé |
+| Tunisian Arabic Corpus (tunisiya.org) | tn, lettres arabes | presse, blogs, SMS / Facebook, télévision, fiction, oral | « freely available for research and educational purposes » ; consultation en ligne | 1 189 766 mots | mélangé |
+| CTAB (Zenodo) | tn, arabizi | messages de pages Facebook publiques (2017-2021) | CC BY 4.0 | ~200 Ko | surtout opinions |
+| TArC | tn, arabizi | corpus annoté | contradictoire (CC BY-SA ou CC BY-NC-SA) | 43 327 mots | non vérifié |
+| TUNIZI, TSAC | tn, arabizi / mixte | commentaires YouTube / Facebook (sentiment) | aucune licence | 3 000 / ~17 000 commentaires | opinions |
+| Wikipédia FR / AR | fr, ar | articles encyclopédiques | CC BY-SA 4.0 | très grande | faits, sans dialecte |
+
+Limites :
+- les fact-checkers tunisiens (Tunifact, BN Check) sont sous droits réservés : seules des
+  citations courtes avec leur source sont envisageables, sous réserve de l'accord de l'équipe ;
+- les affirmations factuelles en tunisien, surtout en arabizi, sont quasi absentes des sources
+  ouvertes : les corpus tunisiens sont surtout des commentaires (opinions). La plupart des
+  affirmations en tunisien devront être rédigées pour le jeu ;
+- TUNIZI et TSAC (sans licence) ne sont pas utilisés sans accord de leurs auteurs.
+- **Fuite par le style de la source** : quand une catégorie de phrases vient d'une seule source,
+  le style de cette source peut trahir le label sans que l'annotateur, ou le système, ait besoin
+  de comprendre la phrase. Exemples : intitulés courts de fact-checking (affirmations candidates),
+  tweets (non-affirmations arabes), langue orale et adresses parlementaires (« Monsieur le
+  ministre ») des débats. L'accord inter-annotateurs et les scores peuvent alors être surestimés.
+  Parades : varier les sources dans chaque catégorie et dans chaque langue, rapporter les scores
+  par source quand c'est possible, et le signaler comme limite dans `experiments.md`.
+
+Non vérifié : licence et lieu de diffusion du corpus TArC ; site, langue et conditions de Tafnied ;
+langue arabe de BN Check et nombre de vérifications ; conditions propres à AFP Factuel ; licence
+propre aux données de X-FACT (seule la licence MIT du dépôt est indiquée) ; couverture de la
+Tunisie par Misbar, AraFacts, X-FACT et MultiClaim ; conditions X/Twitter pour CheckThat! ;
+part d'arabizi dans TSAC ; conditions de réutilisation de l'INS (dataportal.ins.tn).
+
+Réservoir de candidats (2026-10-16) : seuls AraFacts et X-FACT (arabe et français) ont été
+téléchargés, **hors du dépôt** (les données brutes ne sont jamais commitées). Le script
+`notebooks/lot_b_linguistic/eval100/sample_pool.py` (chemins en arguments, voir le README du
+dossier ; aucune donnée versionnée) en tire un fichier de travail hors du dépôt
+qui ne contient que `id`, `text` et `origin` (`source`, `url`, `date`, `licence`), sans aucun
+label (ni verdict des fact-checkers) ni sortie du système :
+- graine fixe 20261016 ; affirmations textuelles seulement ; 4 à 60 mots, sans URL, sans doublon ;
+- même cible par langue (60), trois tranches de longueur égales (4-12, 13-24, 25-60 mots), tirage
+  alterné entre les tranches, plafond de 40 % par site source, jamais relâché ;
+- résultat : 60 phrases arabes (5 sites, Misbar plafonné) et **24 françaises seulement** (une
+  seule source française, fr.africacheck.org, centrée sur l'Afrique subsaharienne) ;
+- X-FACT ne fournit pas l'URL de l'article de vérification : `origin.url` est vide pour ces
+  phrases (source et date renseignées).
+
+Le réservoir propose des candidats : l'annotateur choisit les phrases, vérifie leur langue et
+leur écriture réelles (AraFacts contient aussi des dialectes non tunisiens), ajoute
+`origin.type = "fact-check"`, puis annote selon la section 4, toujours sans exécuter le système.
+Les sources des phrases réelles en tunisien, et d'autres sources françaises (Tunifact, BN Check),
+**restent à fixer avec le Lot A1** (point de réunion).
 
 Règles pour toute phrase réelle :
 - une phrase isolée (citation courte), jamais un article entier ; URL et date dans `origin` ;
@@ -132,6 +188,13 @@ ou `/check`, ni notebook qui les appelle. Ne pas consulter non plus les fichiers
    `python -m linguistic_analysis.agreement annotation_a.jsonl annotation_b.jsonl`, qui liste aussi
    les désaccords.
    - Seuil : kappa ≥ 0.7 sur `is_claim`. En dessous, clarifier le guide puis réviser l'annotation.
+   - Lot de double annotation : mêmes proportions d'affirmations et de non-affirmations candidates
+     dans chaque langue, pour que la langue ne trahisse pas le label. Le style de la source peut
+     encore le trahir (section 2, « Fuite par le style de la source »). Des phrases tirées au
+     hasard d'une source non étiquetée (ex. débats parlementaires) n'ont pas de label connu
+     d'avance : la proportion réelle d'affirmations n'est connue qu'après l'annotation. Le lot
+     est construit par `notebooks/lot_b_linguistic/eval100/build_batch.py` (CSV pour
+     l'annotateur ; la correspondance id → origine reste un fichier de travail non transmis).
    - Les désaccords sont tranchés à deux et ajoutés aux « Cas discutés » du guide.
 2. **Contrôles automatiques sur le fichier seul** (sans exécuter le système) :
    `python -m linguistic_analysis.evaluate --eval-set <fichier> --validate`. Vérifie le format
