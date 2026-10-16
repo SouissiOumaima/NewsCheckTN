@@ -183,10 +183,15 @@ ou `/check`, ni notebook qui les appelle. Ne pas consulter non plus les fichiers
 ### 4.4 Relecture croisée et verrouillage
 1. **Double annotation** : une deuxième personne annote **sans voir** la première annotation au
    moins 30 phrases (6 par groupe, tirées au hasard). Mesures : accord sur `is_claim` et sur
-   `modality` (exactitude et kappa de Cohen), sur `subject` / `predicate` / `obj` (correspondance
+   `modality` (pourcentage d'accord brut et kappa de Cohen, globalement et par langue, avec les
+   effectifs par classe de chaque annotateur), sur `subject` / `predicate` / `obj` (correspondance
    exacte, formes repliées), calculées sans exécuter le système par
    `python -m linguistic_analysis.agreement annotation_a.jsonl annotation_b.jsonl`, qui liste aussi
-   les désaccords.
+   les désaccords. Pour les CSV du lot (`label` AFFIRMATION → `is_claim` vrai, OPINION et AUTRE →
+   faux) : `python -m linguistic_analysis.agreement a.csv b.csv --langs <correspondance.jsonl>`
+   (langue de chaque phrase) ; l'accord sur le label à 3 classes est alors aussi calculé.
+   - Une classe rare chez un annotateur (moins de 20 % ou moins de 5 phrases) rend le kappa
+     instable : le script le signale ; rapporter alors aussi le pourcentage d'accord brut.
    - Seuil : kappa ≥ 0.7 sur `is_claim`. En dessous, clarifier le guide puis réviser l'annotation.
    - Lot de double annotation : mêmes proportions d'affirmations et de non-affirmations candidates
      dans chaque langue, pour que la langue ne trahisse pas le label. Le style de la source peut

@@ -80,6 +80,7 @@ python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_anal
 python -m linguistic_analysis.evaluate --eval-set tests/fixtures/linguistic_analysis/eval_100.jsonl --check-lock --compare
 # accord inter-annotateurs (double annotation)
 python -m linguistic_analysis.agreement annotation_a.jsonl annotation_b.jsonl
+python -m linguistic_analysis.agreement a.csv b.csv --langs correspondance.jsonl  # CSV du lot
 ```
 
 - Le fichier est toujours validé avant l'évaluation (`validate_eval_set` : champs obligatoires,
@@ -130,7 +131,7 @@ que `requirements-dev.txt`.
 | `coreference.py` | Résolution de coréférence par règles |
 | `io_contract.py` | (Dé)sérialisation JSON du contrat d'entrée/sortie, ligne de commande |
 | `evaluate.py` | Évaluation sur un jeu annoté : validation, verrou, scores ventilés, bootstrap, comparaison des modes, export |
-| `agreement.py` | Accord inter-annotateurs (kappa de Cohen, désaccords) |
+| `agreement.py` | Accord inter-annotateurs (JSONL ou CSV du lot : accord brut et kappa de Cohen, globalement et par langue, effectifs par classe, désaccords) |
 | `resources/` | Lexiques : `tn_lexicon.json` (étiquetage par règles), `opinion_<langue>.txt`, `modality_<langue>.json`, `speech_verbs.txt`, `adjuncts.json` (marqueurs de source, noms de temps, lieux), `verbs.json` (lexique verbal du mode règles) |
 
 Tests : `tests/test_linguistic_analysis.py`, données dans `tests/fixtures/linguistic_analysis/`.

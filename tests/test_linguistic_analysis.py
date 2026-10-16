@@ -1,5 +1,6 @@
 """Tests Lot B."""
 
+import csv
 import hashlib
 import json
 import random
@@ -1370,6 +1371,110 @@ def test_agreement_lists_disagreements(tmp_path, capsys):
     agreement.main(files)
     out = capsys.readouterr().out
     assert "Phrases comparées : 2" in out and "fr-002" in out
+
+
+# --- Accord inter-annotateurs : CSV du lot (labels A1), ventilation par langue -------------
+
+
+def _write_csv(path, rows, delimiter=";"):
+    """CSV d'annotation synthétique (id, texte, contexte, label, modalite)."""
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f, delimiter=delimiter)
+        writer.writerow(["id", "texte", "contexte", "label", "modalite"])
+        writer.writerows(rows)
+    return path
+
+
+def test_convert_label_from_a1():
+    assert agreement.convert_label("AFFIRMATION") is True
+    assert agreement.convert_label(" opinion ") is False
+    assert agreement.convert_label("Autre") is False
+    with pytest.raises(ValueError):
+        agreement.convert_label("FAIT")
+
+
+def test_read_csv_annotation_formats_and_problems(tmp_path):
+    rows = [["L01", "phrase un", "", "AFFIRMATION", "rapporte"],  # modalité sans accent
+            ["L02", "phrase deux", "", "OPINION", "opinion"]]
+    for delimiter in (";", ","):
+        items, problems = agreement.read_csv_annotation(
+            _write_csv(tmp_path / f"a{delimiter == ','}.csv", rows, delimiter))
+        assert problems == []
+        assert [(i["id"], i["gold"]["is_claim"], i["gold"]["modality"]) for i in items] == [
+            ("L01", True, "rapporté"), ("L02", False, "opinion")]
+    bad = _write_csv(tmp_path / "bad.csv", [["L01", "x", "", "FAIT", "assertif"],
+                                            ["L02", "y", "", "AUTRE", "certain"],
+                                            ["L02", "z", "", "AUTRE", "assertif"]])
+    problems = agreement.read_csv_annotation(bad)[1]
+    assert any("FAIT" in p for p in problems) and any("certain" in p for p in problems)
+    assert any("double" in p for p in problems)
+
+
+def _textbook_rows(prefix):
+    """Cas d'école : 20 oui/oui, 5 oui/non, 10 non/oui, 15 non/non → accord 70 %, kappa 0.4."""
+    pairs = [("AFFIRMATION", "AFFIRMATION")] * 20 + [("AFFIRMATION", "OPINION")] * 5
+    pairs += [("OPINION", "AFFIRMATION")] * 10 + [("OPINION", "OPINION")] * 15
+    a = [[f"{prefix}{k:02d}", "t", "", la, "assertif"] for k, (la, _) in enumerate(pairs)]
+    b = [[f"{prefix}{k:02d}", "t", "", lb, "assertif"] for k, (_, lb) in enumerate(pairs)]
+    return a, b
+
+
+def test_agreement_by_language_known_values(tmp_path):
+    fr_a, fr_b = _textbook_rows("F")
+    ar = [[f"A{k:02d}", "t", "", "AFFIRMATION" if k % 2 else "AUTRE", "assertif"]
+          for k in range(10)]
+    a = agreement.read_csv_annotation(_write_csv(tmp_path / "a.csv", fr_a + ar))[0]
+    b = agreement.read_csv_annotation(_write_csv(tmp_path / "b.csv", fr_b + ar))[0]
+    langs = {r[0]: "fr" for r in fr_a} | {r[0]: "ar" for r in ar}
+    report = agreement.agreement(a, b, langs)
+    fr, ar_stats = report["by_lang"]["fr"]["is_claim"], report["by_lang"]["ar"]["is_claim"]
+    assert (fr["n"], fr["agreement_pct"], fr["kappa"]) == (50, 70.0, 0.4)
+    assert (ar_stats["n"], ar_stats["agreement_pct"], ar_stats["kappa"]) == (10, 100.0, 1.0)
+    assert report["is_claim"]["n"] == 60 and report["fields"] == ["is_claim", "modality", "label"]
+    assert fr["class_counts"] == {"A": {"False": 25, "True": 25}, "B": {"False": 20, "True": 30}}
+    assert report["by_lang"]["ar"]["label"]["class_counts"]["A"] == {"AFFIRMATION": 5, "AUTRE": 5}
+
+
+def test_agreement_flags_class_imbalance(tmp_path):
+    rows = [[f"L{k:02d}", "t", "", "OPINION" if k < 2 else "AFFIRMATION", "assertif"]
+            for k in range(30)]
+    items = agreement.read_csv_annotation(_write_csv(tmp_path / "a.csv", rows))[0]
+    warnings = agreement.agreement(items, items)["warnings"]
+    assert any("global is_claim" in w and "rare" in w for w in warnings)
+    single = [[f"L{k:02d}", "t", "", "AFFIRMATION", "assertif"] for k in range(10)]
+    items = agreement.read_csv_annotation(_write_csv(tmp_path / "s.csv", single))[0]
+    warnings = agreement.agreement(items, items)["warnings"]
+    assert any("is_claim" in w and "qu'une classe" in w for w in warnings)
+    # Modalité à une seule classe : kappa de 1.0 dégénéré, signalé lui aussi
+    assert any("modality" in w and "qu'une classe" in w for w in warnings)
+
+
+def test_agreement_jsonl_against_csv_takes_language_from_jsonl(tmp_path):
+    a = [_item("fr-001"), _item("fr-002", lang="ar", script="arabic")]
+    b = agreement.read_csv_annotation(_write_csv(tmp_path / "b.csv", [
+        ["fr-001", "x", "", "AFFIRMATION", "assertif"],
+        ["fr-002", "y", "", "OPINION", "opinion"],
+    ]))[0]
+    report = agreement.agreement(a, b)
+    assert set(report["by_lang"]) == {"fr", "ar"} and report["fields"] == ["is_claim", "modality"]
+    assert report["spo_n"] == 0  # pas de triplet dans le CSV
+    assert {(d["id"], d["field"]) for d in report["disagreements"]} == {
+        ("fr-002", "is_claim"), ("fr-002", "modality")}
+
+
+def test_agreement_cli_with_csv_and_langs(tmp_path, capsys):
+    fr_a, fr_b = _textbook_rows("F")
+    a = _write_csv(tmp_path / "a.csv", fr_a)
+    b = _write_csv(tmp_path / "b.csv", fr_b)
+    langs = tmp_path / "corr.jsonl"
+    langs.write_text("".join(json.dumps({"id": r[0], "lang_source": "fr"}) + "\n" for r in fr_a),
+                     encoding="utf-8")
+    agreement.main([str(a), str(b), "--langs", str(langs)])
+    out = capsys.readouterr().out
+    assert "Langue fr (50 phrases)" in out and "accord  70.0 %" in out and "kappa  0.40" in out
+    with pytest.raises(SystemExit) as stop:
+        agreement.main([str(a), str(_write_csv(tmp_path / "x.csv", [["L1", "t", "", "?", "?"]]))])
+    assert stop.value.code == 2
 
 
 # --- Script de démonstration ---------------------------------------------------------------
