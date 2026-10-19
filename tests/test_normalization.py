@@ -6,6 +6,12 @@ import re
 import pytest
 
 from common.schemas import Document, Lang
+from normalization.annotation import (
+    candidates,
+    cohen_kappa,
+    read_annotations,
+    write_annotations,
+)
 from normalization.langid import (
     _ARABIZI_MODEL_FILE,
     arabizi_score,
@@ -356,3 +362,44 @@ def test_arabic_presentation_forms_are_arabic_script():
 @pytest.mark.xfail(reason="phrase française avec un seul mot tunisien : modèle insuffisant")
 def test_mostly_french_sentence_with_one_tunisian_word_is_tn():
     assert detect_language("Honnêtement la décision hedhi n'est pas normale") == Lang.TN
+
+
+# ---------------------------------------------------------------------------
+# Échantillons annotés (normalization/annotation.py)
+# ---------------------------------------------------------------------------
+
+
+def test_cohen_kappa_on_a_hand_computed_example():
+    # Observé : 3 lignes sur 4 identiques = 0.75.
+    # Hasard : a (0.50 x 0.25) + b (0.50 x 0.75) = 0.50.  Kappa = (0.75 - 0.50) / (1 - 0.50) = 0.50.
+    observed, expected, kappa = cohen_kappa(["a", "a", "b", "b"], ["a", "b", "b", "b"])
+    assert (observed, expected, kappa) == (0.75, 0.5, 0.5)
+
+
+def test_cohen_kappa_is_one_for_perfect_agreement():
+    assert cohen_kappa(["t", "a", "x"], ["t", "a", "x"])[2] == 1.0
+
+
+def test_cohen_kappa_refuses_lists_of_different_length():
+    with pytest.raises(ValueError):
+        cohen_kappa(["t"], ["t", "a"])
+
+
+def test_annotation_files_round_trip_and_are_never_overwritten(tmp_path):
+    path = tmp_path / "sample.tsv"
+    rows = [("t", "barcha mahlek"), ("?", "texte à annoter\tavec tabulation")]
+    write_annotations(path, rows)
+    assert read_annotations(path) == rows  # seule la PREMIÈRE tabulation sépare l'étiquette
+    with pytest.raises(SystemExit):
+        write_annotations(path, rows)  # des annotations seraient perdues : on refuse
+
+
+def test_sample_candidates_follow_the_rules():
+    texts = [
+        "برشا ناس جاو اليوم",  # lettres arabes, 4 mots : candidat "arabic"
+        "برشا ناس",  # trop court (moins de 3 mots)
+        "mahlek ya zina barcha",  # lettres latines sans chiffre : candidat "latin"
+        "3lech ya sahbi kifech",  # chiffre d'arabizi : déjà reconnu par les règles, pas "latin"
+    ]
+    assert candidates(texts, "arabic") == ["برشا ناس جاو اليوم"]
+    assert candidates(texts, "latin") == ["mahlek ya zina barcha"]
