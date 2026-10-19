@@ -31,8 +31,54 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-002 | 2026-10-07 | A2 | Tunisien en lettres arabes | règle : lexique de 78 marques + négation | langue TN sur eval_30 ; rappel TN sur échantillon annoté | 8/14 → 12/14 ; 41/78, standard 15/15 | règle retenue comme référence ; suite : classifieur |
 | EXP-A2-003 | 2026-10-07 | A2 | Arabizi sans chiffre (français ou tunisien ?) | régression logistique sur n-grammes de caractères 1-4 ; seuil 5.0 | fausses alertes sur français de test ; rappel TN sur échantillon annoté | 0/416 ; 0/67 → 61/67 (FR 12/16) | modèle retenu ; suite : biais de sujet « tunisiens », règle du seuil |
 | EXP-A2-004 | 2026-10-19 | A2 | Reproductibilité : échantillons annotés et lexique | `normalization.annotation`, `normalization.lexicon` | tirage refait ; lexique retrouvé ; fausses alertes sur la presse | 100/100 et 100/100 ; 55/78 (+ 23 variantes) ; 0/1 589 | tout est refaisable ; suite : kappa, presse d'une autre source |
+| EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 
 ## Entrées
+
+### EXP-A2-005 — Biais de sujet : noms de lieux tunisiens rendus neutres
+- **Date** : 2026-10-19
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : mesurer, puis corriger, le biais vu dans EXP-A2-003 (« les quatorze
+  meilleurs clubs tunisiens » : score 3.33). Hypothèse : un nom de lieu s'écrit pareil dans une
+  phrase française et dans un commentaire en arabizi ; l'ignorer supprime les bascules sans perte
+  notable d'arabizi.
+- **Données** :
+  - (a) test de bascule : les 2 912 textes français `dev` d'EXP-A2-003 (phrases entières et leurs
+    5 premiers mots, sans doublon), auxquels on ajoute un seul groupe de mots parmi 7 : « en Tunisie »,
+    « selon les Tunisiens », « à Tunis », « à Sfax », « à Kairouan », « selon Kaïs Saïed », « en Tunisie
+    et à Sfax » (20 384 variantes). Seul l'ajout change : toute bascule lui est due ;
+  - (b) français `dev` (2 912) et `test` (416) ; (c) les 7 363 textes arabizi mis de côté
+    d'EXP-A2-003 ; (d) l'échantillon annoté en lettres latines (67 `t`, 16 `f`).
+- **Méthode / configuration** : 8 formes ajoutées à `resources/neutral_latin_words.txt` : `tunisie`,
+  `tunisien`, `tunisiens`, `tunisiene`, `tunisienes`, `tunis`, `sfax`, `kairouan` (lettres doublées
+  écrites une fois, comme le reste de la liste). Modèle inchangé, entraîné avec l'ancienne liste de
+  18 mots : les mots neutres sont retirés au moment de la lecture. Ordre suivi : essai de la nouvelle
+  liste en mémoire, comparé à l'ancienne sur les mêmes jeux ; lecture un par un des textes arabizi
+  perdus, avec la décision du pipeline complet (`normalize(...).script`) ; puis seulement, modification
+  du fichier.
+- **Code** : commit `d7d31b1` : `normalization/resources/neutral_latin_words.txt` ; 3 tests ajoutés
+  à `tests/test_normalization.py`.
+- **Résultats** :
+  - (a) bascules : avant, 22 sur 20 384 (par ajout : 4, 1, 8, 2, 2, 0, 5), dont 19 sur des textes de
+    5 mots ou moins ; après, 0 ;
+  - (b) français : 0/2 912 et 0/416 avant comme après ;
+  - (c) arabizi retrouvé par le modèle seul : 6 715 → 6 701. Des 14 textes perdus, 1 est rattrapé par
+    la règle à chiffres du pipeline. Lecture des 13 autres : 8 sont écrits en français (« vive la
+    tunisie libre », « voyage en tunisie c bien »…), 1 n'a aucun mot de langue (un nom de personne et
+    un nom de pays), 4 sont vraiment tunisiens, tous de 2 à 4 mots (« sfax maaak »…) ;
+  - (d) échantillon annoté : inchangé, t 61/67, f 4/16 ;
+  - tests : 415 réussis, aucun échec ; `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient. La « perte » est surtout un gain : 8 des 13 textes étaient du
+  français rangé avec l'arabizi dans les corpus. Conséquence : le score « arabizi retrouvé »
+  d'EXP-A2-003 (0.91) est faussé par ces erreurs d'étiquette, et une partie de ses « erreurs » sont des
+  réponses justes. Le vrai coût est de 4 commentaires tunisiens très courts. Limites : le test de
+  bascule est artificiel (lieux ajoutés en fin de phrase) ; la liste est fermée : d'autres lieux
+  (Sousse, Gabès…) et les noms de personnes ne sont pas couverts ; « selon Kaïs Saïed » ne fait pas
+  basculer ce modèle, mais un modèle d'essai plus permissif (seuil 2.0) y était sensible ; le modèle
+  n'a pas été réentraîné avec la nouvelle liste.
+- **Décision / suite** : liste élargie retenue. Suite : réentraîner avec la nouvelle liste et
+  remesurer ; retirer le français des corpus arabizi, puis mesurer le rappel sur de l'arabizi vérifié
+  à la main ; traiter les textes très courts.
 
 ### EXP-A2-004 — Reproductibilité : échantillons annotés et lexique des marques
 - **Date** : 2026-10-19
