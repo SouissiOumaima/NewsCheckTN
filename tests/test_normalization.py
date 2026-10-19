@@ -22,6 +22,8 @@ from normalization.langid import (
     load_neutral_words,
     prepare_latin,
 )
+from normalization.lexicon import folded as lexicon_folded
+from normalization.lexicon import words as lexicon_words
 from normalization.normalize import (
     detect_language,
     detect_script,
@@ -403,3 +405,19 @@ def test_sample_candidates_follow_the_rules():
     ]
     assert candidates(texts, "arabic") == ["برشا ناس جاو اليوم"]
     assert candidates(texts, "latin") == ["mahlek ya zina barcha"]
+
+
+# ---------------------------------------------------------------------------
+# Lexique des marques (normalization/lexicon.py)
+# ---------------------------------------------------------------------------
+
+
+def test_lexicon_words_use_the_folded_form_of_the_rule():
+    # Le mot est compté sous la forme que lit la règle : alef, ta marbouta et tatweel repliés.
+    assert lexicon_words("برشــــا الإنسانة") == {"برشا", "الانسانه"}
+
+
+def test_lexicon_markers_are_stored_in_folded_form():
+    # Sinon le comptage des candidats ne retrouverait pas les mots du lexique.
+    for marker in load_markers():
+        assert lexicon_folded(marker) == marker, marker
