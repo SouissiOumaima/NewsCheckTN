@@ -421,3 +421,21 @@ def test_lexicon_markers_are_stored_in_folded_form():
     # Sinon le comptage des candidats ne retrouverait pas les mots du lexique.
     for marker in load_markers():
         assert lexicon_folded(marker) == marker, marker
+
+
+# ---------------------------------------------------------------------------
+# Noms de lieux tunisiens neutres (EXP-A2-005)
+# ---------------------------------------------------------------------------
+
+
+def test_tunisian_place_names_are_ignored_by_the_model():
+    # Le nom de lieu ne dit rien de la langue : il n'est pas donné au modèle.
+    assert prepare_latin("Vive la Tunisie libre à Sfax") == "vive la libre à"
+
+
+@pytest.mark.parametrize("text", ["vive la tunisie libre", "voyage en tunisie c bien"])
+def test_french_comments_about_tunisia_are_french(text):
+    # Commentaires réels de TSAC / Tunizi, rangés avec l'arabizi dans le corpus mais écrits en
+    # français. Avant EXP-A2-005, le mot "tunisie" suffisait à les faire classer arabizi.
+    assert detect_script(text) == "latin"
+    assert detect_language(text) == Lang.FR
