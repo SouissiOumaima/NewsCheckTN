@@ -12,10 +12,10 @@ langue. La proximité est mesurée par la similarité cosinus (de -1 à 1).
 - Le calcul de similarité est en Python pur (pas de numpy/FAISS) : suffisant pour quelques
   milliers de passages. TODO(Lot D): FAISS si le corpus dépasse ~20 000 passages.
 
-Modèles testés / à tester (voir notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb) :
-- sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 (défaut, léger, CPU) ;
-- intfloat/multilingual-e5-small / -base (préfixes « query: » / « passage: ») ;
-- BAAI/bge-m3 (plus lourd, meilleur en arabe, GPU conseillé).
+Modèles comparés dans EXP-D-003 (notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb) :
+- paraphrase-multilingual-MiniLM-L12-v2 : moins bon que BM25, échoue sur le tunisien ;
+- intfloat/multilingual-e5-small / -base (préfixes « query: » / « passage: ») : -base = défaut ;
+- BAAI/bge-m3 : aussi bon que e5-base, scores mieux étalés, mais 2,3 Go (GPU conseillé).
 """
 
 from __future__ import annotations
@@ -30,7 +30,8 @@ from typing import Protocol
 
 from common.schemas import Evidence
 
-DEFAULT_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# Choix d'après EXP-D-003 : meilleur Recall@5 en hybride, exécutable sur CPU.
+DEFAULT_MODEL = "intfloat/multilingual-e5-base"
 # Préfixes exigés par certains modèles (requête, passage).
 _PREFIXES = {"e5": ("query: ", "passage: ")}
 

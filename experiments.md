@@ -26,34 +26,79 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
-| EXP-D-003 | 2026-10-11 | D | Retrieval dense + hybride RRF | MiniLM / e5 / bge-m3, RRF k=60 | Recall@5 / MRR | à mesurer (Colab) | — |
+| EXP-D-003 | 2026-10-19 | D | Retrieval dense + hybride RRF | MiniLM / e5-small / e5-base / bge-m3, RRF k=60 | Recall@5 / MRR | hybride e5-base 0.94 / 0.96 (BM25 0.67 / 0.91) ; verdict inchangé | e5-base retenu ; NLI = goulot ; re-ranking S5 |
 | EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
 | EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 
 ## Entrées
 
-### EXP-D-003 — Retrieval dense multilingue et hybride RRF (S4) — EN COURS
-- **Date** : 2026-10-11
+### EXP-D-003 — Retrieval dense multilingue et hybride RRF (S4)
+- **Date** : 2026-10-19
 - **Auteur / Lot** : Membre 5 / Lot D
 - **Objectif / hypothèse** : un encodeur multilingue relie une affirmation française à la preuve
-  arabe équivalente (et inversement), ce que BM25 ne peut pas faire (EXP-D-001 : Recall@5 ≈ 0.6) ;
+  arabe équivalente (et inversement), ce que BM25 ne peut pas faire (EXP-D-001 : Recall@5 ≈ 0.67) ;
   l'hybride RRF garde la précision lexicale de BM25 et ajoute ces correspondances.
-- **Données** : `tests/fixtures/rag_llm/` v2 (15 passages fictifs, 20 affirmations).
-- **Méthode / configuration** : `rag_llm/retrieval/dense.py` (embeddings normalisés, cosinus) ;
-  `hybrid.py` : RRF (k = 60) sur 20 candidats BM25 + 20 candidats denses ; passages denses de
-  cosinus < MIN_DENSE_SIMILARITY (0.4 provisoire) écartés avant fusion. Modèles :
+- **Données** : `tests/fixtures/rag_llm/` v2 (15 passages **fictifs**, 20 affirmations dont 18 avec
+  preuve). Une affirmation = 0.056 de Hit@1 : écarts à confirmer sur le corpus réel.
+- **Méthode / configuration** : `rag_llm/retrieval/dense.py` (embeddings normalisés, cosinus ;
+  préfixes `query:` / `passage:` pour e5) ; `hybrid.py` : RRF (k = 60) sur 20 candidats BM25 +
+  20 candidats denses, passages denses de cosinus < 0.4 écartés avant fusion. 4 modèles :
   paraphrase-multilingual-MiniLM-L12-v2, multilingual-e5-small, multilingual-e5-base, bge-m3.
-- **Code** : `python -m rag_llm.evaluate_retrieval --method all [--model …]` ;
+  Verdict : gabarit + NLI par règles (EXP-D-002). Colab, GPU T4. Déterministe.
+- **Code** : commit `ee18993` ; `python -m rag_llm.evaluate_retrieval --method all --model …` ;
   `notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb`.
-- **Résultats** : *à compléter après exécution sur Colab* (Hit@1, Recall@5, MRR par méthode et par
-  groupe ; scores denses des affirmations sans preuve ; seuil retenu).
-- **Analyse** : *à compléter*. Comportement vérifié par les tests avec un faux encodeur bilingue :
-  le dense retrouve la preuve dans l'autre langue ; en hybride, un passage trouvé par les deux
-  méthodes passe devant ; un passage à mots communs mais hors sujet (« prix » du pain pour l'huile
-  d'olive) peut devancer une preuve trouvée par le dense seul — point à surveiller, motive le
-  re-ranking de S5.
-- **Décision / suite** : choisir le modèle et le seuil d'après les mesures ; S5 : re-ranking.
+- **Résultats — retrieval (GLOBAL, n = 18)** :
+
+  | Modèle | Méthode | Hit@1 | Hit@5 | Recall@5 | MRR | tn-arabic Hit@1 | tn-arabizi Hit@5 |
+  |--------|---------|-------|-------|----------|-----|-----------------|------------------|
+  | — | BM25 | 0.889 | 0.944 | 0.667 | 0.907 | 0.5 | 0.5 |
+  | MiniLM | dense | 0.722 | 0.722 | 0.639 | 0.722 | 0.0 | 0.0 |
+  | MiniLM | hybride | 0.889 | 0.944 | 0.778 | 0.907 | 0.5 | 0.5 |
+  | e5-small | dense | 0.944 | 0.944 | 0.861 | 0.951 | 1.0 | 0.5 |
+  | e5-small | hybride | 0.944 | 0.944 | 0.861 | 0.951 | 1.0 | 0.5 |
+  | e5-base | dense | 0.944 | 1.000 | 0.917 | 0.956 | 1.0 | 1.0 |
+  | **e5-base** | **hybride** | **0.944** | **1.000** | **0.944** | **0.956** | **1.0** | **1.0** |
+  | bge-m3 | dense | 0.944 | 0.944 | 0.917 | 0.944 | 1.0 | 0.5 |
+  | bge-m3 | hybride | 0.944 | 0.944 | 0.917 | 0.944 | 1.0 | 0.5 |
+
+- **Résultats — score dense du 1er passage (calibration de l'abstention)** :
+
+  | Modèle | Bonne preuve (min – max) | Sans preuve : dev-c16 / dev-c17 |
+  |--------|--------------------------|---------------------------------|
+  | MiniLM | 0.406 – 0.970 | < 0.4 (écartées) / < 0.4 |
+  | e5-small | 0.835 – 0.934 | 0.790 / 0.835 |
+  | e5-base | 0.796 – 0.916 | 0.742 / 0.820 |
+  | bge-m3 | 0.446 – 0.957 | 0.417 / < 0.4 |
+
+  En hybride, le score RRF du 1er passage vaut 0.032–0.033 quand il est trouvé par BM25 **et** par
+  le dense, 0.016 quand il n'est trouvé que par une seule méthode (cas des 2 affirmations sans preuve).
+- **Résultats — verdict de bout en bout** : BM25 et hybride e5-base donnent **exactement** les mêmes
+  métriques (exactitude 0.70, couverture 0.65, précision sélective 0.92, abstention justifiée 1.00,
+  macro-F1 0.52, 0 citation invalide). Seule différence : les 2 affirmations sans preuve sont
+  désormais arrêtées par la règle A3 (preuves non décisives) au lieu de A1 (aucune preuve).
+  Les cellules de seuil (MIN_DENSE_SIMILARITY 0.3 à 0.6) ont tourné avec MiniLM en hybride par
+  erreur de notebook : résultats identiques, non informatifs (cellule corrigée).
+- **Analyse** :
+  1. Hypothèse confirmée : le dense e5 retrouve la preuve dans l'autre langue ; Recall@5 passe de
+     0.67 (BM25) à 0.94 (hybride e5-base). Le tunisien en lettres arabes passe de 0.5 à 1.0 (Hit@1).
+     Avec e5-base, même l'arabizi `dev-c05` retrouve une preuve dans le top 5.
+  2. Le choix de l'encodeur est décisif : MiniLM fait **moins bien** que BM25 et échoue sur tout le
+     tunisien.
+  3. Avec e5, le cosinus ne permet plus de détecter l'absence de preuve : les affirmations sans preuve
+     ont des scores (0.74–0.84) dans la plage des bonnes preuves. Un seuil absolu sur le cosinus
+     n'est pas fiable ; bge-m3 sépare mieux (0.417 vs ≥ 0.446) mais avec une marge très faible.
+  4. Le retrieval s'améliore mais le verdict ne bouge pas : le NLI par règles compare des mots, il
+     ne peut pas exploiter une preuve arabe pour une affirmation française. **Le goulot est
+     désormais le NLI**, plus le retrieval. Sécurité : sans preuve, l'abstention repose maintenant
+     sur le NLI (A3) et plus sur le retrieval (A1/A2) — fragile avec un vrai NLI.
+- **Décision / suite** :
+  - modèle par défaut : `intfloat/multilingual-e5-base` en hybride (meilleur Recall@5, tourne sur
+    CPU) ; bge-m3 à re-tester sur le corpus réel ; `RETRIEVAL_METHOD` reste `bm25` par défaut pour
+    la CI et l'API tant que le Lot E n'a pas validé la dépendance sentence-transformers ;
+  - S5 : re-ranking cross-encoder multilingue, dont le score sert de seuil d'abstention (A2) ;
+    signal complémentaire à tester : accord BM25 / dense (score RRF 0.016 vs 0.032) ;
+  - Lot C : brancher le NLI multilingue pour que le gain de retrieval se traduise dans le verdict.
 
 ### EXP-D-002 — Verdict par gabarit, NLI par règles et abstention v1 (S2–S3)
 - **Date** : 2026-10-07

@@ -45,7 +45,7 @@
 | S1 | BM25 baseline + évaluation (EXP-D-001) | ✅ fait, sur jeu de dev **fictif** |
 | S2 | Baseline NLI par règles (`baseline_stance.py`) | ✅ fait (EXP-D-002) |
 | S3 | Verdict par gabarit + politique d'abstention v1 | ✅ fait (EXP-D-002) |
-| S4 | Retrieval dense multilingue + fusion RRF (EXP-D-003) | ✅ code + tests ; **mesures réelles à faire sur Colab** |
+| S4 | Retrieval dense multilingue + fusion RRF (EXP-D-003) | ✅ fait : hybride e5-base, Recall@5 0.67 → 0.94 |
 | S5 | Re-ranking cross-encoder | à faire |
 
 ## Choisir la méthode de retrieval
