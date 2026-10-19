@@ -29,8 +29,69 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 | EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 (stub = v1) ; cas ciblés 0/5 → 5/5 | v1 retenue ; suite : classifieur TN |
 | EXP-A2-002 | 2026-10-07 | A2 | Tunisien en lettres arabes | règle : lexique de 78 marques + négation | langue TN sur eval_30 ; rappel TN sur échantillon annoté | 8/14 → 12/14 ; 41/78, standard 15/15 | règle retenue comme référence ; suite : classifieur |
+| EXP-A2-003 | 2026-10-07 | A2 | Arabizi sans chiffre (français ou tunisien ?) | régression logistique sur n-grammes de caractères 1-4 ; seuil 5.0 | fausses alertes sur français de test ; rappel TN sur échantillon annoté | 0/416 ; 0/67 → 61/67 (FR 12/16) | modèle retenu ; suite : biais de sujet « tunisiens », règle du seuil |
 
 ## Entrées
+
+### EXP-A2-003 — Arabizi sans chiffre : modèle à n-grammes de caractères
+- **Date** : 2026-10-07
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : séparer le français du tunisien écrit en lettres latines sans chiffre
+  d'arabizi (« barcha », « mahlek »), que les règles classaient toujours `fr`. Hypothèse : les suites
+  de 1 à 4 lettres suffisent à distinguer les deux langues, sans dictionnaire ni gros modèle.
+- **Données** (corpus bruts non versionnés, dans `data/raw/langid/`) :
+  - arabizi : Tunizi (Zenodo, CC BY 4.0) et lignes de TSAC (LGPL-3.0) reconnues par la règle à
+    chiffres ; après dédoublonnage, 66 272 textes pour apprendre, 7 363 mis de côté (10 %, graine 13) ;
+  - français : UD French-GSD (CC BY-SA 4.0) ; `train` découpé en 35 356 morceaux de la longueur des
+    commentaires, `dev` pour choisir le seuil, `test` (416 phrases) consulté une seule fois, à la fin ;
+  - (c) 100 commentaires TSAC en lettres latines sans chiffre d'arabizi (3 mots ou plus, graine 13),
+    annotés `t` / `f` / `x` par un annotateur : 67 `t`, 16 `f`, 17 `x`. Jamais appris, mais ils ont
+    servi à repérer le défaut du mot « bravo » : jeu de mise au point, pas jeu de test.
+- **Méthode / configuration** : `python -m normalization.train_langid` (scikit-learn 1.7.2, graine 13).
+  Présence, mot par mot, des n-grammes de 1 à 4 caractères (ignorés s'ils sont vus dans moins de
+  5 textes) ; régression logistique (C = 0.5, classes équilibrées). Deux passages : le premier sert à
+  retirer les textes « arabizi » jugés nettement français (score < -2.0 : 60 textes), le second donne
+  le modèle. Les 20 000 poids les plus forts sont exportés dans `resources/arabizi_ngrams.json`
+  (315 Ko) ; à l'usage, score = somme des poids des n-grammes présents, en Python pur (ni les tests
+  ni la CI n'ont besoin de scikit-learn). Seuil : le plus petit de la grille 0 à 5 sans aucune fausse
+  alerte sur le français `dev` ; valeur retenue 5.0, borne haute de la grille. Garde-fous : 18 mots
+  neutres ignorés (`resources/neutral_latin_words.txt` : « bravo », « merci »…) et aucune décision
+  en dessous de 2 mots.
+- **Code** : commit `6113840` : `normalization/train_langid.py`, `normalization/langid.py` ; dans
+  `normalization/normalize.py`, `detect_script` interroge le modèle quand les règles répondent `latin`.
+- **Résultats** :
+  - français `test`, jamais consulté avant : 0 phrase classée arabizi sur 416 ;
+  - arabizi mis de côté : 6 715 retrouvés sur 7 363 (0.91) ;
+  - grille des seuils (score seul, 2 941 textes français `dev`) : à 2.0, 97.3 % d'arabizi retrouvé et
+    2 textes français classés arabizi ; à 4.0, 93.9 % et 1 ; à 5.0, 91.4 % et 0 ;
+  - (c) avant → après, 83 lignes décidées : TN 0/67 → 61/67 ; FR 16/16 → 12/16 ; exactitude
+    0.19 → 0.88 ; moyenne par classe 0.50 → 0.83. Les chiffres « avant » sont connus d'avance :
+    l'échantillon a été tiré parmi les textes que les règles classaient `fr` ;
+  - eval_30 (langue) : inchangé, FR 10/10, AR 10/10, TN 12/14 ; échantillon en lettres arabes
+    d'EXP-A2-002 : inchangé, AR 15/15, TN 41/78 ;
+  - tests : 405 réussis, aucun échec ; `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient : sans dictionnaire, le modèle retrouve 9 textes tunisiens sur 10 et
+  ne déclenche aucune fausse alerte sur le français de presse. Les 12 textes `dev` les mieux notés
+  « arabizi », relus un par un, et les erreurs de (c) montrent quatre faiblesses :
+  1. le seuil tient à un seul texte : « can you feel it a » (score 4.79), fragment anglais du corpus
+     français. Sans lui, 4.0 suffisait (93.9 % retrouvés au lieu de 91.4 %) ;
+  2. biais de sujet : « les quatorze meilleurs clubs tunisiens » obtient 3.33, porté par `tun`, `tuni`.
+     Tunizi parle souvent de la Tunisie, et les affirmations à vérifier aussi : c'est le principal
+     risque pour le pipeline ;
+  3. noms propres : 3 des 4 erreurs FR → TN de (c) sont « bravo » accompagné d'un nom tunisien
+     (« bravo » est ignoré, il ne reste que le nom) ; côté `dev`, « billie holiday », « baník okd »,
+     « keating » montent de 1.1 à 1.8. La 4e erreur de (c) (ligne 43) est une annotation discutable ;
+  4. français familier et textes courts : ` ca `, ` c `, `tu ` comptent pour l'arabizi, car Tunizi
+     contient du français familier (le nettoyage n'en retire que 60) ; ce registre est presque absent
+     des mesures (« chauchard tu es une bête » : 0.62). Les 6 erreurs TN → FR de (c) ont 1 à 3 mots.
+  Limites : (c) a servi à la mise au point et n'a que 16 lignes `f`, surtout des « bravo + nom » ;
+  un seul annotateur ; ni français familier ni phrase mêlant les deux langues dans les mesures
+  (`mx-4` d'eval_30 reste `fr`).
+- **Décision / suite** : modèle retenu, seuil 5.0 inchangé pour l'instant, la règle à chiffres passant
+  toujours en premier. Suite (EXP-A2-004) : rendre reproductibles tirages, kappa et lexique ; revoir
+  la règle du seuil (un texte anglais ne devrait pas la décider) ; apprendre aussi du français qui
+  parle de la Tunisie et du français familier ; double annotation de (c) ; échantillon neuf pour un
+  vrai test.
 
 ### EXP-A2-002 — Tunisien en lettres arabes : règle à lexique de marques
 - **Date** : 2026-10-07
