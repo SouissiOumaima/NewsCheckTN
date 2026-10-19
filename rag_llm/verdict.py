@@ -6,7 +6,8 @@ et cite les passages mot pour mot. Le LLM avec prompt contraint arrive en S6.
 
 Politique d'abstention v1 — le système répond `preuves_insuffisantes` si :
   A1. aucune preuve n'a été retrouvée ;
-  A2. aucune preuve n'atteint le score de pertinence minimal (MIN_RETRIEVAL_SCORE) ;
+  A2. aucune preuve n'atteint le score de pertinence minimal de la méthode de retrieval
+      (`hybrid.min_relevance_score` : BM25 ≥ 1.0, cosinus dense ≥ 0.4…) ;
   A3. aucune preuve pertinente n'est décisive (soutient / contredit avec
       confiance ≥ MIN_CONFIDENCE) ;
   A4. les preuves décisives se contredisent (écart < CONFLICT_MARGIN).
@@ -18,11 +19,9 @@ LLM (S6) pourra formuler.
 from __future__ import annotations
 
 from common.schemas import Claim, Label, Lang, Stance, StanceResult, Verdict
+from rag_llm.retrieval.hybrid import min_relevance_score
 
 MIN_CONFIDENCE = 0.6
-# Seuil sur le score BM25 (cf. EXP-D-001 : bonnes preuves ≥ 1.07, absence de preuve = 0).
-# TODO(Lot D): à recalibrer quand le score viendra du retrieval hybride (S5).
-MIN_RETRIEVAL_SCORE = 1.0
 CONFLICT_MARGIN = 0.25
 # Un verdict par règles n'est jamais certain à 100 % : plancher d'incertitude.
 MIN_UNCERTAINTY = 0.1
@@ -100,16 +99,19 @@ def generate_verdict(claim: Claim, stances: list[StanceResult]) -> Verdict:
 
 
 def generate_verdict_with_reason(
-    claim: Claim, stances: list[StanceResult]
+    claim: Claim, stances: list[StanceResult], min_score: float | None = None
 ) -> tuple[Verdict, str | None]:
     """Comme `generate_verdict`, avec en plus le code de la raison d'abstention (ou None).
+
+    `min_score` : seuil de pertinence (A2) ; par défaut celui de la méthode de retrieval active.
 
     TODO(Lot D + E): proposer un champ `abstention_reason` dans `Verdict` (common/schemas.py).
     """
     if not stances:
         return _abstain(claim, NO_EVIDENCE), NO_EVIDENCE  # A1
 
-    relevant = [s for s in stances if s.evidence.score >= MIN_RETRIEVAL_SCORE]
+    threshold = min_relevance_score() if min_score is None else min_score
+    relevant = [s for s in stances if s.evidence.score >= threshold]
     if not relevant:
         return _abstain(claim, LOW_RELEVANCE), LOW_RELEVANCE  # A2
 

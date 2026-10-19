@@ -11,7 +11,8 @@ Métriques :
 Usage (depuis la racine du dépôt) :
     python -m rag_llm.evaluate_verdict                  # NLI par règles (rag_llm.baseline_stance)
     python -m rag_llm.evaluate_verdict --stance lot-c   # NLI du Lot C (models.nli.stance)
-Résultat : `evaluation/results/lot-d_verdict_<stance>_<AAAAMMJJ>.json`.
+    python -m rag_llm.evaluate_verdict --method hybrid  # retrieval hybride (sentence-transformers)
+Résultat : `evaluation/results/lot-d_verdict_<méthode>_<stance>_<AAAAMMJJ>.json`.
 """
 
 from __future__ import annotations
@@ -26,7 +27,8 @@ from common.schemas import Claim, Label, Lang
 from data.loaders import load_evidence_corpus
 from evaluation.metrics import macro_f1
 from rag_llm.evaluate_retrieval import FIXTURES, RESULTS_DIR, ROOT, load_claims
-from rag_llm.retrieval.hybrid import retrieve
+from rag_llm.retrieval import hybrid
+from rag_llm.retrieval.hybrid import METHODS, min_relevance_score, retrieve
 from rag_llm.verdict import generate_verdict_with_reason
 
 NEI = Label.NOT_ENOUGH_INFO.value
@@ -40,13 +42,18 @@ def _stance_fn(name: str):
     return predict_stances
 
 
-def run(corpus, claims: list[dict], stance: str = "rules", k: int = 5) -> list[dict]:
+def run(
+    corpus, claims: list[dict], stance: str = "rules", k: int = 5, method: str = "bm25"
+) -> list[dict]:
     predict_stances = _stance_fn(stance)
+    threshold = min_relevance_score(method)
     rows = []
     for c in claims:
         claim = Claim(text=c["text"], lang=Lang(c["lang"]))
-        evidences = retrieve(claim, corpus, k=k)
-        verdict, reason = generate_verdict_with_reason(claim, predict_stances(claim, evidences))
+        evidences = retrieve(claim, corpus, k=k, method=method)
+        verdict, reason = generate_verdict_with_reason(
+            claim, predict_stances(claim, evidences), min_score=threshold
+        )
         retrieved = {e.doc_id for e in evidences}
         rows.append({
             "claim_id": c["claim_id"],
@@ -89,18 +96,23 @@ def main() -> None:
     p.add_argument("--corpus", type=Path, default=FIXTURES / "evidence_dev.jsonl")
     p.add_argument("--claims", type=Path, default=FIXTURES / "claims_dev.jsonl")
     p.add_argument("--stance", choices=["rules", "lot-c"], default="rules")
+    p.add_argument("--method", choices=METHODS, default="bm25")
+    p.add_argument("--model", default=None, help="modèle d'embeddings (défaut : EMBEDDING_MODEL)")
     p.add_argument("--exp-id", default="EXP-D-002")
     p.add_argument("--split", default="dev-fictif-v2")
     args = p.parse_args()
 
-    rows = run(load_evidence_corpus(args.corpus), load_claims(args.claims), stance=args.stance)
+    if args.model:
+        hybrid.set_encoder(hybrid.SentenceTransformerEncoder(args.model))
+    corpus = load_evidence_corpus(args.corpus)
+    rows = run(corpus, load_claims(args.claims), stance=args.stance, method=args.method)
     overall = compute_metrics(rows)
     groups = defaultdict(list)
     for r in rows:
         groups[r["group"]].append(r)
     by_group = {g: compute_metrics(v) for g, v in sorted(groups.items())}
 
-    print(f"\nVerdict par gabarit — NLI : {args.stance} — {len(rows)} affirmations")
+    print(f"\nVerdict par gabarit — retrieval : {args.method} — NLI : {args.stance}")
     print(f"{'id':<9}{'groupe':<12}{'attendu':<24}{'prédit':<24}raison / citations")
     for r in rows:
         mark = "✓" if r["pred"] == r["gold"] else "✗"
@@ -117,9 +129,10 @@ def main() -> None:
     print(f"Raisons d'abstention : {dict(reasons)}")
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out = RESULTS_DIR / f"lot-d_verdict_{args.stance}_{date.today():%Y%m%d}.json"
+    out = RESULTS_DIR / f"lot-d_verdict_{args.method}_{args.stance}_{date.today():%Y%m%d}.json"
     payload = {
-        "exp_id": args.exp_id, "lot": "D", "task": "verdict", "model": f"gabarit+{args.stance}",
+        "exp_id": args.exp_id, "lot": "D", "task": "verdict",
+        "model": f"{args.method}+gabarit+{args.stance}",
         "split": args.split,
         "metrics": {**overall, "by_group": by_group, "abstention_reasons": dict(reasons)},
         "per_claim": rows,

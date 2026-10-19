@@ -20,10 +20,11 @@
 ## Organisation
 | Dossier / fichier | Contenu |
 |-------------------|---------|
-| `retrieval/hybrid.py` | Point d'entrée du retrieval (BM25 seul pour l'instant, index mis en cache) |
+| `retrieval/hybrid.py` | Point d'entrée du retrieval : `bm25` / `dense` / `hybrid` (fusion RRF), choisi par `RETRIEVAL_METHOD` |
 | `retrieval/text.py` | Prétraitement pour la recherche : normalisation « agressive », tokens, mots vides |
 | `retrieval/bm25.py` | BM25 Okapi en Python pur (aucune dépendance, testable en CI) |
-| `retrieval/dense.py`, `retrieval/rerank.py` | Composants (à créer, S4–S5) |
+| `retrieval/dense.py` | Recherche dense : encodeur sentence-transformers (import paresseux), cosinus, cache disque |
+| `retrieval/rerank.py` | Re-ranking cross-encoder (à créer, S5) |
 | `evaluate_retrieval.py` | Recall@k, Hit@k, MRR par langue/script → `evaluation/results/` |
 | `prompts/` | Gabarits de prompt versionnés : `<tâche>_<langue>_v<N>.txt` |
 | `verdict.py` | Verdict par gabarit (FR / AR) + politique d'abstention v1 ; LLM en S6 |
@@ -44,12 +45,21 @@
 | S1 | BM25 baseline + évaluation (EXP-D-001) | ✅ fait, sur jeu de dev **fictif** |
 | S2 | Baseline NLI par règles (`baseline_stance.py`) | ✅ fait (EXP-D-002) |
 | S3 | Verdict par gabarit + politique d'abstention v1 | ✅ fait (EXP-D-002) |
-| S4 | Retrieval dense multilingue | à faire |
-| S5 | Hybride BM25 + dense (RRF) + re-ranking | à faire |
+| S4 | Retrieval dense multilingue + fusion RRF (EXP-D-003) | ✅ code + tests ; **mesures réelles à faire sur Colab** |
+| S5 | Re-ranking cross-encoder | à faire |
+
+## Choisir la méthode de retrieval
+`RETRIEVAL_METHOD` dans `.env` : `bm25` (défaut, aucun modèle), `dense` ou `hybrid`.
+`dense` et `hybrid` demandent `pip install sentence-transformers` ; le modèle (`EMBEDDING_MODEL`)
+est téléchargé au premier appel, et les vecteurs du corpus sont mis en cache dans `rag_llm/index/`.
+La CI reste en `bm25` ; les tests du dense utilisent un faux encodeur bilingue.
+
+Mesures réelles : `notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb` (Colab).
 
 ## Évaluer le retrieval
 ```bash
 python -m rag_llm.evaluate_retrieval                     # jeu de dev fictif (tests/fixtures/rag_llm/)
+python -m rag_llm.evaluate_retrieval --method all        # compare bm25, dense, hybrid
 python -m rag_llm.evaluate_retrieval --corpus data/processed/evidence_corpus.jsonl \
     --claims <paires_annotees>.jsonl --exp-id EXP-D-00N --split dev
 ```
@@ -57,7 +67,8 @@ Format des affirmations : `{"claim_id", "text", "lang": "fr|ar|tn", "script", "g
 
 ## Politique d'abstention v1 (`verdict.py`)
 Le système répond `preuves_insuffisantes` si : **A1** aucune preuve retrouvée ; **A2** aucune preuve
-de score ≥ `MIN_RETRIEVAL_SCORE` (1.0, BM25) ; **A3** aucune preuve décisive (soutient/contredit avec
+de score ≥ seuil de la méthode (`hybrid.min_relevance_score` : BM25 ≥ 1.0, cosinus ≥ 0.4 ;
+en hybride, filtrage avant fusion) ; **A3** aucune preuve décisive (soutient/contredit avec
 confiance ≥ `MIN_CONFIDENCE` = 0.6) ; **A4** preuves décisives contradictoires (écart < 0.25).
 Sinon : `vrai` ou `faux`, avec jusqu'à 3 citations recopiées mot pour mot et une incertitude ≥ 0.1.
 

@@ -26,11 +26,34 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-003 | 2026-10-11 | D | Retrieval dense + hybride RRF | MiniLM / e5 / bge-m3, RRF k=60 | Recall@5 / MRR | à mesurer (Colab) | — |
 | EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
 | EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 
 ## Entrées
+
+### EXP-D-003 — Retrieval dense multilingue et hybride RRF (S4) — EN COURS
+- **Date** : 2026-10-11
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : un encodeur multilingue relie une affirmation française à la preuve
+  arabe équivalente (et inversement), ce que BM25 ne peut pas faire (EXP-D-001 : Recall@5 ≈ 0.6) ;
+  l'hybride RRF garde la précision lexicale de BM25 et ajoute ces correspondances.
+- **Données** : `tests/fixtures/rag_llm/` v2 (15 passages fictifs, 20 affirmations).
+- **Méthode / configuration** : `rag_llm/retrieval/dense.py` (embeddings normalisés, cosinus) ;
+  `hybrid.py` : RRF (k = 60) sur 20 candidats BM25 + 20 candidats denses ; passages denses de
+  cosinus < MIN_DENSE_SIMILARITY (0.4 provisoire) écartés avant fusion. Modèles :
+  paraphrase-multilingual-MiniLM-L12-v2, multilingual-e5-small, multilingual-e5-base, bge-m3.
+- **Code** : `python -m rag_llm.evaluate_retrieval --method all [--model …]` ;
+  `notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb`.
+- **Résultats** : *à compléter après exécution sur Colab* (Hit@1, Recall@5, MRR par méthode et par
+  groupe ; scores denses des affirmations sans preuve ; seuil retenu).
+- **Analyse** : *à compléter*. Comportement vérifié par les tests avec un faux encodeur bilingue :
+  le dense retrouve la preuve dans l'autre langue ; en hybride, un passage trouvé par les deux
+  méthodes passe devant ; un passage à mots communs mais hors sujet (« prix » du pain pour l'huile
+  d'olive) peut devancer une preuve trouvée par le dense seul — point à surveiller, motive le
+  re-ranking de S5.
+- **Décision / suite** : choisir le modèle et le seuil d'après les mesures ; S5 : re-ranking.
 
 ### EXP-D-002 — Verdict par gabarit, NLI par règles et abstention v1 (S2–S3)
 - **Date** : 2026-10-07
