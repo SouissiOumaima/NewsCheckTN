@@ -49,3 +49,34 @@ En cas de doute réel : `x`. Un doute honnête vaut mieux qu'une étiquette forc
   Après application de la règle ci-dessus : **78 `t`, 15 `a`, 7 `x`**.
 - Conclusion : environ une ligne sur cinq n'est pas clairement du tunisien. TSAC ne peut pas servir
   tel quel d'exemples de tunisien.
+
+## Textes en lettres latines (ajout du 2026-10-07)
+
+Même principe que pour les lettres arabes : l'étiquette décrit la langue de la phrase, pas
+l'origine de son auteur.
+
+| Étiquette | Sens |
+|-----------|------|
+| `t` | tunisien écrit en lettres latines (arabizi), avec ou sans chiffres |
+| `f` | français |
+| `x` | indécidable : les deux langues dans la même phrase, ou aucun mot qui permette de trancher |
+
+Fichier : `data/interim/langid/tsac_latin_sample.tsv` (100 commentaires TSAC en lettres latines sans
+chiffre d'arabizi, 3 mots ou plus, graine 13). Premier passage, un annotateur : 67 `t`, 16 `f`, 17 `x`.
+
+Cas décidés :
+
+- « bravo » suivi d'un prénom ou d'un nom, sans autre mot : `f`. Le seul mot de langue est français ;
+  un nom propre ne dit rien de la langue de la phrase.
+- français et tunisien dans la même phrase (« c pas possible mamstou ») : `x`.
+- Les mots passe-partout (bravo, merci, ok, super, normal…) ne suffisent pas à décider : on regarde
+  les autres mots de la phrase.
+- Lettres étirées, majuscules, émoticônes et ponctuation n'entrent pas en compte.
+
+Cas ouverts, à discuter avec le second annotateur :
+
+- « bravo + nom » en `f` : choix cohérent, mais ces lignes ne contiennent presque pas de français.
+  Les compter à part dans les mesures.
+- Ligne 43 : annotée `f`, alors que son dernier mot est une forme tunisienne (`t` ?).
+- Les phrases mêlées restent `x`, donc hors mesure : prévoir une étiquette ou un jeu à part pour
+  mesurer ce cas, fréquent dans les textes réels.
