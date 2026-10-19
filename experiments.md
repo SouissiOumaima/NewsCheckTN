@@ -30,8 +30,53 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 (stub = v1) ; cas ciblés 0/5 → 5/5 | v1 retenue ; suite : classifieur TN |
 | EXP-A2-002 | 2026-10-07 | A2 | Tunisien en lettres arabes | règle : lexique de 78 marques + négation | langue TN sur eval_30 ; rappel TN sur échantillon annoté | 8/14 → 12/14 ; 41/78, standard 15/15 | règle retenue comme référence ; suite : classifieur |
 | EXP-A2-003 | 2026-10-07 | A2 | Arabizi sans chiffre (français ou tunisien ?) | régression logistique sur n-grammes de caractères 1-4 ; seuil 5.0 | fausses alertes sur français de test ; rappel TN sur échantillon annoté | 0/416 ; 0/67 → 61/67 (FR 12/16) | modèle retenu ; suite : biais de sujet « tunisiens », règle du seuil |
+| EXP-A2-004 | 2026-10-19 | A2 | Reproductibilité : échantillons annotés et lexique | `normalization.annotation`, `normalization.lexicon` | tirage refait ; lexique retrouvé ; fausses alertes sur la presse | 100/100 et 100/100 ; 55/78 (+ 23 variantes) ; 0/1 589 | tout est refaisable ; suite : kappa, presse d'une autre source |
 
 ## Entrées
+
+### EXP-A2-004 — Reproductibilité : échantillons annotés et lexique des marques
+- **Date** : 2026-10-19
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : rendre refaisables, par le code du dépôt, les étapes d'EXP-A2-002 et
+  EXP-A2-003 faites jusque-là hors dépôt : tirage des deux échantillons annotés, copie vierge pour un
+  second annotateur, kappa, extraction du lexique tunisien, contrôle sur la presse. Hypothèse : refaites
+  ainsi, elles redonnent exactement les mêmes fichiers et les mêmes chiffres.
+- **Données** (corpus bruts non versionnés, dans `data/raw/langid/`) : TSAC (LGPL-3.0) ; UD Arabic-PADT
+  (CC BY-NC-SA 3.0, `git clone --depth 1`), presse en arabe standard : `train` (6 075 phrases) pour
+  choisir les mots, `dev` (909) et `test` (680) pour le contrôle seulement ; les deux échantillons
+  annotés d'EXP-A2-002 (lettres arabes) et d'EXP-A2-003 (lettres latines).
+- **Méthode / configuration** : déterministe (graine 13 pour les tirages).
+  - `python -m normalization.annotation sample arabic|latin --check` : refait le tirage et compare,
+    ligne par ligne, aux fichiers déjà annotés ; `blank`, `count` et `kappa` remplacent les scripts
+    collés dans le terminal ;
+  - `python -m normalization.lexicon candidates` : mots présents dans au moins 12 commentaires TSAC en
+    lettres arabes (hors échantillons annotés) et dans aucune phrase de PADT `train`, comptés en
+    textes et sous la forme repliée que lit la règle ;
+  - `python -m normalization.lexicon press` : décision du pipeline complet (`normalize(...).lang`) sur
+    PADT `dev` et `test`.
+- **Code** : commits `e001a7d` (`normalization/annotation.py`) et `04314d3`
+  (`normalization/lexicon.py`) ; 7 tests ajoutés à `tests/test_normalization.py`.
+- **Résultats** :
+  - tirages refaits : lettres arabes 100/100 lignes identiques, lettres latines 100/100 ; comptage de
+    l'échantillon en lettres latines : 67 `t`, 16 `f`, 17 `x` ;
+  - lexique : 6 899 commentaires TSAC, 351 candidats ; 55 des 78 marques en font partie ; les 23
+    autres sont des variantes ajoutées à la main (`متاعو`, `ماهوش`…), trop rares pour le seuil de
+    12 textes, et toutes absentes de la presse ;
+  - presse : 0 phrase classée tunisien sur 909 (`dev`) et 0 sur 680 (`test`) ; aucune des 78 marques
+    n'y apparaît, même une seule fois ;
+  - tests : 412 réussis, aucun échec ; `ruff check .` sans remarque. Résultats identiques sur deux
+    machines (Windows et Linux).
+- **Analyse** : l'hypothèse tient. Un point appris en route : une graine fixe ne suffit pas à rendre un
+  tirage reproductible. Avec le code actuel, qui compte aussi les lettres arabes « déjà dessinées »
+  (anciens codes Unicode), 17 textes de plus entraient dans la liste des candidats, et le tirage en
+  lettres arabes ne redonnait plus aucune des 100 lignes. Le module compte donc les lettres comme au
+  premier tirage. Limites : le contrôle sur la presse utilise le même corpus que la sélection des
+  mots (PADT `train` d'un côté, `dev` et `test` de l'autre) : le 0/1 589 est optimiste et ne dit rien
+  d'une autre presse, par exemple tunisienne en arabe standard ; le tri manuel des 351 candidats
+  n'est pas consigné mot par mot.
+- **Décision / suite** : outils retenus ; les prochaines expériences du lot passeront par eux. Suite :
+  kappa dès le retour du second annotateur (`python -m normalization.annotation kappa …`) ; contrôle
+  sur une presse d'une autre source ; puis les faiblesses d'EXP-A2-003 (biais de sujet, règle du seuil).
 
 ### EXP-A2-003 — Arabizi sans chiffre : modèle à n-grammes de caractères
 - **Date** : 2026-10-07

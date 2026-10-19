@@ -23,6 +23,7 @@ Transformer tout texte d'entrée en une forme propre et homogène, utilisée par
 | `langid.py` | Identification de langue : marques dialectales en lettres arabes (lexique `resources/tn_markers.txt`) ; français ou arabizi par n-grammes de caractères (modèle `resources/arabizi_ngrams.json`, mots ignorés `resources/neutral_latin_words.txt`) |
 | `train_langid.py` | Entraînement hors ligne du modèle français / arabizi (voir « Réentraîner le modèle » plus bas) |
 | `annotation.py` | Échantillons annotés à la main : tirage reproductible, copie vierge, comptage, kappa (`python -m normalization.annotation --help`) |
+| `lexicon.py` | Origine et contrôle du lexique tunisien : candidats TSAC absents de la presse, fausses alertes sur UD Arabic-PADT (`python -m normalization.lexicon --help`) |
 | `perplexity.py` | Modèles de langue et calcul de perplexité |
 | `evaluate.py` | Évaluation langue / script sur un jeu JSONL (`python -m normalization.evaluate --errors`) |
 | `resources/` | Lexiques, tables de correspondance (petits fichiers uniquement) |
