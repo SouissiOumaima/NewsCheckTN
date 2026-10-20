@@ -1,0 +1,33 @@
+{
+  "projet": "NewsCheck TN",
+  "lot": "A1",
+  "statut": "preparation_interne_non_publiee",
+  "fichiers": {
+    "pilote_a1": {
+      "chemin_local": "data/annotations/pilote_60_provenance_a_valider.jsonl",
+      "nombre": 60,
+      "ids_uniques": true,
+      "contient_textes": true,
+      "autorisation_redistribution": "a_confirmer"
+    },
+    "tarc": {
+      "chemin_local": "data/annotations/tarc_30_provenance_a_valider.jsonl",
+      "nombre": 30,
+      "ids_uniques": true,
+      "contient_textes": true,
+      "autorisation_redistribution": "a_confirmer"
+    },
+    "tunswitch": {
+      "chemin_local": "data/annotations/tunswitch_22_sans_labels_a_valider.jsonl",
+      "nombre": 22,
+      "ids_uniques": true,
+      "contient_textes": true,
+      "autorisation_redistribution": "a_confirmer"
+    }
+  },
+  "restrictions": [
+    "Licences et droits de redistribution a confirmer",
+    "Annotations privees exclues",
+    "Aucun corpus autorise automatiquement pour eval_100"
+  ]
+}
