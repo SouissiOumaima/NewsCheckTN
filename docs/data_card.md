@@ -51,8 +51,8 @@ pas leur véracité.
 |---|---:|
 | fr-latin | 20 |
 | ar-arabic | 15 |
-| tn-mixed | 19 |
-| tn-arabizi | 6 |
+| tn-mixed | 20 |
+| tn-arabizi | 5 |
 | Total | 60 |
 
 La distribution est déséquilibrée et ne représente
