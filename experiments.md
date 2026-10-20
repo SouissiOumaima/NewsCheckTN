@@ -31,8 +31,55 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-002 | 2026-10-07 | B | Extraction d'affirmations : compléments de source / temps / lieu hors objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.64 (règles) ; 0.77 (parseurs) | retenu ; suite : lexique verbal du mode règles |
 | EXP-B-003 | 2026-10-15 | B | Extraction d'affirmations : lexique verbal du mode règles, sujet verbe-sujet-objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.86 (règles) ; 0.77 (parseurs) | retenu ; suite : jeu d'environ 100 phrases |
 | EXP-B-004 | 2026-10-15 | B | Extraction d'affirmations : source du discours rapporté, complément du participe dans le sujet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.91 (règles) ; 0.77 (parseurs) | retenu ; jeu de dev saturé |
+| EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
 
 ## Entrées
+
+### EXP-B-005 — Lexiques selon l'écriture et verbe de parole précédé de « و » / « ف » collé
+- **Date** : 2026-10-20
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : (a) une phrase en lettres arabes doit consulter les mêmes lexiques
+  d'opinion et de modalité, que le Lot A2 l'étiquette `ar` ou `tn` : avec la table par langue, le
+  tunisien étiqueté `tn` perdait les marqueurs de l'arabe standard (اعتقد, حسب, اذا) ; (b) un verbe
+  de parole précédé de « و » / « ف » collé (« وقال », très fréquent en tête de phrase dans la presse)
+  doit donner un triplet, la modalité `rapporté` et la source, dans les deux modes.
+- **Données** : `eval_30.jsonl` (34 phrases, gold inchangé), jeu de **développement** ; 12 phrases de
+  démonstration rédigées pour un audit (3 FR, 3 arabe standard, 3 tunisien en lettres arabes,
+  3 arabizi), **non annotées**. Aucun jeu annoté hors développement : `eval_100` n'existe pas encore.
+- **Méthode / configuration** : (a) `factuality.lexicon_codes` : phrase contenant des lettres arabes
+  → lexiques tn puis ar (plus fr si des lettres latines s'y mêlent), quelle que soit la langue ;
+  sinon table par langue inchangée ; le premier lexique prime en cas de conflit de clé
+  (`modality._markers`). (b) Avec arbre : si la racine est « و » / « ف » (CCONJ), le verbe rattaché
+  en `parataxis` ou `conj` devient la racine ; sans arbre : verbe de parole cherché aussi sans la
+  conjonction collée (`preprocessing._verb_candidates`, préfixe retiré seulement au-delà de 3 lettres).
+  Normalisation v1 du Lot A2 (fusionnée depuis `main`), spaCy 3.8 `fr_core_news_md`, Stanza 1.15 `ar`.
+- **Code** : branche `lot-b-linguistic`, commits `15d02f9` (`fix(lot-b): lexiques de modalité et
+  d'opinion choisis selon l'écriture`) et `1fdd355` (`fix(lot-b): verbe de parole précédé de « و » ou
+  « ف » collé`) ; `python -m linguistic_analysis.evaluate --compare`.
+- **Résultats** :
+  - eval_30 : sorties **identiques** avant / après chaque commit, en mode règles et en mode parseurs,
+    sur tous les champs (indices compris) ; scores inchangés (triplet exact 0.91 règles, 0.77
+    parseurs ; 4 et 7 erreurs). eval_30 ne contient aucune phrase concernée par (b), et (a) ne change
+    rien tant que le tunisien en lettres arabes reste étiqueté `ar` ;
+  - tests ciblés, qui échouaient avant et passent après : (a) 6 tests, résultat identique avec `lang`
+    forcé à `ar` et à `tn` pour ar-03, ar-07, ar-09 et 3 phrases construites (opinion, rapporté,
+    incertitude) ; (b) 4 tests (arbre Stanza reproduit à la main, vraie sortie Stanza, mode règles
+    avec « و », mode règles avec « ف » et un piège : « و » + verbe qui n'est pas un verbe de parole) ;
+  - 12 phrases de démonstration : seule la phrase arabe « و + verbe de parole » change (triplet vide
+    et `assertif` → triplet, `rapporté`, source = locuteur) ; les 11 autres sont identiques ;
+  - **effet non mesuré sur un jeu annoté**.
+- **Analyse** : défaut connu de (b) : le prédicat garde la conjonction (« وقال » au lieu de « قال »,
+  convention du gold d'ar-04), car Stanza ne donne pas de position aux mots d'un token multi-mots :
+  ils reçoivent l'empan du token entier ; en mode règles, le token n'est pas découpé. Non corrigé.
+  Cas voisin non corrigé, cause en amont : avec Stanza, une phrase arabe standard du type « ارتفعت
+  نسبة التضخم… » (démonstration D-AR-1) donne un sujet réduit à un mot et un objet faux, parce que
+  `Document.text` replie ة → ه : Stanza découpe alors le mot en nom + pronom affixe ه et l'arbre
+  change. Sur les phrases en lettres arabes d'eval_30, 18 des 24 mots finissant par ة sont découpés
+  ainsi après normalisation, 0 sur le texte brut. Point L7, à traiter côté Lot A2 (texte moins
+  normalisé ou correspondance des positions) ; un essai côté Lot B (Stanza sur le texte brut aligné)
+  laisse eval_30 à 7 erreurs en mode parseurs (ar-01 corrigé, ar-10 nouveau) et n'est pas retenu.
+- **Décision / suite** : retenu. Mesurer (a) et (b) sur `eval_100` une fois verrouillé ; prédicat
+  sans conjonction collée à traiter ; point L7 à porter en réunion avec le Lot A2.
 
 ### EXP-B-004 — Source du discours rapporté et complément du participe
 - **Date** : 2026-10-15

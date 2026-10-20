@@ -4,6 +4,8 @@ import csv
 import hashlib
 import json
 import random
+import sys
+import types
 from dataclasses import asdict, fields
 from pathlib import Path
 
@@ -182,6 +184,26 @@ def test_parser_fallback_without_libraries(monkeypatch):
     finally:
         preprocessing._load_spacy_fr.cache_clear()
         preprocessing._load_stanza_ar.cache_clear()
+
+
+# Avant son remplacement par la fixture automatique (mode règles hors tests « slow »).
+_GET_PARSER = preprocessing.get_parser
+
+
+def test_incompatible_spacy_model_falls_back_to_rules(monkeypatch):
+    # Modèle installé mais incompatible : `spacy.load` lève une exception.
+    def load(name):
+        raise OSError(f"{name} : modèle incompatible")
+
+    monkeypatch.setitem(sys.modules, "spacy", types.SimpleNamespace(load=load))
+    monkeypatch.setattr(preprocessing, "_is_installed", lambda module: True)
+    monkeypatch.setattr(preprocessing, "get_parser", _GET_PARSER)
+    preprocessing._load_spacy_fr.cache_clear()
+    try:
+        (s,) = preprocessing.analyze(normalize("Le ministre a annoncé une hausse des prix."))
+    finally:
+        preprocessing._load_spacy_fr.cache_clear()
+    assert s.parser == "rules" and s.lang == Lang.FR
 
 
 def test_tunisian_uses_rules():

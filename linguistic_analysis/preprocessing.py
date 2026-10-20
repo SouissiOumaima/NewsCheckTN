@@ -75,7 +75,10 @@ def _load_spacy_fr() -> Any | None:
         return None
     import spacy
 
-    return spacy.load(SPACY_FR_MODEL)
+    try:
+        return spacy.load(SPACY_FR_MODEL)
+    except Exception:  # modèle installé mais incompatible ou corrompu
+        return None
 
 
 @lru_cache(maxsize=None)
