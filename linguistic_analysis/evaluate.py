@@ -38,6 +38,7 @@ import json
 import math
 import random
 import re
+import sys
 from collections import Counter, defaultdict
 from contextlib import contextmanager
 from datetime import date
@@ -53,7 +54,7 @@ from normalization.normalize import normalize
 ROOT = Path(__file__).resolve().parents[1]
 EVAL_SET = ROOT / "tests" / "fixtures" / "linguistic_analysis" / "eval_30.jsonl"
 RESULTS_DIR = ROOT / "evaluation" / "results"
-EXP_ID = "EXP-B-004"
+EXP_ID = "EXP-B-005"
 PROTOCOL = ROOT / "docs" / "lot-b_protocole_eval_100.md"
 ROLES = ("subject", "predicate", "obj")
 _TOKEN = re.compile(r"\w+|[^\w\s]")
@@ -640,6 +641,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--validate", action="store_true",
                         help="valide le fichier et affiche ses effectifs, sans exécuter le système")
     args = parser.parse_args(argv)
+    # Console Windows : forcer l'UTF-8 pour afficher l'arabe sans erreur d'encodage.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     if args.sha256:
         print(f"{sha256_file(args.eval_set)}  {args.eval_set}")
         return

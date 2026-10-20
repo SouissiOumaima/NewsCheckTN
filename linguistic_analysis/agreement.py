@@ -28,6 +28,7 @@ import argparse
 import csv
 import io
 import json
+import sys
 import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -299,6 +300,9 @@ def main(argv: list[str] | None = None) -> None:
                         help="JSONL id -> lang (ou lang_source), pour les fichiers CSV")
     parser.add_argument("--json", type=Path, help="écrit aussi le rapport complet en JSON")
     args = parser.parse_args(argv)
+    # Console Windows : forcer l'UTF-8 pour afficher l'arabe sans erreur d'encodage.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     loaded = {}
     for name, path in (("A", args.annotation_a), ("B", args.annotation_b)):
         items, problems = load_annotation(path)

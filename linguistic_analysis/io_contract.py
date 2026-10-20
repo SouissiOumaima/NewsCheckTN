@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
 
@@ -113,6 +114,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("output", type=Path, help="JSONL de sortie")
     parser.add_argument("--detailed", action="store_true", help="sortie détaillée (interne Lot B)")
     args = parser.parse_args(argv)
+    # Console Windows : forcer l'UTF-8 pour afficher l'arabe sans erreur d'encodage.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     n = run(args.input, args.output, detailed=args.detailed)
     print(f"{n} document(s) traité(s) -> {args.output}")
 

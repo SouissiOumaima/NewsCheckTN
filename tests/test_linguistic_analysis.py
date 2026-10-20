@@ -3,7 +3,9 @@
 import csv
 import hashlib
 import json
+import os
 import random
+import subprocess
 import sys
 import types
 from dataclasses import asdict, fields
@@ -1017,6 +1019,19 @@ def test_cli_errors_export(tmp_path, capsys):
     assert any(n.startswith("lot-b_erreurs_regles_") for n in names)
     assert any(n.startswith("lot-b_extraction_regles_") for n in names)
     assert "erreur(s)" in capsys.readouterr().out
+
+
+def test_cli_output_survives_cp1252_console(tmp_path):
+    # Console Windows ou sortie redirigée : encodage cp1252, sans `-X utf8`. Les erreurs listées
+    # contiennent de l'arabe (ar-02), que cp1252 ne sait pas encoder.
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONUTF8", "PYTHONIOENCODING")}
+    env |= {"PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+    command = [sys.executable, "-m", "linguistic_analysis.evaluate", "--rules", "--errors",
+               "--bootstrap", "0", "--out-dir", str(tmp_path)]
+    done = subprocess.run(command, cwd=Path(__file__).resolve().parents[1], env=env,
+                          capture_output=True, timeout=300)
+    assert done.returncode == 0, done.stderr.decode("utf-8", "replace")[-500:]
+    assert "ar-02" in done.stdout.decode("utf-8")
 
 
 @pytest.mark.slow
