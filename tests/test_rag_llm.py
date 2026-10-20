@@ -8,7 +8,12 @@ import pytest
 from common.schemas import Claim, Evidence, Label, Lang, Stance, StanceResult
 from data.loaders import load_evidence_corpus
 from rag_llm import evaluate_verdict
-from rag_llm.baseline_stance import predict_stance_rules, predict_stances, topic_overlap
+from rag_llm.baseline_stance import (
+    _numbers,
+    predict_stance_rules,
+    predict_stances,
+    topic_overlap,
+)
 from rag_llm.build_tunifact_eval import build_corpus
 from rag_llm.evaluate_retrieval import compute_metrics, load_claims, run
 from rag_llm.retrieval import hybrid
@@ -316,3 +321,34 @@ def test_affirmations_tunifact_coherentes():
         articles = {d.rsplit("-", 1)[0] for d in c["gold_doc_ids"]}
         assert len(articles) <= 1
         assert not any(d.endswith("-001") for d in c["gold_doc_ids"])
+
+
+# --- Lecture des nombres v2 (EXP-D-005) -----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("39 000 ingénieurs et 3 000 médecins", {"39000", "3000"}),
+        ("39.000 ingénieurs et 3.300 médecins", {"39000", "3300"}),
+        ("13\u00a0000 foyers", {"13000"}),  # espace insécable
+        ("39 ألف مهندس و3 آلاف طبيب", {"39000", "3000"}),  # « و3 » : préfixe arabe accepté
+        ("2 millions de dinars", {"2000000"}),
+        ("le chômage est de 16,4 % en 2023", {"16.4"}),  # décimale ; année ignorée
+        ("ارتفعت بنسبة ٩٫٣٪ في ٢٠٢٣", {"9.3"}),  # décimale arabe
+        ("Covid-19, G20, A320 et Covid19", set()),  # nombres collés à un nom
+        ("اللقاحات ضد كوفيد-19", set()),
+    ],
+)
+def test_lecture_des_nombres(text, expected):
+    assert _numbers(text) == expected
+
+
+def test_memes_quantites_ecrites_differemment_sont_egales():
+    assert _numbers("13 000 foyers") == _numbers("13 ألف منزل") == _numbers("13.000 maisons")
+
+
+def test_covid19_ne_fait_plus_soutenir_une_preuve():
+    claim = Claim(text="Les vaccins anti Covid-19 provoquent des cancers du sang.", lang=Lang.FR)
+    ev = _ev("x", "Selon l'OMS, les vaccins anti Covid-19 ne provoquent pas de cancers du sang.")
+    assert predict_stance_rules(claim, ev).stance == Stance.REFUTES  # démenti, plus « 19 = 19 »

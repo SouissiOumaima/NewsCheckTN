@@ -12,8 +12,18 @@ Règles, appliquées seulement si la preuve parle du même sujet que l'affirmati
    → contredit ;
 3. sinon → neutre.
 
+Lecture des nombres (v2, EXP-D-005) :
+- séparateurs de milliers reconnus : « 39 000 », « 39.000 », « 39 000 » (espace insécable)
+  → 39000 ; « 16,4 » et « 9.3 » restent des décimaux (le groupe après le séparateur n'a pas
+  exactement 3 chiffres) ;
+- « 13 ألف », « 3 آلاف », « 2 mille » → ×1 000 ; « 2 millions », « 2 مليون » → ×1 000 000 ;
+- un nombre collé à un nom n'est pas une quantité : « Covid-19 », « كوفيد-19 », « G20 »,
+  « A320 » sont ignorés. Un préfixe arabe collé (« و3 », « ب2025 ») reste accepté.
+
 Limites connues : pas de compréhension du sens, unités ignorées (16 % = 16 millions),
-démenti détecté par mots isolés. À remplacer par le NLI du Lot C dès qu'il est disponible.
+démenti détecté par mots isolés, et une phrase qui reprend l'affirmation pour la réfuter
+(« X a classé comme fausse l'information selon laquelle … 67 % ») est lue comme un soutien
+(mêmes nombres). À remplacer par le NLI du Lot C dès qu'il est disponible.
 """
 
 from __future__ import annotations
@@ -26,8 +36,21 @@ from rag_llm.retrieval.text import normalize_for_retrieval, tokenize
 MIN_OVERLAP = 0.5
 STEM_LEN = 5  # comparaison sur les 5 premières lettres : « remplis » ≈ « remplissage »
 
-_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 _YEAR = re.compile(r"^(19|20)\d\d$")
+# Milliers : 1 à 3 chiffres puis des groupes de 3 chiffres séparés par un espace ou un point.
+# (Après `normalize_for_retrieval`, les espaces insécables sont déjà des espaces.)
+_THOUSANDS = re.compile(r"(?<![\d.,])(\d{1,3})((?:[ .]\d{3})+)(?![\d]|[.,]\d)")
+# Multiplicateurs écrits en lettres (formes normalisées : ألف → الف, آلاف → الاف).
+_MULTIPLIERS = {
+    "mille": 1_000, "الف": 1_000, "الاف": 1_000, "million": 1_000_000, "millions": 1_000_000,
+    "مليون": 1_000_000, "ملايين": 1_000_000,
+}
+_NUMBER_WORD = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*(" + "|".join(sorted(_MULTIPLIERS, key=len, reverse=True)) + r")\b"
+)
+# Un nombre précédé d'une lettre latine (G20, A320, Covid19), ou d'une lettre puis d'un
+# tiret (Covid-19, كوفيد-19), fait partie d'un nom : ce n'est pas une quantité.
+_NUMBER = re.compile(r"(?<![a-z\d.,])(?<![a-z\u0600-\u06ff]-)\d+(?:[.,]\d+)?")
 
 # Marqueurs de démenti, sous forme normalisée (voir `normalize_for_retrieval`).
 REFUTE_CUES_FR = (
@@ -39,8 +62,18 @@ REFUTE_CUES_AR = (
 )
 
 
+def _format(value: float) -> str:
+    return str(int(value)) if value == int(value) else str(value)
+
+
 def _numbers(text: str) -> set[str]:
-    nums = {n.replace(",", ".") for n in _NUMBER.findall(normalize_for_retrieval(text))}
+    """Quantités citées dans le texte (hors années), sous une forme comparable."""
+    norm = normalize_for_retrieval(text)
+    norm = _THOUSANDS.sub(lambda m: m.group(1) + re.sub(r"\D", "", m.group(2)), norm)
+    norm = _NUMBER_WORD.sub(
+        lambda m: _format(float(m.group(1).replace(",", ".")) * _MULTIPLIERS[m.group(2)]), norm
+    )
+    nums = {_format(float(n.replace(",", "."))) for n in _NUMBER.findall(norm)}
     return {n for n in nums if not _YEAR.match(n)}
 
 

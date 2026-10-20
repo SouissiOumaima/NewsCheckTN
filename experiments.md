@@ -26,6 +26,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
 | EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
 | EXP-D-003 | 2026-10-19 | D | Retrieval dense + hybride RRF | MiniLM / e5-small / e5-base / bge-m3, RRF k=60 | Recall@5 / MRR | hybride e5-base 0.94 / 0.96 (BM25 0.67 / 0.91) ; verdict inchangé | e5-base retenu ; NLI = goulot ; re-ranking S5 |
 | EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
@@ -33,6 +34,43 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 
 ## Entrées
+
+### EXP-D-005 — NLI par règles v2 : lecture des nombres
+- **Date** : 2026-10-20
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : corriger les deux défauts **génériques** de lecture des nombres
+  révélés par EXP-D-004 (séparateurs de milliers ; nombres faisant partie d'un nom), sans
+  toucher au 3e défaut (phrase de verdict qui reprend la rumeur), qui demande un vrai NLI.
+- **Données** : développement = jeu fictif v2 (`claims_dev.jsonl`) ; test = Tunifact v0
+  (EXP-D-004), mesuré **une seule fois**, après les corrections.
+- **Méthode / configuration** : `rag_llm/baseline_stance.py`, fonction `_numbers` :
+  « 39 000 », « 39.000 », espace insécable → 39000 (groupe de 3 chiffres exactement, sinon
+  décimal : « 16,4 », « 9.3 ») ; « 13 ألف », « 3 آلاف », « mille », « million(s) », « مليون »
+  → multiplication ; nombre précédé d'une lettre latine ou d'une lettre + tiret ignoré
+  (« Covid-19 », « كوفيد-19 », « G20 », « A320 »), préfixe arabe collé accepté (« و3 »).
+  `rag_llm/retrieval/text.py` : signes arabes ٫ ٬ ٪ convertis. Reste inchangé (EXP-D-002).
+- **Code** : `python -m rag_llm.evaluate_verdict` (dev), puis avec `--corpus
+  data/interim/lot_d/evidence_tunifact_v0.jsonl --claims tests/fixtures/rag_llm/claims_tunifact_v0.jsonl`.
+- **Résultats** :
+
+  | Jeu | Exactitude | Couverture | Précision sélective | Verdicts faux émis | Abst. justifiée |
+  |-----|------------|------------|---------------------|--------------------|-----------------|
+  | dev fictif v2 (avant = après) | 0.70 | 0.65 | 0.92 | 1 | 1.00 |
+  | Tunifact v0, avant (EXP-D-004) | 0.20 | 0.20 | 0.00 | 3 | 1.00 |
+  | Tunifact v0, après | 0.20 | 0.07 | 0.00 | **1** | 1.00 |
+
+  Détail Tunifact : `tf-c01` (698, vrai) faux → *preuves contradictoires* (la preuve donne
+  3 300 médecins, la phrase de verdict 3 000 : désaccord réel entre les deux phrases de
+  l'article) ; `tf-c02` (Covid-19) vrai → *preuves non décisives* ; `tf-c03` reste faussement
+  « vrai » (3e défaut, attendu).
+- **Analyse** : les corrections ne rendent pas le système plus juste (exactitude inchangée),
+  mais **plus prudent** : 2 des 3 verdicts erronés et assurés deviennent des abstentions, ce qui
+  est préférable pour un outil de vérification. Le 3e défaut est hors de portée de règles
+  lexicales : « classé comme fausse l'information … 67 % » contient les mêmes nombres que la
+  rumeur. Les corrections sont génériques (pas de mot ou de nombre propre aux 5 articles) ; elles
+  ont cependant été motivées par ce jeu : il ne doit plus servir à régler les règles.
+- **Décision / suite** : v2 retenue (moins d'erreurs assurées, dev inchangé). Le NLI par règles
+  a atteint sa limite : brancher le NLI multilingue du Lot C ; S5 re-ranking.
 
 ### EXP-D-004 — Première évaluation sur données réelles : Tunifact v0
 - **Date** : 2026-10-20

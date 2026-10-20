@@ -13,7 +13,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
-_ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+# Chiffres arabes-indiens → 0-9, et signes arabes : ٫ (décimale) ٬ (milliers) ٪ (pour cent).
+_ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩٫٬٪", "0123456789.,%")
 _TATWEEL = "\u0640"
 _AR_PREFIXES = ("وال", "بال", "كال", "فال", "لل", "ال")
 _TOKEN = re.compile(r"\w+")
