@@ -22,8 +22,11 @@ Décision : `is_opinion = o >= 0.5 and o > f`. Confiance : `min(1, 0.5 + |o - f|
 Une phrase avec un verbe d'opinion mais des données précises (« je pense que le chômage a atteint
 16 % en 2023 ») reste donc factuelle : elle contient une affirmation vérifiable.
 
-Lexiques utilisés selon la langue de la phrase : FR → fr ; AR → ar + tn (le Lot A2 étiquette le
-tunisien en lettres arabes `ar`) ; TN → tn + fr (code-switching).
+Lexiques consultés (voir `lexicon_codes`), dans l'ordre de priorité :
+- phrase en lettres arabes, quelle que soit sa langue : tn puis ar (le tunisien en lettres arabes
+  emploie aussi les marqueurs de l'arabe standard, et le Lot A2 peut l'étiqueter `ar` ou `tn`),
+  plus fr si la phrase contient aussi des lettres latines ;
+- sinon, selon la langue de la phrase : FR → fr ; AR → ar + tn ; TN → tn + fr (code-switching).
 """
 
 from __future__ import annotations
@@ -66,6 +69,8 @@ PERCENT_WORDS = ("pour cent", "pourcent", "بالمئه", "بالمائه", "ف�
 _YEAR = re.compile(r"^(1[89]|20)\d{2}$")
 _NUMBER = re.compile(r"^[\d٠-٩]+(?:[.,][\d٠-٩]+)*$")
 _ARABIC = re.compile(r"[؀-ۿ]")
+_ARABIC_LETTER = re.compile(r"[ء-يٱ-ۓ]")
+_LATIN_LETTER = re.compile(r"[A-Za-zÀ-ÿ]")
 
 
 def match_text(text: str) -> str:
@@ -93,9 +98,20 @@ def load_lexicon(lang: str) -> dict[str, tuple[str, ...]]:
     return {name: tuple(entries) for name, entries in sections.items()}
 
 
-def _entries(lang: Lang, section: str) -> list[str]:
+def lexicon_codes(sentence: Sentence) -> tuple[str, ...]:
+    """Lexiques à consulter pour la phrase, le premier primant en cas de conflit.
+
+    En lettres arabes, l'écriture décide (tn, ar, et fr si des lettres latines s'y mêlent) ;
+    sinon, la langue de la phrase (`LEXICONS_BY_LANG`).
+    """
+    if _ARABIC_LETTER.search(sentence.text):
+        return ("tn", "ar", "fr") if _LATIN_LETTER.search(sentence.text) else ("tn", "ar")
+    return LEXICONS_BY_LANG.get(sentence.lang, LEXICONS_BY_LANG[Lang.UNKNOWN])
+
+
+def _entries(sentence: Sentence, section: str) -> list[str]:
     out: list[str] = []
-    for code in LEXICONS_BY_LANG.get(lang, LEXICONS_BY_LANG[Lang.UNKNOWN]):
+    for code in lexicon_codes(sentence):
         out.extend(load_lexicon(code).get(section, ()))
     return out
 
@@ -135,24 +151,24 @@ def _content_tokens(sentence: Sentence) -> list[Token]:
 
 def _opinion_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
     """Liste de (catégorie de poids, indice)."""
-    lang, cues = sentence.lang, []
+    cues = []
 
     if text.rstrip().endswith(("?", "؟")):
         cues.append(("question", "question:?"))
-    elif marker := find_marker(text, _entries(lang, "questions"), anchored=True):
+    elif marker := find_marker(text, _entries(sentence, "questions"), anchored=True):
         cues.append(("question", f"question:{marker}"))
 
-    if marker := find_marker(text, _entries(lang, "souhaits")):
+    if marker := find_marker(text, _entries(sentence, "souhaits")):
         cues.append(("souhait", f"souhait:{marker}"))
     elif _has_tree(sentence) and any(
         t.deprel == "root" and t.feats.get("Mood") == "Imp" for t in sentence.tokens
     ):
         cues.append(("souhait", "souhait:impératif"))
 
-    if marker := find_marker(text, _entries(lang, "expressions")):
+    if marker := find_marker(text, _entries(sentence, "expressions")):
         cues.append(("expression", f"opinion:{marker}"))
 
-    verbs = set(_entries(lang, "verbes"))
+    verbs = set(_entries(sentence, "verbes"))
     for tok in sentence.tokens:
         forms = {match_text(tok.text), match_text(tok.lemma)}
         if forms & verbs and (
@@ -163,7 +179,7 @@ def _opinion_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
                 cues.append(("complétive", "opinion:complétive"))
             break
 
-    evaluatives = set(_entries(lang, "evaluatifs"))
+    evaluatives = set(_entries(sentence, "evaluatifs"))
     content = _content_tokens(sentence)
     best = None
     for tok in content:
@@ -191,7 +207,7 @@ def _factual_cues(sentence: Sentence, text: str) -> list[tuple[str, str]]:
         cues.append(("nombre", "fait:nombre"))
     if any(t.text in ("%", "٪") for t in sentence.tokens) or any(w in text for w in PERCENT_WORDS):
         cues.append(("pourcentage", "fait:pourcentage"))
-    month = find_marker(text, _entries(sentence.lang, "dates"))
+    month = find_marker(text, _entries(sentence, "dates"))
     if any(_YEAR.match(t.text) for t in numbers) or month:
         cues.append(("date", "fait:date"))
     if _has_tree(sentence):
@@ -218,7 +234,7 @@ def classify_factuality(sentence: Sentence) -> tuple[bool, float, list[str]]:
     opinion = _opinion_cues(sentence, text)
     factual = _factual_cues(sentence, text)
     has_number = any(category == "nombre" for category, _ in factual)
-    intensifier = find_marker(text, _entries(sentence.lang, "intensifieurs"))
+    intensifier = find_marker(text, _entries(sentence, "intensifieurs"))
     if intensifier and not has_number:
         opinion.append(("intensifieur", f"opinion:intensifieur:{intensifier}"))
 

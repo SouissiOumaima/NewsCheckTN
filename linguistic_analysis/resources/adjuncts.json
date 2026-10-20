@@ -1,0 +1,57 @@
+{
+  "_description": "Repérage des compléments circonstanciels qui ne font pas partie de l'objet du triplet : source (selon X), temps (en 2024, depuis janvier, la semaine dernière, يوم الجمعة) et lieu (à Sfax, في صفاقس, fi Gafsa). Formes comparées repliées (minuscules, arabe normalisé). Pour l'arabe, l'article « ال » est aussi retiré avant la recherche. lead_words : mots-outils et ordinaux qui peuvent précéder le nom de temps ou de lieu ; time_links : mots de liaison internes à une expression de temps (« le mois de mars »).",
+  "source_markers": [
+    "selon", "d'après", "d' après", "d'apres", "d' apres", "suivant",
+    "حسب", "بحسب", "وفق", "وفقا", "حسبما", "حسب ما",
+    "7asb", "hasb", "7sab"
+  ],
+  "time_preps": [
+    "depuis", "pendant", "durant", "dès", "jusqu'à", "jusqu' à", "jusqu'en", "jusqu' en",
+    "منذ", "مند", "خلال", "طيلة", "حتي",
+    "mel", "men wa9t"
+  ],
+  "lead_words": [
+    "en", "au", "aux", "à", "dans", "le", "la", "l'", "les", "ce", "cet", "cette", "ces",
+    "في", "ب", "ف", "هذا", "هذه", "هذي", "ذلك", "تلك", "هاذا", "هاذي",
+    "fi", "f", "b", "el", "l", "had", "hedha", "hedhi", "hal",
+    "premier", "première", "1er", "deuxième", "second", "seconde", "troisième", "quatrième",
+    "الاول", "الاولي", "الثاني", "الثانيه", "الثالث", "الثالثه", "الرابع", "الرابعه",
+    "loul", "theni", "thelth"
+  ],
+  "time_links": ["de", "du", "d'", "des", "من"],
+  "location_preps": ["à", "au", "aux", "en", "dans", "في", "ب", "fi", "f", "b"],
+  "year_preps": ["en", "au", "في", "fi", "f"],
+  "time_nouns": [
+    "hier", "aujourd'hui", "aujourd' hui", "demain", "matin", "soir", "soirée", "nuit",
+    "jour", "jours", "journée", "semaine", "semaines", "mois", "an", "ans", "année", "années",
+    "trimestre", "semestre", "week-end",
+    "janvier", "février", "fevrier", "mars", "avril", "mai", "juin", "juillet", "août", "aout",
+    "septembre", "octobre", "novembre", "décembre", "decembre",
+    "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche",
+    "امس", "اليوم", "غدا", "صباح", "مساء", "ليله",
+    "يوم", "ايام", "اسبوع", "اسابيع", "شهر", "اشهر", "شهور", "سنه", "سنوات", "عام", "اعوام",
+    "ثلاثي", "سداسي",
+    "جانفي", "فيفري", "مارس", "افريل", "ماي", "جوان", "جويليه", "اوت", "سبتمبر", "اكتوبر",
+    "نوفمبر", "ديسمبر", "يناير", "فبراير", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس",
+    "الاثنين", "اثنين", "ثلاثاء", "اربعاء", "خميس", "جمعه", "سبت", "احد",
+    "البارح", "غدوه", "نهار", "عشيه", "صباحيه",
+    "thnin", "tlath", "arb3a", "khmis", "sebt", "a7ad",
+    "lbare7", "el bare7", "ghodwa", "lyoum", "nhar", "jem3a", "chhar", "ch-har", "3am", "sna"
+  ],
+  "time_modifiers": [
+    "dernier", "dernière", "derniers", "dernières", "prochain", "prochaine", "passé", "passée",
+    "courant", "courante", "même",
+    "الماضي", "الماضيه", "القادم", "القادمه", "المقبل", "المقبله", "الحالي", "الجاري",
+    "elli fet", "jey", "jeya"
+  ],
+  "places": [
+    "tunisie", "tunis", "ariana", "ben arous", "manouba", "nabeul", "zaghouan", "bizerte", "béja",
+    "beja", "jendouba", "le kef", "kef", "siliana", "sousse", "monastir", "mahdia", "sfax",
+    "kairouan", "kasserine", "sidi bouzid", "gabès", "gabes", "médenine", "medenine", "tataouine",
+    "gafsa", "tozeur", "kébili", "kebili", "djerba", "jerba", "la marsa", "hammamet",
+    "تونس", "اريانه", "بن عروس", "منوبه", "نابل", "زغوان", "بنزرت", "باجه", "جندوبه", "الكاف",
+    "كاف", "سليانه", "سوسه", "المنستير", "منستير", "المهديه", "مهديه", "صفاقس", "القيروان",
+    "قيروان", "القصرين", "قصرين", "سيدي بوزيد", "قابس", "مدنين", "تطاوين", "قفصه", "توزر",
+    "قبلي", "جربه", "المرسي", "الحمامات"
+  ]
+}

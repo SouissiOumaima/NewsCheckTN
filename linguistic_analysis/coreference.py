@@ -6,8 +6,8 @@ spans ne changent pas (`resolved_text` est une version supplémentaire).
 
 Mentions candidates (fenêtre des 2 phrases précédentes) :
 - le sujet de chaque phrase, tel qu'extrait par `spo` : groupe nominal défini (« le ministre »,
-  « الوزير ») ou nom propre ; si ce sujet était lui-même un pronom résolu, c'est son antécédent
-  qui sert de mention (chaînes) ;
+  « الوزير », annexion « وزير الصحه ») ou nom propre ; si ce sujet était lui-même un pronom
+  résolu, c'est son antécédent qui sert de mention (chaînes) ;
 - les noms propres (PROPN avec parseur ; sans parseur, mot inconnu du lexique à majuscule).
 
 Pronoms résolus : FR il / elle / ils / elles (sauf « il » impersonnel), AR هو / هي / هم,
@@ -62,6 +62,7 @@ _DETERMINERS: dict[str, tuple[str | None, str | None]] = {
     "el": (None, None),
     "al": (None, None),
 }
+_ARABIC = re.compile(r"[؀-ۿ]")
 _FR_DETERMINER_START = re.compile(r"^(?:Le|La|Les|L')(?=[\s'A-Za-zÀ-ÿ])")
 
 
@@ -109,6 +110,9 @@ def _is_definite_or_name(sentence: Sentence, tokens: list[Token]) -> bool:
     if head.upos == "PROPN":  # tête nom propre (pas un groupe indéfini qui contient un nom)
         return True
     if fold(first.text) in _DETERMINERS or fold(first.text).startswith("ال"):
+        return True
+    # Annexion arabe : défini si le complément porte l'article (« رئيس الحكومه »).
+    if _ARABIC.search(first.text) and any(fold(t.text).startswith("ال") for t in tokens[1:]):
         return True
     if sentence.parser != "rules":
         return any(t.feats.get("Definite") == "Def" for t in tokens)
