@@ -1,7 +1,20 @@
 """Tests Lot A2."""
 
-from common.schemas import Lang
-from normalization.normalize import detect_language, normalize, normalize_arabic
+import re
+
+import pytest
+
+from common.schemas import Document, Lang
+from normalization.normalize import (
+    detect_language,
+    detect_script,
+    normalize,
+    normalize_arabic,
+)
+
+# ---------------------------------------------------------------------------
+# Tests d'origine du dépôt (inchangés) : ils doivent toujours passer.
+# ---------------------------------------------------------------------------
 
 
 def test_detect_language_fr():
@@ -22,3 +35,176 @@ def test_normalize_arabic_removes_diacritics():
 
 def test_normalize_whitespace():
     assert normalize("  Bonjour   Tunis  ").text == "Bonjour Tunis"
+
+
+# ---------------------------------------------------------------------------
+# Jeu de textes réalistes, réutilisé par plusieurs tests ci-dessous.
+# ---------------------------------------------------------------------------
+
+SAMPLES = [
+    "Le chômage en Tunisie est de 16,4 % en 2023.",
+    "Le vol A320 a décollé à 9h30 pour le sommet du G20.",
+    "La note AAA de la France, sous Louis XIII, 10² = 100.",
+    "C\u2019est graaaaave !!! 1000000 dinars",
+    "3lech el 7koma ma 9alet chay",
+    "Sa7a, el 7ala s3iba برشا برشا",
+    "بـــرشـــا مَبْرُوك لتونس ههههههه",
+    "إنّ الأسعار ارتفعت بنسبة ٩٫٣٪ في ٢٠٢٣",
+    "Voir https://www.ins.tn/a3bc ou écrire à ali@gmail.com @ali",
+    "😂😂😂 12345",
+    "",
+]
+
+
+# ---------------------------------------------------------------------------
+# 1. Le contrat : ce que les autres lots attendent de nous.
+# ---------------------------------------------------------------------------
+
+# parametrize lance le même test une fois par élément de SAMPLES.
+@pytest.mark.parametrize("raw", SAMPLES)
+def test_normalize_respects_contract(raw):
+    doc = normalize(raw)
+    assert isinstance(doc, Document)
+    assert doc.raw_text == raw  # l'original n'est jamais modifié
+    assert isinstance(doc.lang, Lang)
+    assert doc.script in {"arabic", "latin", "arabizi", "mixed"}
+
+
+@pytest.mark.parametrize("raw", SAMPLES)
+def test_normalize_is_idempotent(raw):
+    # Convention du README : normaliser deux fois = normaliser une fois.
+    once = normalize(raw).text
+    assert normalize(once).text == once
+
+
+# ---------------------------------------------------------------------------
+# 2. La règle d'or : nombres, sigles et liens ne changent jamais.
+# ---------------------------------------------------------------------------
+
+def _digits(text: str) -> str:
+    """Tous les chiffres du texte, dans l'ordre, convertis en chiffres 0-9."""
+    # int() comprend aussi les chiffres arabes-indiens : int("٩") == 9.
+    return "".join(str(int(char)) for char in text if char.isdecimal())
+
+
+@pytest.mark.parametrize("raw", SAMPLES)
+def test_normalize_never_changes_digits(raw):
+    assert _digits(normalize(raw).text) == _digits(raw)
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    ["AAA", "XIII", "10²", "1000000", "16,4 %", "A320", "G20"],
+)
+def test_normalize_keeps_numbers_and_acronyms(fragment):
+    assert fragment in normalize(f"Selon le rapport {fragment} publié hier").text
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    ["https://www.ins.tn/a3bc", "ali@gmail.com", "@ali"],
+)
+def test_normalize_keeps_links_and_addresses(fragment):
+    assert fragment in normalize(f"Voir {fragment} pour le détail").text
+
+
+# ---------------------------------------------------------------------------
+# 3. Les règles de normalisation.
+# ---------------------------------------------------------------------------
+
+def test_normalize_converts_arabic_digits_and_signs():
+    doc = normalize("ارتفعت بنسبة ٩٫٣٪ في ٢٠٢٣")
+    assert "9.3%" in doc.text
+    assert "2023" in doc.text
+
+
+def test_normalize_removes_tatweel_and_unifies_alef():
+    assert normalize("بـــرشـــا").text == "برشا"
+    assert normalize("أعلنت إنّ آخر").text == "اعلنت ان اخر"
+
+
+def test_normalize_unifies_apostrophes():
+    assert normalize("L\u2019inflation").text == "L'inflation"
+
+
+def test_normalize_reduces_latin_elongation_to_two():
+    assert normalize("graaaaave").text == "graave"
+    assert normalize("aller").text == "aller"  # double lettre légitime
+
+
+def test_normalize_reduces_arabic_elongation_to_three():
+    assert normalize("ههههههه").text == "ههه"
+    assert normalize("تتتبع").text == "تتتبع"  # vrai mot à 3 lettres identiques
+
+
+def test_normalize_removes_invisible_characters():
+    # \u200f = marque de direction droite-gauche, invisible à l'écran.
+    assert normalize("تونس\u200f").text == "تونس"
+
+
+# ---------------------------------------------------------------------------
+# 4. Script et langue.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Le G20 se réunit à Tunis.",
+        "Le vol A320 a décollé à 9h30.",
+        "La 5G arrive au 2e trimestre.",
+        "La superficie est de 163 610 km2.",
+        "Voir https://t.co/a3bc pour le détail",
+    ],
+)
+def test_french_with_digits_is_not_arabizi(text):
+    # Ces phrases étaient classées "tunisien" par le stub d'origine.
+    assert detect_script(text) == "latin"
+    assert detect_language(text) == Lang.FR
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["3lech el 7koma ma 9alet chay", "Sa7a", "el dar mta3 baba"],
+)
+def test_arabizi_is_detected(text):
+    assert detect_script(text) == "arabizi"
+    assert detect_language(text) == Lang.TN
+
+
+def test_acronym_does_not_make_arabic_text_mixed():
+    assert detect_script("أعلنت الحكومة عن زيادة حسب BCT") == "arabic"
+
+
+def test_balanced_text_is_mixed():
+    assert detect_script("el 7ala s3iba برشا برشا") == "mixed"
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["", "   ", "12345", "😂😂😂", "https://t.co/abc"],
+)
+def test_text_without_letters_has_unknown_language(text):
+    assert detect_language(text) == Lang.UNKNOWN
+
+
+def test_is_arabizi_rule_ignores_one_ambiguous_word_in_long_text():
+    # Un seul mot douteux ("ta3") dans 40 mots de français ne suffit pas.
+    text = " ".join(["le rapport annuel"] * 13) + " ta3"
+    assert len(re.findall(r"\w+", text)) == 40
+    assert detect_script(text) == "latin"
+
+
+# ---------------------------------------------------------------------------
+# 5. Limites connues, écrites noir sur blanc.
+#    xfail = "échec attendu" : le test décrit ce qu'on VEUT obtenir et que le
+#    code ne sait pas encore faire. Il passera au vert avec le classifieur.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.xfail(reason="tunisien en lettres arabes : classifieur à venir")
+def test_tunisian_in_arabic_script_is_tn():
+    assert detect_language("الحكومة باش تزيد في الشهرية برشا") == Lang.TN
+
+
+@pytest.mark.xfail(reason="arabizi sans chiffres : classifieur à venir")
+def test_arabizi_without_digits_is_tn():
+    assert detect_language("chnowa el jaw lyoum fi tounes") == Lang.TN

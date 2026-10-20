@@ -22,6 +22,7 @@ Transformer tout texte d'entrée en une forme propre et homogène, utilisée par
 | `arabizi.py` | Table de translittération et désambiguïsation |
 | `langid.py` | Identification de langue (fastText lid.176 + classifieur MSA/TN) |
 | `perplexity.py` | Modèles de langue et calcul de perplexité |
+| `evaluate.py` | Évaluation langue / script sur un jeu JSONL (`python -m normalization.evaluate --errors`) |
 | `resources/` | Lexiques, tables de correspondance (petits fichiers uniquement) |
 
 ## Conventions
