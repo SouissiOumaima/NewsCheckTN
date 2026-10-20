@@ -408,6 +408,49 @@ def test_lexicons_load_for_all_languages():
         assert {"expressions", "evaluatifs", "souhaits"} <= set(lexicon)
 
 
+def _claim_as(text: str, lang: Lang):
+    """Affirmation du texte normalisé, en lettres arabes, avec la langue annoncée forcée."""
+    doc = normalize(text)
+    (claim,) = extract_claims_detailed(
+        Document(raw_text=doc.raw_text, text=doc.text, lang=lang, script="arabic")
+    )
+    return {
+        key: getattr(claim, key)
+        for key in ("is_claim", "is_opinion", "modality", "certainty", "triggers")
+    }
+
+
+# Le tunisien en lettres arabes emploie aussi les marqueurs de l'arabe standard, et le Lot A2
+# peut l'étiqueter `ar` ou `tn` : en lettres arabes, le résultat ne dépend pas de `lang`.
+@pytest.mark.parametrize(
+    "item_id, expected",
+    [("ar-03", "rapporté"), ("ar-07", "opinion"), ("ar-09", "hypothétique")],
+)
+def test_arabic_script_lexicons_ignore_announced_lang_eval(item_id, expected):
+    (item,) = [it for it in evaluate.load_eval_set() if it["id"] == item_id]
+    as_ar, as_tn = _claim_as(item["text"], Lang.AR), _claim_as(item["text"], Lang.TN)
+    assert as_ar == as_tn
+    assert as_tn["modality"] == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected_modality, expected_trigger",
+    [
+        ("أعتقد أن الأسعار باش تهبط الشهر الجاي.", "opinion", "opinion:اعتقد"),
+        ("حسب وزارة الصحة، برشا حالات جديدة تسجلت.", "rapporté", "rapporté:حسب"),
+        ("من المحتمل أن الحكومة باش تزيد في الأجور.", "assertif", "incertitude:من المحتمل"),
+    ],
+    ids=["opinion", "rapporté", "incertitude"],
+)
+def test_arabic_script_lexicons_ignore_announced_lang_tunisian(
+    text, expected_modality, expected_trigger
+):
+    as_ar, as_tn = _claim_as(text, Lang.AR), _claim_as(text, Lang.TN)
+    assert as_ar == as_tn
+    assert as_tn["modality"] == expected_modality
+    assert expected_trigger in as_tn["triggers"]
+
+
 def test_detailed_claims_carry_factuality():
     doc = normalize(
         "Le chômage a atteint 16 % en 2023. Je pense que cette réforme est une catastrophe."
