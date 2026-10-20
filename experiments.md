@@ -32,6 +32,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
 | EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
+| EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 (stub = v1) ; cas ciblés 0/5 → 5/5 | v1 retenue ; suite : classifieur TN |
 
 ## Entrées
 
@@ -256,6 +257,42 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   communs avec l'arabe standard (« زيت », « الماء »). Jeu minuscule et fictif : chiffres optimistes.
 - **Décision / suite** : baseline retenue. S4 : retrieval dense multilingue (attendu : gain sur le
   croisement FR ↔ AR) ; translittération arabizi du Lot A2 ; refaire l'évaluation sur le corpus réel A1.
+### EXP-A2-001 — Normalisation v1 et identification de langue par règles
+- **Date** : 2026-10-06
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : remplacer le stub de normalisation ; vérifier que la détection d'arabizi
+  ne classe plus en tunisien le français contenant un chiffre collé à une lettre (G20, A320, 5G),
+  sans dégrader le reste.
+- **Données** : (a) `tests/fixtures/linguistic_analysis/eval_30.jsonl`, 34 phrases annotées par le
+  Lot B (10 FR, 10 arabe standard, 5 tunisien en lettres arabes, 5 arabizi, 4 mixtes), un annotateur,
+  étiquettes `lang` et `script` ; (b) 5 phrases françaises ciblées, rédigées pour reproduire le défaut
+  (`test_french_with_digits_is_not_arabizi`). Pas de split : aucune donnée d'apprentissage.
+- **Méthode / configuration** : règles déterministes (pas de graine). Stub = `normalize.py` de
+  `fe99c66` ; v1 = `6a3d92d`. v1 : mot arabizi sous conditions (au moins 2 lettres, chiffre isolé
+  parmi 2-3-5-6-7-9, pas tout en majuscules, pas une unité), seuil de 5 % des mots latins, script
+  décidé à la majorité (80 %), liens et adresses ignorés ; chiffres arabes convertis, nombres, sigles
+  et liens jamais modifiés.
+- **Code** : commit `6a3d92d`, `normalization/normalize.py`, `tests/test_normalization.py` ;
+  `normalization/evaluate.py` (`python -m normalization.evaluate --errors`).
+- **Résultats** :
+  - (a) eval_30, identiques pour le stub et la v1. Langue : FR 10/10, AR 10/10, TN 8/14 (0.57) ;
+    exactitude 0.82, moyenne par classe 0.86. Script : arabic 15/15, arabizi 5/5, latin 10/10,
+    mixed 0/4 ; exactitude 0.88, moyenne par classe 0.75.
+  - (b) phrases ciblées : stub 0/5 (classées arabizi), v1 5/5.
+  - Tests du lot : stub 55 réussis / 15 échecs ; v1 70 réussis, 2 échecs attendus (xfail).
+    Projet entier avec la v1 : 370 réussis, aucun échec ; `ruff check .` sans remarque.
+- **Analyse** : eval_30 ne contient aucune phrase française avec un chiffre collé à une lettre : il ne
+  distingue pas les deux versions, d'où le jeu (b). Les 9 erreurs restantes sur eval_30 : 5 phrases
+  tunisiennes en lettres arabes classées `ar` (l'alphabet seul ne suffit pas) ; 1 arabizi sans chiffre
+  classé `fr` (`mx-4`) ; 4 `mixed`, où le Lot B entend « mélange de langues FR/TN en lettres latines »
+  et le code « mélange d'alphabets » : définition à fixer. La v1 conserve ة → ه et ى → ي du stub, qui
+  gênent l'analyse syntaxique (EXP-B-001, E7). Limites : jeu petit, un seul annotateur ; les phrases
+  (b) ont été rédigées en connaissant les règles : elles prouvent la correction du défaut, pas une
+  performance générale.
+- **Décision / suite** : v1 retenue. À discuter avec les Lots B et D : texte léger (orthographe
+  conservée) dans `Document.text` et repli séparé pour la recherche ; sens de `script = mixed`.
+  Suite : classifieur de langue (n-grammes de caractères) pour le tunisien en lettres arabes et
+  l'arabizi sans chiffres ; jeu d'évaluation A2 de phrases réelles.
 
 ### EXP-B-001 — Extracteur à règles, palier Bronze
 - **Date** : 2026-10-04
