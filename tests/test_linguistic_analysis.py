@@ -1215,6 +1215,69 @@ def test_french_participle_endings_unaffected():
     assert (triple.predicate, triple.obj) == ("ont progressé", "de 5 %")
 
 
+# --- Silver : conjonction « و » / « ف » collée au verbe de parole --------------------------
+
+ATTACHED_SPEECH = "وقال وزير الصحة إن عدد الإصابات تراجع بشكل كبير."
+
+
+def _stanza_like(text, words):
+    """Phrase analysée comme par Stanza, sans le modèle. `words` : (mot, token d'origine ou None
+    pour un mot du même token multi-mots, upos, tête, relation) ; les mots d'un même token
+    partagent son empan, comme dans `preprocessing._analyze_stanza`."""
+    tokens, position, span = [], 0, (0, 0)
+    for i, (word, surface, upos, head, deprel) in enumerate(words):
+        if surface is not None:
+            start = text.index(surface, position)
+            span, position = (start, start + len(surface)), start + len(surface)
+        tokens.append(preprocessing.Token(i=i, text=word, lemma=word, upos=upos, head=head,
+                                          deprel=deprel, start=span[0], end=span[1]))
+    return preprocessing.Sentence(text=text, start=0, end=len(text), tokens=tokens,
+                                  lang=Lang.AR, parser="stanza-ar")
+
+
+def test_spo_tree_attached_conjunction_root_takes_the_verb():
+    # Arbre produit par Stanza : « و » racine, verbe de parole en parataxis.
+    text = "وقال وزير الصحه ان عدد الاصابات تراجع بشكل كبير."
+    sentence = _stanza_like(text, [
+        ("و", "وقال", "CCONJ", -1, "root"), ("قال", None, "VERB", 0, "parataxis"),
+        ("وزير", "وزير", "NOUN", 1, "nsubj"), ("الصحه", "الصحه", "NOUN", 2, "nmod"),
+        ("ان", "ان", "SCONJ", 7, "mark"), ("عدد", "عدد", "NOUN", 7, "nsubj"),
+        ("الاصابات", "الاصابات", "NOUN", 5, "nmod"), ("تراجع", "تراجع", "VERB", 1, "ccomp"),
+        ("ب", "بشكل", "ADP", 9, "case"), ("شكل", None, "NOUN", 7, "obl"),
+        ("كبير", "كبير", "ADJ", 9, "amod"), (".", ".", "PUNCT", 0, "punct"),
+    ])
+    triple = spo.extract_spo(sentence)
+    assert (triple.subject, triple.obj) == ("وزير الصحه", "عدد الاصابات تراجع بشكل كبير")
+    assert triple.predicate.endswith("قال")
+    assert triple.reported and triple.source == "وزير الصحه"
+
+
+@pytest.mark.slow
+def test_spo_stanza_attached_conjunction_speech_verb():
+    if preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèle Stanza ar absent")
+    (claim,) = extract_claims_detailed(normalize(ATTACHED_SPEECH))
+    assert claim.parser == "stanza-ar"
+    assert (claim.subject, claim.obj) == ("وزير الصحه", "عدد الاصابات تراجع بشكل كبير")
+    assert (claim.modality, claim.source) == ("rapporté", "وزير الصحه")
+
+
+def test_spo_rules_speech_verb_with_attached_conjunction():
+    (claim,) = extract_claims_detailed(normalize(ATTACHED_SPEECH))
+    assert claim.parser == "rules"
+    assert (claim.subject, claim.obj) == ("وزير الصحه", "عدد الاصابات تراجع بشكل كبير")
+    assert (claim.modality, claim.source) == ("rapporté", "وزير الصحه")
+
+
+def test_spo_rules_attached_conjunction_stripped_only_for_speech_verbs():
+    reported = spo.extract_spo(_sentence("فأكد وزير التجارة أن الأسعار ستنخفض."))
+    assert reported.reported and reported.source == "وزير التجاره"
+    assert reported.obj == "الاسعار ستنخفض"
+    # Piège : « و » + verbe qui n'est pas un verbe de parole, suivi de « أن » : pas rapporté.
+    trap = spo.extract_spo(_sentence("وتبين أن الأسعار ارتفعت في الشهر الماضي."))
+    assert not trap.reported and trap.source is None
+
+
 # --- Outillage eval_100 : validation, verrou, ventilation, bootstrap, accord ---------------
 
 TEMPLATE = FIXTURES / "eval_100_template.jsonl"

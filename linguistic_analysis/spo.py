@@ -47,6 +47,7 @@ from pathlib import Path
 from linguistic_analysis.preprocessing import (
     Sentence,
     Token,
+    _verb_candidates,
     fold,
     is_intransitive_verb,
     verb_lexicon,
@@ -69,6 +70,8 @@ _FR_AUX = {
 _INFINITIVE = re.compile(r"(er|ir|re|oir)$")
 _PARTICIPLE = re.compile(r"(é|ée|és|ées|i|is|ie|ies|it|its|u|us|ue|ues|t|ts)$")
 _COMPLEMENTIZERS = {"que", "qu'", "elli", "illi", "eli", "اللي", "الي", "ان", "انه", "بان"}
+# Conjonctions collées au verbe (« وقال ») : Stanza en fait parfois la racine de l'arbre.
+_ATTACHED_CONJUNCTIONS = {"و", "ف"}
 # Prépositions de l'arabe standard (limites du sujet quand le verbe est en tête).
 _AR_PREPOSITIONS = {
     "عن", "حتي", "بين", "ضد", "نحو", "منذ", "خلال", "حول", "عبر", "لدي", "عند", "بعد", "قبل",
@@ -431,6 +434,10 @@ def _extract_with_tree(sentence: Sentence) -> SPO | None:
     if not roots:
         return None
     root = next((t for t in roots if t.upos in ("VERB", "AUX")), roots[0])
+    if root.upos == "CCONJ" and fold(root.text) in _ATTACHED_CONJUNCTIONS:
+        # « و » racine, verbe en parataxis ou conj : le verbe devient la racine.
+        root = next((c for c in _children(sentence, root) if c.upos in ("VERB", "AUX")
+                     and c.deprel.startswith(("parataxis", "conj"))), root)
     children = _children(sentence, root)
     subj = next((c for c in children if c.deprel.startswith("nsubj")), None)
     subject_tokens = _subtree(sentence, subj) if subj else []
@@ -621,7 +628,10 @@ def _extract_with_rules(sentence: Sentence) -> SPO | None:
         after += 1
     passive = any(fold(t.text) == "été" for t in predicate_tokens[:-1])
 
-    speech = any(fold(t.text) in speech_verbs() for t in predicate_tokens)
+    # Verbe de parole cherché aussi sans « و » / « ف » collé (« وقال »).
+    speech = any(
+        c in speech_verbs() for t in predicate_tokens for c in _verb_candidates(fold(t.text))
+    )
     source_tokens, lead = _leading_source(tokens[:start])
     adjuncts = {"source": source_tokens} if source_tokens else {}
     subject_tokens = tokens[lead:start]
