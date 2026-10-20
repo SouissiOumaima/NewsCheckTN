@@ -12,3 +12,14 @@ tester le code du retrieval. Les chiffres ne doivent pas être cités comme de v
   (`dev-c18` à `dev-c20`) pour équilibrer un jeu dominé par des affirmations fausses.
 
 À remplacer par le corpus réel du Lot A1 et les paires (affirmation, preuve) annotées.
+
+## Jeu réel Tunifact v0 (EXP-D-004)
+
+- `claims_tunifact_v0.jsonl` : 15 affirmations rédigées par le Lot D à partir de 5 articles
+  Tunifact du Lot A1 (698 migration → vrai ; 613 vaccins, 797 bac, 890 Poste → faux ;
+  937 coupures en France → trompeur, d'après le verdict publié par Tunifact).
+  `origine` : `original` (même langue que l'article, 5), `traduction` (autre langue, tunisien ou
+  arabizi, traduit par le Lot D, 7), `inventee` (aucune preuve dans le corpus, 3).
+- Le corpus (25 phrases Tunifact + 30 phrases TArC comme distracteurs) n'est **pas** versionné :
+  `python -m rag_llm.build_tunifact_eval` l'écrit dans `data/interim/lot_d/` à partir de la
+  branche `lot-a1-data` (droits de redistribution Tunifact non confirmés).

@@ -9,6 +9,7 @@ from common.schemas import Claim, Evidence, Label, Lang, Stance, StanceResult
 from data.loaders import load_evidence_corpus
 from rag_llm import evaluate_verdict
 from rag_llm.baseline_stance import predict_stance_rules, predict_stances, topic_overlap
+from rag_llm.build_tunifact_eval import build_corpus
 from rag_llm.evaluate_retrieval import compute_metrics, load_claims, run
 from rag_llm.retrieval import hybrid
 from rag_llm.retrieval.bm25 import BM25Index
@@ -287,3 +288,31 @@ def test_seuil_abstention_depend_de_la_methode():
     s = StanceResult(evidence=_ev("x", "t", score=0.9), stance=Stance.REFUTES, confidence=0.9)
     assert not generate_verdict_with_reason(CLAIM_FR, [s], min_score=0.4)[0].abstained
     assert generate_verdict_with_reason(CLAIM_FR, [s], min_score=1.0)[1] == LOW_RELEVANCE
+
+
+# --- Jeu réel Tunifact v0 (EXP-D-004) -------------------------------------------------
+# Les textes du Lot A1 ne sont pas recopiés dans le dépôt (droits à confirmer) : on teste la
+# construction du corpus sur de petites lignes factices et la cohérence du fichier d'affirmations.
+
+
+def test_corpus_tunifact_exclut_la_rumeur_et_ajoute_les_distracteurs():
+    tunifact = [
+        {"id": "tunifact-1-001", "text": "rumeur", "lang": "fr", "source": "Tunifact"},
+        {"id": "tunifact-1-002", "text": "preuve", "lang": "fr", "source": "Tunifact"},
+    ]
+    tarc = [{"id": "tarc-forum-0001", "text": "bruit", "lang": "tn", "source": "TArC"}]
+    ids = [r["doc_id"] for r in build_corpus(tunifact, tarc)]
+    assert ids == ["tunifact-1-002", "tarc-forum-0001"]
+
+
+def test_affirmations_tunifact_coherentes():
+    claims = load_claims(FIXTURES / "claims_tunifact_v0.jsonl")
+    labels = {lab.value for lab in Label}
+    assert len({c["claim_id"] for c in claims}) == len(claims)
+    for c in claims:
+        assert c["gold_label"] in labels and Lang(c["lang"])
+        assert (c["gold_label"] == "preuves_insuffisantes") == (not c["gold_doc_ids"])
+        # preuves attendues : phrases d'un seul article, jamais la rumeur (-001)
+        articles = {d.rsplit("-", 1)[0] for d in c["gold_doc_ids"]}
+        assert len(articles) <= 1
+        assert not any(d.endswith("-001") for d in c["gold_doc_ids"])

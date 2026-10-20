@@ -26,12 +26,64 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
 | EXP-D-003 | 2026-10-19 | D | Retrieval dense + hybride RRF | MiniLM / e5-small / e5-base / bge-m3, RRF k=60 | Recall@5 / MRR | hybride e5-base 0.94 / 0.96 (BM25 0.67 / 0.91) ; verdict inchangé | e5-base retenu ; NLI = goulot ; re-ranking S5 |
 | EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
 | EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 
 ## Entrées
+
+### EXP-D-004 — Première évaluation sur données réelles : Tunifact v0
+- **Date** : 2026-10-20
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : mesurer la chaîne retrieval → NLI par règles → verdict sur des
+  articles de fact-checking réels, et vérifier si les conclusions tirées du jeu fictif tiennent.
+- **Données** : Lot A1, branche `lot-a1-data` (commit `19976a4`) : 5 articles Tunifact découpés
+  en phrases (698, 613, 797 en FR ; 890, 937 en AR). Corpus = 25 phrases Tunifact (la phrase
+  `-001` de chaque article, qui reformule la rumeur, est exclue) + 30 phrases TArC (forum
+  tunisien) comme distracteurs = 55 passages. 15 affirmations rédigées par le Lot D
+  (`claims_tunifact_v0.jsonl`) : 5 dans la langue de l'article, 7 traduites (autre langue,
+  tunisien, arabizi), 3 sans preuve dans le corpus. Labels = verdict publié par Tunifact
+  (1 article vrai, 3 faux, 1 trompeur). Limites : 5 articles seulement ; les articles 613, 797
+  et 890 sont des **reformulations** du Lot A1 ; affirmations et traductions écrites par une
+  seule personne ; droits de redistribution Tunifact non confirmés (corpus non versionné).
+- **Méthode / configuration** : identique à EXP-D-002 (BM25 k1 = 1.5, b = 0.75 ; NLI par
+  règles ; gabarit ; seuil A2 = 1.0). Aucun réglage sur ce jeu. Déterministe.
+- **Code** : `python -m rag_llm.build_tunifact_eval` puis
+  `python -m rag_llm.evaluate_retrieval|evaluate_verdict --corpus data/interim/lot_d/evidence_tunifact_v0.jsonl --claims tests/fixtures/rag_llm/claims_tunifact_v0.jsonl`.
+- **Résultats — retrieval (BM25, n = 12 avec preuve)** : Hit@1 0.833, Hit@5 0.833,
+  Recall@5 0.542, MRR 0.833. Par groupe (Hit@1) : ar-arabic 1.00 (4), fr-latin 0.80 (5),
+  tn-arabic 1.00 (1), tn-arabizi 0.50 (2). Échecs : `tf-c08` (FR → article AR) et `tf-c11`
+  (arabizi). Score BM25 du 1er passage : 3.8 à 29.1 quand il est correct ; **2.0 à 9.6** pour les
+  3 affirmations sans preuve.
+- **Résultats — verdict** : exactitude 0.20, couverture 0.20, **précision sélective 0.00**
+  (3 verdicts émis, tous faux), abstention justifiée 1.00, macro-F1 0.10, 0 citation invalide.
+- **Analyse** :
+  1. Le retrieval tient à peu près (Hit@1 0.83) ; les passages « croisés » trouvés par BM25 le
+     sont grâce à des nombres ou des mots français cités dans l'article arabe (937-002 contient le
+     titre français d'une dépêche) — chance, pas compréhension.
+  2. **Le seuil d'abstention BM25 (1.0) ne vaut que pour le jeu fictif** : ici, une affirmation
+     sans preuve (`tf-c13`, bac 2026 annulé) obtient 9.6, plus qu'une bonne preuve (3.8).
+  3. **Le NLI par règles échoue sur des articles réels**, pour trois causes identifiées :
+     - séparateurs de milliers : « 39 000 » devient {39, 000}, « 39.000 » est lu comme 39,0 →
+       la preuve de l'article *vrai* 698 est jugée contradictoire (`tf-c01` → faux) ;
+     - nombres dans les noms : « Covid-19 » donne le nombre 19, commun à l'affirmation et au
+       verdict de Tunifact → « soutient » (`tf-c02` → vrai) ;
+     - une phrase de verdict reprend l'affirmation pour la réfuter (« Tunifact a classé comme
+       fausse l'information … 67 % … 33 % ») : mêmes nombres → « soutient » (`tf-c03` → vrai) ;
+       « fausse », « زائفة », « مضللة » ne sont pas des marqueurs de démenti de la liste.
+  4. Les 3 verdicts émis sont faux avec une incertitude faible : sur données réelles, le système
+     se trompe **avec assurance**, ce qui est le pire cas pour un fact-checker. Les conclusions
+     d'EXP-D-002 (précision sélective 0.92) étaient un artefact du jeu fictif, écrit en même
+     temps que les règles.
+- **Décision / suite** :
+  - ce jeu devient le jeu de **test** du Lot D (ne plus régler de règle en le regardant) ;
+  - NLI : priorité au modèle multilingue du Lot C ; en attendant, corriger les 2 défauts
+    génériques des règles (séparateurs de milliers, nombres collés à des lettres) sur le jeu de dev,
+    puis re-mesurer ici une seule fois ;
+  - seuil d'abstention : ne plus utiliser le score BM25 brut ; re-ranker (S5) ;
+  - demander au Lot A1 davantage d'articles (texte complet + verdict) pour dépasser 5 articles.
 
 ### EXP-D-003 — Retrieval dense multilingue et hybride RRF (S4)
 - **Date** : 2026-10-19
