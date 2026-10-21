@@ -172,8 +172,14 @@ def main() -> None:
               f" | {rate(arabizi_scores, threshold):6.2%}")
     # Le plus petit seuil pour lequel aucun texte français de mesure n'est classé arabizi.
     allowed = [t for t in THRESHOLDS if rate(french_scores, t) <= MAX_FALSE_ALARM]
-    threshold = allowed[0] if allowed else THRESHOLDS[-1]
-    print(f"seuil retenu : {threshold}")
+    if allowed:
+        threshold = allowed[0]
+        print(f"seuil retenu : {threshold}")
+    else:
+        # Aucun seuil ne tient le critère : on garde le plus haut, et on le dit.
+        threshold = THRESHOLDS[-1]
+        print(f"seuil retenu : {threshold} (repli : aucun seuil n'atteint"
+              f" {MAX_FALSE_ALARM:.2%} de français classé arabizi)")
 
     model = {
         "description": "Poids par n-gramme de caractères : positif = arabizi, négatif = français.",
