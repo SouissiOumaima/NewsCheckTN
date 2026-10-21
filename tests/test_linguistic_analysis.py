@@ -1,6 +1,13 @@
 """Tests Lot B."""
 
+import csv
+import hashlib
 import json
+import os
+import random
+import subprocess
+import sys
+import types
 from dataclasses import asdict, fields
 from pathlib import Path
 
@@ -8,6 +15,7 @@ import pytest
 
 from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
+    agreement,
     claim_extraction,
     coreference,
     demo,
@@ -178,6 +186,26 @@ def test_parser_fallback_without_libraries(monkeypatch):
     finally:
         preprocessing._load_spacy_fr.cache_clear()
         preprocessing._load_stanza_ar.cache_clear()
+
+
+# Avant son remplacement par la fixture automatique (mode règles hors tests « slow »).
+_GET_PARSER = preprocessing.get_parser
+
+
+def test_incompatible_spacy_model_falls_back_to_rules(monkeypatch):
+    # Modèle installé mais incompatible : `spacy.load` lève une exception.
+    def load(name):
+        raise OSError(f"{name} : modèle incompatible")
+
+    monkeypatch.setitem(sys.modules, "spacy", types.SimpleNamespace(load=load))
+    monkeypatch.setattr(preprocessing, "_is_installed", lambda module: True)
+    monkeypatch.setattr(preprocessing, "get_parser", _GET_PARSER)
+    preprocessing._load_spacy_fr.cache_clear()
+    try:
+        (s,) = preprocessing.analyze(normalize("Le ministre a annoncé une hausse des prix."))
+    finally:
+        preprocessing._load_spacy_fr.cache_clear()
+    assert s.parser == "rules" and s.lang == Lang.FR
 
 
 def test_tunisian_uses_rules():
@@ -404,6 +432,49 @@ def test_lexicons_load_for_all_languages():
         assert {"expressions", "evaluatifs", "souhaits"} <= set(lexicon)
 
 
+def _claim_as(text: str, lang: Lang):
+    """Affirmation du texte normalisé, en lettres arabes, avec la langue annoncée forcée."""
+    doc = normalize(text)
+    (claim,) = extract_claims_detailed(
+        Document(raw_text=doc.raw_text, text=doc.text, lang=lang, script="arabic")
+    )
+    return {
+        key: getattr(claim, key)
+        for key in ("is_claim", "is_opinion", "modality", "certainty", "triggers")
+    }
+
+
+# Le tunisien en lettres arabes emploie aussi les marqueurs de l'arabe standard, et le Lot A2
+# peut l'étiqueter `ar` ou `tn` : en lettres arabes, le résultat ne dépend pas de `lang`.
+@pytest.mark.parametrize(
+    "item_id, expected",
+    [("ar-03", "rapporté"), ("ar-07", "opinion"), ("ar-09", "hypothétique")],
+)
+def test_arabic_script_lexicons_ignore_announced_lang_eval(item_id, expected):
+    (item,) = [it for it in evaluate.load_eval_set() if it["id"] == item_id]
+    as_ar, as_tn = _claim_as(item["text"], Lang.AR), _claim_as(item["text"], Lang.TN)
+    assert as_ar == as_tn
+    assert as_tn["modality"] == expected
+
+
+@pytest.mark.parametrize(
+    "text, expected_modality, expected_trigger",
+    [
+        ("أعتقد أن الأسعار باش تهبط الشهر الجاي.", "opinion", "opinion:اعتقد"),
+        ("حسب وزارة الصحة، برشا حالات جديدة تسجلت.", "rapporté", "rapporté:حسب"),
+        ("من المحتمل أن الحكومة باش تزيد في الأجور.", "assertif", "incertitude:من المحتمل"),
+    ],
+    ids=["opinion", "rapporté", "incertitude"],
+)
+def test_arabic_script_lexicons_ignore_announced_lang_tunisian(
+    text, expected_modality, expected_trigger
+):
+    as_ar, as_tn = _claim_as(text, Lang.AR), _claim_as(text, Lang.TN)
+    assert as_ar == as_tn
+    assert as_tn["modality"] == expected_modality
+    assert expected_trigger in as_tn["triggers"]
+
+
 def test_detailed_claims_carry_factuality():
     doc = normalize(
         "Le chômage a atteint 16 % en 2023. Je pense que cette réforme est une catastrophe."
@@ -451,21 +522,21 @@ def _check_exact_extraction(sentence, triple):
 
 
 SPO_RULES_CASES = [
-    # (texte, sujet, prédicat, objet, discours rapporté)
+    # (texte, sujet, prédicat, objet, discours rapporté) ; les compléments de temps sont hors objet
     # Français (sans parseur)
     ("Le taux de chômage a atteint 16,4 % en 2023.", "Le taux de chômage", "a atteint",
-     "16,4 % en 2023", False),
-    ("Le ministre a visité Sfax hier.", "Le ministre", "a visité", "Sfax hier", False),
+     "16,4 %", False),
+    ("Le ministre a visité Sfax hier.", "Le ministre", "a visité", "Sfax", False),
     ("Le gouvernement a signé un accord avec le FMI.", "Le gouvernement", "a signé",
      "un accord avec le FMI", False),
     # Tunisien en lettres arabes (valeurs attendues = texte normalisé par le Lot A2)
     ("الحكومة قالت إلي الأسعار باش تنقص.", "الحكومه", "قالت", "الاسعار باش تنقص", True),
-    ("الوزير زار صفاقس نهار الاثنين.", "الوزير", "زار", "صفاقس نهار الاثنين", False),
+    ("الوزير زار صفاقس نهار الاثنين.", "الوزير", "زار", "صفاقس", False),
     ("الشركة عملت 200 خدمة جديدة.", "الشركه", "عملت", "200 خدمه جديده", False),
     # Tunisien en arabizi
     ("El 7koma 9alet elli el as3ar bech tan9es.", "El 7koma", "9alet",
      "el as3ar bech tan9es", True),
-    ("El ministre zar Sfax nhar el thnin.", "El ministre", "zar", "Sfax nhar el thnin", False),
+    ("El ministre zar Sfax nhar el thnin.", "El ministre", "zar", "Sfax", False),
     ("El cherka 3mlet 200 khedma jdida.", "El cherka", "3mlet", "200 khedma jdida", False),
 ]
 
@@ -482,7 +553,8 @@ def test_spo_rules(text, subject, predicate, obj, reported):
 
 def test_spo_rules_negation_and_passive():
     neg = spo.extract_spo(_sentence("Le chômage n'a pas baissé en 2024."))
-    assert (neg.subject, neg.predicate, neg.obj) == ("Le chômage", "n'a pas baissé", "en 2024")
+    assert (neg.subject, neg.predicate, neg.obj) == ("Le chômage", "n'a pas baissé", None)
+    assert neg.time == "en 2024"
     passive = spo.extract_spo(_sentence("120 nouveaux cas ont été enregistrés par le ministère."))
     assert passive.voice == "passive" and passive.predicate == "ont été enregistrés"
     assert passive.subject == "120 nouveaux cas" and passive.obj == "par le ministère"
@@ -500,7 +572,7 @@ def test_spo_rules_speech_verb_without_complementizer_is_not_reported():
 
 
 def test_spo_rules_no_known_verb_returns_none():
-    assert spo.extract_spo(_sentence("ارتفعت نسبة التضخم في تونس.")) is None
+    assert spo.extract_spo(_sentence("تفاقمت أزمة المياه في الجنوب.")) is None
 
 
 def test_claims_now_carry_spo():
@@ -508,14 +580,14 @@ def test_claims_now_carry_spo():
     assert (claim.subject, claim.predicate, claim.obj) == (
         "Le taux de chômage",
         "a atteint",
-        "16,4 % en 2023",
+        "16,4 %",
     )
 
 
 SPO_SPACY_CASES = [
     ("Le taux de chômage a atteint 16,4 % en 2023.", "Le taux de chômage", "a atteint", "16,4 %"),
-    ("Le chômage est de 16 % en 2023.", "Le chômage", "est", "de 16 % en 2023"),
-    ("Le chômage n'a pas baissé en 2024.", "Le chômage", "n'a pas baissé", "en 2024"),
+    ("Le chômage est de 16 % en 2023.", "Le chômage", "est", "de 16 %"),
+    ("Le chômage n'a pas baissé en 2024.", "Le chômage", "n'a pas baissé", None),
     ("Le ministre a déclaré que les prix allaient baisser.", "Le ministre", "a déclaré",
      "les prix allaient baisser"),
 ]
@@ -565,7 +637,8 @@ def test_spo_stanza_ar():
     sentence = _sentence("البطالة مرتفعة في تونس.")
     nominal = spo.extract_spo(sentence)
     assert nominal.predicate == spo.IMPLICIT_PREDICATE and nominal.predicate_span is None
-    assert nominal.subject == "البطاله" and nominal.obj == "مرتفعه في تونس"
+    assert nominal.subject == "البطاله" and nominal.obj == "مرتفعه"
+    assert nominal.location == "في تونس"  # complément de lieu hors attribut
     _check_exact_extraction(sentence, nominal)
 
 
@@ -884,7 +957,7 @@ def test_evaluate_writes_results(tmp_path):
     path = evaluate.write_results(results, tmp_path)
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert path.name.startswith("lot-b_extraction_regles_")
-    assert saved["lot"] == "B" and saved["exp_id"] == "EXP-B-001"
+    assert saved["lot"] == "B" and saved["exp_id"] == evaluate.EXP_ID
     metrics = saved["metrics"]
     groups = {"fr-latin", "ar-arabic", "tn-arabic", "tn-arabizi", "tn-mixed"}
     assert set(metrics["by_lang"]) == groups
@@ -948,6 +1021,19 @@ def test_cli_errors_export(tmp_path, capsys):
     assert "erreur(s)" in capsys.readouterr().out
 
 
+def test_cli_output_survives_cp1252_console(tmp_path):
+    # Console Windows ou sortie redirigée : encodage cp1252, sans `-X utf8`. Les erreurs listées
+    # contiennent de l'arabe (ar-02), que cp1252 ne sait pas encoder.
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONUTF8", "PYTHONIOENCODING")}
+    env |= {"PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0"}
+    command = [sys.executable, "-m", "linguistic_analysis.evaluate", "--rules", "--errors",
+               "--bootstrap", "0", "--out-dir", str(tmp_path)]
+    done = subprocess.run(command, cwd=Path(__file__).resolve().parents[1], env=env,
+                          capture_output=True, timeout=300)
+    assert done.returncode == 0, done.stderr.decode("utf-8", "replace")[-500:]
+    assert "ar-02" in done.stdout.decode("utf-8")
+
+
 @pytest.mark.slow
 def test_error_categories_match_parser_errors():
     pytest.importorskip("spacy")
@@ -956,6 +1042,582 @@ def test_error_categories_match_parser_errors():
         pytest.skip("modèles spaCy / Stanza absents")
     results = evaluate.evaluate(EVAL_ITEMS)
     assert _error_keys(results) == set(ERROR_CATEGORIES["parseurs"])
+
+
+# --- Silver : compléments de source / temps / lieu hors objet --------------------------------
+
+ADJUNCT_RULES_CASES = [
+    # (texte, objet, source, temps, lieu) — mode règles, phrases hors du jeu d'évaluation
+    ("Le chômage a atteint 16 % au premier trimestre, selon l'INS.", "16 %", "l'INS",
+     "au premier trimestre", None),
+    ("La société a recruté 300 ingénieurs à Sousse en 2023.", "300 ingénieurs", None,
+     "en 2023", "à Sousse"),
+    ("Les pluies ont endommagé les routes la semaine dernière à Kasserine.", "les routes", None,
+     "la semaine dernière", "à Kasserine"),
+    ("Les prix ont baissé de 5 % depuis le mois de mars.", "de 5 %", None,
+     "depuis le mois de mars", None),
+    ("Le taux de chômage était de 15 % en 2022.", "de 15 %", None, "en 2022", None),
+    ("El cherka 3mlet 200 khedma jdida fi Sfax.", "200 khedma jdida", None, None, "fi Sfax"),
+    # Restent dans l'objet : nombre + nom de temps, nombre seul, lieu non répertorié, personne
+    ("Le ministre est resté 100 jours en poste.", "100 jours en poste", None, None, None),
+    ("L'usine a produit 2024 voitures.", "2024 voitures", None, None, None),
+    ("Le tribunal a condamné l'ancien ministre à dix ans de prison.",
+     "l'ancien ministre à dix ans de prison", None, None, None),
+    ("Le gouvernement a écrit au Président de la République.",
+     "au Président de la République", None, None, None),
+]
+
+
+@pytest.mark.parametrize(("text", "obj", "source", "time", "location"), ADJUNCT_RULES_CASES)
+def test_spo_rules_adjuncts_out_of_object(text, obj, source, time, location):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.obj, triple.source, triple.time, triple.location) == (
+        obj, source, time, location
+    )
+
+
+def test_spo_rules_leading_source_removed_from_subject():
+    triple = spo.extract_spo(_sentence("D'après la Banque mondiale, la croissance a atteint 2 %."))
+    assert (triple.subject, triple.obj) == ("la croissance", "2 %")
+    assert triple.source == "la Banque mondiale"
+
+
+def test_spo_rules_reported_clause_kept_whole():
+    triple = spo.extract_spo(_sentence("El wali 9al elli el mashrou3 bech yabda fi Sfax."))
+    assert triple.reported and triple.obj == "el mashrou3 bech yabda fi Sfax"
+    assert triple.location is None
+
+
+def test_adjunct_kind_lexicon():
+    def kind(text):
+        return spo.adjunct_kind(_sentence(text).tokens)
+
+    assert kind("en 2024.") == "time" and kind("2024.") is None  # année : préposition requise
+    assert kind("يوم الجمعة.") == "time" and kind("منذ شهر جانفي.") == "time"
+    assert kind("في صفاقس.") == "location" and kind("صفاقس.") is None
+    assert kind("حسب البنك المركزي.") == "source"
+    assert kind("100 jours.") is None and kind("à 7 %.") is None
+
+
+def test_detailed_claim_carries_adjuncts():
+    (claim,) = extract_claims_detailed(normalize("Selon l'INS, le chômage a atteint 16 % en 2023."))
+    assert (claim.obj, claim.source, claim.time) == ("16 %", "l'INS", "en 2023")
+    assert {"source", "time", "location"} <= set(asdict(claim))
+    assert "source" not in {f.name for f in fields(Claim)}  # contrat partagé inchangé
+
+
+@pytest.mark.slow
+def test_spo_parsers_adjuncts():
+    if preprocessing.get_parser(Lang.FR) is None or preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèles spaCy / Stanza absents")
+    fr = spo.extract_spo(_sentence("La société a recruté 300 ingénieurs à Sousse en 2023."))
+    assert (fr.obj, fr.time, fr.location) == ("300 ingénieurs", "en 2023", "à Sousse")
+    ar = spo.extract_spo(_sentence("افتتحت الوزارة مستشفى جديدا في صفاقس يوم الاثنين."))
+    assert (ar.subject, ar.obj) == ("الوزاره", "مستشفي جديدا")
+    assert (ar.time, ar.location) == ("يوم الاثنين", "في صفاقس")
+    duration = spo.extract_spo(_sentence("Le ministre est resté 100 jours en poste."))
+    assert duration.obj == "100 jours" and duration.time is None
+
+
+# --- Silver : lexique verbal du mode règles et sujet verbe-sujet-objet ----------------------
+
+VERB_RULES_CASES = [
+    # (texte, sujet, prédicat, objet) — mode règles, phrases hors du jeu d'évaluation
+    # Français : formes conjuguées générées, auxiliaire au conditionnel, modal + infinitif
+    ("La production de phosphate progresse depuis mars.", "La production de phosphate",
+     "progresse", None),
+    ("Les autorités auraient arrêté trois suspects.", "Les autorités", "auraient arrêté",
+     "trois suspects"),
+    ("Le déficit commercial pourrait dépasser 20 milliards de dinars.", "Le déficit commercial",
+     "pourrait dépasser", "20 milliards de dinars"),
+    ("Le gouvernement va construire un nouvel hôpital.", "Le gouvernement", "va construire",
+     "un nouvel hôpital"),
+    # Arabe standard, verbe en tête : intransitif (jusqu'à la limite) ou chaîne d'annexion
+    ("انخفض سعر صرف الدينار مقابل الأورو.", "سعر صرف الدينار", "انخفض", "مقابل الاورو"),
+    ("تراجعت صادرات زيت الزيتون بنسبة 10 بالمئة.", "صادرات زيت الزيتون", "تراجعت",
+     "بنسبه 10 بالمئه"),
+    ("سجلت الشركة الوطنية أرباحا قياسية.", "الشركه الوطنيه", "سجلت", "ارباحا قياسيه"),
+    ("افتتحت الوزارة مستشفى جديدا.", "الوزاره", "افتتحت", "مستشفي جديدا"),
+    ("قرر البنك المركزي رفع نسبة الفائدة.", "البنك المركزي", "قرر", "رفع نسبه الفائده"),
+    # Tunisien : flexions et négation ما…ش
+    ("الحكومة ما زادتش في الشهرية.", "الحكومه", "ما زادتش", "في الشهريه"),
+    ("El as3ar ma hbatetch.", "El as3ar", "ma hbatetch", None),
+    ("Les loyers tal3ou barcha.", "Les loyers", "tal3ou", "barcha"),
+]
+
+
+@pytest.mark.parametrize(("text", "subject", "predicate", "obj"), VERB_RULES_CASES)
+def test_spo_rules_verb_lexicon(text, subject, predicate, obj):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.subject, triple.predicate, triple.obj) == (subject, predicate, obj)
+
+
+def test_rules_verb_forms_generated():
+    def upos(word):
+        return _sentence(f"{word} x y z.").tokens[0].upos
+
+    for word in ("progresse", "baissaient", "lança", "يرتفع", "سترتفع", "وارتفعت", "هبطتش"):
+        assert upos(word) == "VERB", word
+    assert upos("tunis") == "X" and upos("بين") != "VERB"
+
+
+def test_spo_rules_noun_after_determiner_is_not_a_verb():
+    triple = spo.extract_spo(_sentence("La visite du ministre a duré deux heures."))
+    assert (triple.subject, triple.predicate) == ("La visite du ministre", "a duré")
+
+
+def test_coreference_rules_arabic_annexation_antecedent():
+    text = "استقبل وزير الصحة وفدا أجنبيا. وهو أكد أهمية التعاون."
+    claims = extract_claims_detailed(normalize(text))
+    assert claims[-1].resolution_log == ["وهو → وزير الصحه"]
+
+
+# --- Silver : source du discours rapporté --------------------------------------------------
+
+SOURCE_RULES_CASES = [
+    # (texte, objet, source, discours rapporté) — mode règles, phrases hors du jeu d'évaluation
+    ("Le porte-parole du gouvernement a annoncé que les salaires seront augmentés.",
+     "les salaires seront augmentés", "Le porte-parole du gouvernement", True),
+    ("Les prix vont baisser, a déclaré le ministre du Commerce.", None,
+     "le ministre du Commerce", True),
+    ("Le chômage a reculé à 15 %, affirme l'Institut national de la statistique.", "à 15 %",
+     "l'Institut national de la statistique", True),
+    ("صرح وزير التجارة بأن الأسعار ستنخفض.", "الاسعار ستنخفض", "وزير التجاره", True),
+    ("ارتفعت الصادرات بنسبة 5 بالمئة حسب ما أفاد به المعهد الوطني للإحصاء.", "بنسبه 5 بالمئه",
+     "المعهد الوطني للاحصاء", False),
+    ("El wali 9al elli el mashrou3 bech yabda.", "el mashrou3 bech yabda", "El wali", True),
+    ("9alou elli el banka bech tzid el faida.", "el banka bech tzid el faida", None, True),
+    # Pas de discours rapporté : pas de complétive, ou virgule suivie d'autre chose qu'une incise
+    ("Le ministre a annoncé la fermeture de trois usines.", "la fermeture de trois usines",
+     None, False),
+    ("Le contrat a été signé, annonce publiée hier par la société.",
+     "annonce publiée hier par la société", None, False),
+    ("Les ventes ont baissé, ce qui inquiète les commerçants.",
+     "ce qui inquiète les commerçants", None, False),
+]
+
+
+@pytest.mark.parametrize(("text", "obj", "source", "reported"), SOURCE_RULES_CASES)
+def test_spo_rules_reported_source(text, obj, source, reported):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.obj, triple.source, triple.reported) == (obj, source, reported)
+
+
+def test_incise_gives_reported_modality():
+    (claim,) = extract_claims_detailed(normalize("Les prix vont baisser, a déclaré le ministre."))
+    assert claim.modality == "rapporté" and claim.source == "le ministre"
+
+
+def test_pronoun_source_replaced_by_antecedent():
+    text = "La ministre de la Santé a visité Sfax. Elle a affirmé que 40 lits seront ajoutés."
+    claim = extract_claims_detailed(normalize(text))[-1]
+    assert claim.subject == "Elle" and claim.source == "La ministre de la Santé"
+
+
+@pytest.mark.slow
+def test_spo_parsers_reported_source():
+    if preprocessing.get_parser(Lang.FR) is None:
+        pytest.skip("modèle spaCy absent")
+    incise = spo.extract_spo(_sentence("Les prix vont baisser, a déclaré le ministre du Commerce."))
+    assert incise.reported and incise.source == "le ministre du Commerce"
+    inverted = spo.extract_spo(_sentence("Le chômage a reculé à 15 %, affirme l'INS."))
+    assert (inverted.obj, inverted.source) == ("à 15 %", "l'INS")
+    speech = spo.extract_spo(_sentence("Le ministre a affirmé que le déficit avait baissé."))
+    assert speech.source == "Le ministre"
+
+
+# --- Silver : complément du participe dans le sujet (verbe arabe en tête) ------------------
+
+PARTICIPLE_RULES_CASES = [
+    # (texte, sujet, objet) — mode règles, verbe intransitif en tête, phrases hors du jeu
+    ("ارتفع عدد التونسيين المقيمين في فرنسا.", "عدد التونسيين المقيمين في فرنسا", None),
+    ("تراجع عدد العاملين في القطاع الفلاحي بنسبة 3 بالمئة.", "عدد العاملين في القطاع الفلاحي",
+     "بنسبه 3 بالمئه"),
+    ("انخفضت أسعار المواد المستوردة من الخارج.", "اسعار المواد المستورده من الخارج", None),
+    # Restent hors du sujet : nombre après la préposition, nom qui n'est pas un participe
+    ("وصل عدد الوافدين إلى 2 مليون.", "عدد الوافدين", "الي 2 مليون"),
+    ("ارتفع عدد المشاريع في الجهة.", "عدد المشاريع", "في الجهه"),
+]
+
+
+@pytest.mark.parametrize(("text", "subject", "obj"), PARTICIPLE_RULES_CASES)
+def test_spo_rules_participle_complement_in_subject(text, subject, obj):
+    triple = spo.extract_spo(_sentence(text))
+    assert (triple.subject, triple.obj) == (subject, obj)
+
+
+def test_french_participle_endings_unaffected():
+    # Garde-fou : le motif des participes arabes ne doit pas remplacer celui du français.
+    triple = spo.extract_spo(_sentence("Les exportations ont progressé de 5 %."))
+    assert (triple.predicate, triple.obj) == ("ont progressé", "de 5 %")
+
+
+# --- Silver : conjonction « و » / « ف » collée au verbe de parole --------------------------
+
+ATTACHED_SPEECH = "وقال وزير الصحة إن عدد الإصابات تراجع بشكل كبير."
+
+
+def _stanza_like(text, words):
+    """Phrase analysée comme par Stanza, sans le modèle. `words` : (mot, token d'origine ou None
+    pour un mot du même token multi-mots, upos, tête, relation) ; les mots d'un même token
+    partagent son empan, comme dans `preprocessing._analyze_stanza`."""
+    tokens, position, span = [], 0, (0, 0)
+    for i, (word, surface, upos, head, deprel) in enumerate(words):
+        if surface is not None:
+            start = text.index(surface, position)
+            span, position = (start, start + len(surface)), start + len(surface)
+        tokens.append(preprocessing.Token(i=i, text=word, lemma=word, upos=upos, head=head,
+                                          deprel=deprel, start=span[0], end=span[1]))
+    return preprocessing.Sentence(text=text, start=0, end=len(text), tokens=tokens,
+                                  lang=Lang.AR, parser="stanza-ar")
+
+
+def test_spo_tree_attached_conjunction_root_takes_the_verb():
+    # Arbre produit par Stanza : « و » racine, verbe de parole en parataxis.
+    text = "وقال وزير الصحه ان عدد الاصابات تراجع بشكل كبير."
+    sentence = _stanza_like(text, [
+        ("و", "وقال", "CCONJ", -1, "root"), ("قال", None, "VERB", 0, "parataxis"),
+        ("وزير", "وزير", "NOUN", 1, "nsubj"), ("الصحه", "الصحه", "NOUN", 2, "nmod"),
+        ("ان", "ان", "SCONJ", 7, "mark"), ("عدد", "عدد", "NOUN", 7, "nsubj"),
+        ("الاصابات", "الاصابات", "NOUN", 5, "nmod"), ("تراجع", "تراجع", "VERB", 1, "ccomp"),
+        ("ب", "بشكل", "ADP", 9, "case"), ("شكل", None, "NOUN", 7, "obl"),
+        ("كبير", "كبير", "ADJ", 9, "amod"), (".", ".", "PUNCT", 0, "punct"),
+    ])
+    triple = spo.extract_spo(sentence)
+    assert (triple.subject, triple.obj) == ("وزير الصحه", "عدد الاصابات تراجع بشكل كبير")
+    assert triple.predicate.endswith("قال")
+    assert triple.reported and triple.source == "وزير الصحه"
+
+
+@pytest.mark.slow
+def test_spo_stanza_attached_conjunction_speech_verb():
+    if preprocessing.get_parser(Lang.AR) is None:
+        pytest.skip("modèle Stanza ar absent")
+    (claim,) = extract_claims_detailed(normalize(ATTACHED_SPEECH))
+    assert claim.parser == "stanza-ar"
+    assert (claim.subject, claim.obj) == ("وزير الصحه", "عدد الاصابات تراجع بشكل كبير")
+    assert (claim.modality, claim.source) == ("rapporté", "وزير الصحه")
+
+
+def test_spo_rules_speech_verb_with_attached_conjunction():
+    (claim,) = extract_claims_detailed(normalize(ATTACHED_SPEECH))
+    assert claim.parser == "rules"
+    assert (claim.subject, claim.obj) == ("وزير الصحه", "عدد الاصابات تراجع بشكل كبير")
+    assert (claim.modality, claim.source) == ("rapporté", "وزير الصحه")
+
+
+def test_spo_rules_attached_conjunction_stripped_only_for_speech_verbs():
+    reported = spo.extract_spo(_sentence("فأكد وزير التجارة أن الأسعار ستنخفض."))
+    assert reported.reported and reported.source == "وزير التجاره"
+    assert reported.obj == "الاسعار ستنخفض"
+    # Piège : « و » + verbe qui n'est pas un verbe de parole, suivi de « أن » : pas rapporté.
+    trap = spo.extract_spo(_sentence("وتبين أن الأسعار ارتفعت في الشهر الماضي."))
+    assert not trap.reported and trap.source is None
+
+
+# --- Outillage eval_100 : validation, verrou, ventilation, bootstrap, accord ---------------
+
+TEMPLATE = FIXTURES / "eval_100_template.jsonl"
+
+
+def _item(item_id="fr-001", **changes):
+    """Ligne valide minimale (phrase synthétique), modifiable champ par champ."""
+    item = {
+        "id": item_id, "lang": "fr", "script": "latin", "text": "Le prix a baissé de 5 %.",
+        "phenomena": ["fait_chiffré"], "origin": {"type": "rédigée"},
+        "gold": {"is_claim": True, "subject": "Le prix", "predicate": "a baissé",
+                 "obj": "de 5 %", "modality": "assertif"},
+    }
+    item.update(changes)
+    return item
+
+
+def test_validate_accepts_eval_30_and_a_valid_line():
+    assert evaluate.validate_eval_set(EVAL_ITEMS) == []
+    assert evaluate.validate_eval_set([_item()]) == []
+
+
+def test_validate_rejects_template_lines():
+    problems = evaluate.validate_eval_set(evaluate.load_eval_set(TEMPLATE))
+    assert any("_commentaire" in p for p in problems)
+    assert any("valeurs de gabarit" in p for p in problems)
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({"lang": "en"}, "langue"),
+        ({"script": "cyrillic"}, "écriture"),
+        ({"lang": "fr", "script": "arabic"}, "groupe"),
+        ({"phenomena": ["fait_chifre"]}, "phénomènes inconnus"),
+        ({"phenomena": []}, "phenomena"),
+        ({"gold": {"is_claim": True, "subject": None, "predicate": "a"}}, "champs manquants"),
+        ({"gold": {"is_claim": "oui", "subject": None, "predicate": None, "obj": None,
+                   "modality": "assertif"}}, "is_claim"),
+        ({"gold": {"is_claim": True, "subject": None, "predicate": None, "obj": None,
+                   "modality": "certain"}}, "modality"),
+        ({"phenomena": ["coréférence"]}, "coréférence"),
+        ({"origin": {"type": "blog"}}, "origin.type"),
+        ({"text": "<phrase à écrire>"}, "gabarit"),
+    ],
+)
+def test_validate_rejects_invalid_lines(changes, expected):
+    problems = evaluate.validate_eval_set([_item(**changes)])
+    assert any(expected in p for p in problems), problems
+
+
+def test_validate_rejects_duplicate_ids():
+    problems = evaluate.validate_eval_set([_item("fr-001"), _item("fr-001")])
+    assert any("id en double" in p for p in problems)
+
+
+def _lock_files(tmp_path, recorded):
+    data = tmp_path / "eval_100.jsonl"
+    data.write_text(json.dumps(_item(), ensure_ascii=False) + "\n", encoding="utf-8")
+    protocol = tmp_path / "protocole.md"
+    protocol.write_text(
+        "# Protocole\n\n## 7. Verrouillage et historique\n\n"
+        "| Date | Événement | `id` concernés | SHA-256 |\n|---|---|---|---|\n"
+        f"| 2026-11-01 | verrouillage | tous | {recorded} |\n",
+        encoding="utf-8",
+    )
+    return data, protocol
+
+
+def test_lock_accepts_recorded_hash(tmp_path):
+    expected = hashlib.sha256(
+        (json.dumps(_item(), ensure_ascii=False) + "\n").encode("utf-8")
+    ).hexdigest()
+    data, protocol = _lock_files(tmp_path, expected)
+    assert evaluate.check_lock(data, protocol) == expected
+    # Même empreinte avec des fins de ligne CRLF (copie de travail Windows).
+    data.write_bytes(data.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert evaluate.check_lock(data, protocol) == expected
+
+
+def test_lock_refuses_modified_file_or_missing_hash(tmp_path):
+    data, protocol = _lock_files(tmp_path, "0" * 64)
+    with pytest.raises(evaluate.LockError, match="a changé"):
+        evaluate.check_lock(data, protocol)
+    protocol.write_text("# Protocole\n\n## 7. Verrouillage\n\n| — | — |\n", encoding="utf-8")
+    with pytest.raises(evaluate.LockError, match="aucune empreinte"):
+        evaluate.check_lock(data, protocol)
+
+
+def test_cli_refuses_to_evaluate_unlocked_set(tmp_path, capsys):
+    data, protocol = _lock_files(tmp_path, "0" * 64)
+    with pytest.raises(SystemExit) as stop:
+        evaluate.main(["--eval-set", str(data), "--protocol", str(protocol), "--check-lock",
+                       "--out-dir", str(tmp_path)])
+    assert stop.value.code == 2 and "refusée" in capsys.readouterr().err
+    assert not list(tmp_path.glob("lot-b_extraction_*"))
+
+
+def test_cli_sha256_and_invalid_set(tmp_path, capsys):
+    data, _ = _lock_files(tmp_path, "0" * 64)
+    evaluate.main(["--eval-set", str(data), "--sha256"])
+    assert evaluate.sha256_file(data) in capsys.readouterr().out
+    with pytest.raises(SystemExit) as stop:
+        evaluate.main(["--eval-set", str(TEMPLATE), "--out-dir", str(tmp_path)])
+    assert stop.value.code == 2 and "invalide" in capsys.readouterr().err
+
+
+def test_cli_validate_does_not_run_the_system(tmp_path, capsys, monkeypatch):
+    def forbidden(_item):
+        raise AssertionError("le système ne doit pas être exécuté pendant la validation")
+
+    monkeypatch.setattr(evaluate, "predict", forbidden)
+    data, _ = _lock_files(tmp_path, "0" * 64)
+    evaluate.main(["--eval-set", str(data), "--validate", "--out-dir", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert "Jeu valide : 1 phrases" in out and "fr-latin 1" in out
+    assert not list(tmp_path.glob("lot-b_extraction_*"))
+
+
+def test_breakdown_by_phenomenon_with_counts():
+    metrics = evaluate.evaluate(EVAL_ITEMS, rules=True)["metrics"]
+    counts = {}
+    for it in EVAL_ITEMS:
+        for phenomenon in it["phenomena"]:
+            counts[phenomenon] = counts.get(phenomenon, 0) + 1
+    assert {ph: m["n"] for ph, m in metrics["by_phenomenon"].items()} == counts
+    rapporte = metrics["by_phenomenon"]["rapporté"]
+    assert rapporte["spo_n"] == sum(
+        it["gold"]["is_claim"] for it in EVAL_ITEMS if "rapporté" in it["phenomena"]
+    )
+
+
+def _record(item_id, correct):
+    """Phrase synthétique : sortie identique au gold (correct) ou fausse sur tous les champs."""
+    gold = {"is_claim": True, "subject": "le prix", "predicate": "a baissé", "obj": "de 5 %",
+            "modality": "assertif"}
+    wrong = {"is_claim": True, "subject": "x", "predicate": "y", "obj": "z",
+             "modality": "opinion"}
+    return {"id": item_id, "gold": gold, "pred": dict(gold) if correct else wrong}
+
+
+def test_bootstrap_interval_contains_true_value():
+    rng = random.Random(7)  # population synthétique : 70 % de phrases correctes
+    records = [_record(f"s{k:03d}", rng.random() < 0.7) for k in range(200)]
+    ci = evaluate.bootstrap_ci(records, resamples=300)["modality_accuracy"]
+    assert ci["low"] <= 0.7 <= ci["high"] and ci["high"] - ci["low"] < 0.2
+    again = evaluate.bootstrap_ci(records, resamples=300)["modality_accuracy"]
+    assert again == ci  # graine fixe : résultat reproductible
+
+
+def test_paired_bootstrap_detects_obvious_difference():
+    good = [_record(f"s{k:02d}", True) for k in range(30)]
+    bad = [_record(f"s{k:02d}", False) for k in range(30)]
+    result = evaluate.paired_bootstrap(bad, good, resamples=200)["spo_all_exact"]
+    assert result["diff"] == 1.0 and result["low"] > 0 and result["contains_zero"] is False
+
+
+def test_paired_bootstrap_identical_outputs_show_no_difference():
+    rng = random.Random(3)
+    records = [_record(f"s{k:02d}", rng.random() < 0.6) for k in range(30)]
+    result = evaluate.paired_bootstrap(records, records, resamples=200)
+    computed = [r for r in result.values() if r["diff"] is not None]
+    assert computed and all(r["diff"] == 0 and r["contains_zero"] for r in computed)
+
+
+def test_paired_bootstrap_requires_same_sentences():
+    with pytest.raises(ValueError):
+        evaluate.paired_bootstrap([_record("a", True)], [_record("b", True)], resamples=10)
+
+
+def test_cohen_kappa_known_values():
+    labels = ["assertif", "opinion", "rapporté", "assertif", "interrogatif"]
+    assert agreement.cohen_kappa(labels, labels) == 1.0
+    # Cas d'école : 20 oui/oui, 5 oui/non, 10 non/oui, 15 non/non → po = 0.70, pe = 0.50
+    a = [True] * 25 + [False] * 25
+    b = [True] * 20 + [False] * 5 + [True] * 10 + [False] * 15
+    assert agreement.cohen_kappa(a, b) == pytest.approx(0.4)
+
+
+def test_agreement_lists_disagreements(tmp_path, capsys):
+    a = [_item("fr-001"), _item("fr-002"), _item("fr-003")]
+    b = [_item("fr-001"),
+         _item("fr-002", gold={"is_claim": False, "subject": None, "predicate": None,
+                               "obj": None, "modality": "opinion"}),
+         _item("fr-004")]
+    report = agreement.agreement(a, b)
+    assert report["n"] == 2 and report["only_a"] == ["fr-003"] and report["only_b"] == ["fr-004"]
+    assert {(d["id"], d["field"]) for d in report["disagreements"]} == {
+        ("fr-002", "is_claim"), ("fr-002", "modality")
+    }
+    files = []
+    for name, items in (("a", a), ("b", b)):
+        path = tmp_path / f"{name}.jsonl"
+        path.write_text("".join(json.dumps(i, ensure_ascii=False) + "\n" for i in items),
+                        encoding="utf-8")
+        files.append(str(path))
+    agreement.main(files)
+    out = capsys.readouterr().out
+    assert "Phrases comparées : 2" in out and "fr-002" in out
+
+
+# --- Accord inter-annotateurs : CSV du lot (labels A1), ventilation par langue -------------
+
+
+def _write_csv(path, rows, delimiter=";"):
+    """CSV d'annotation synthétique (id, texte, contexte, label, modalite)."""
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.writer(f, delimiter=delimiter)
+        writer.writerow(["id", "texte", "contexte", "label", "modalite"])
+        writer.writerows(rows)
+    return path
+
+
+def test_convert_label_from_a1():
+    assert agreement.convert_label("AFFIRMATION") is True
+    assert agreement.convert_label(" opinion ") is False
+    assert agreement.convert_label("Autre") is False
+    with pytest.raises(ValueError):
+        agreement.convert_label("FAIT")
+
+
+def test_read_csv_annotation_formats_and_problems(tmp_path):
+    rows = [["L01", "phrase un", "", "AFFIRMATION", "rapporte"],  # modalité sans accent
+            ["L02", "phrase deux", "", "OPINION", "opinion"]]
+    for delimiter in (";", ","):
+        items, problems = agreement.read_csv_annotation(
+            _write_csv(tmp_path / f"a{delimiter == ','}.csv", rows, delimiter))
+        assert problems == []
+        assert [(i["id"], i["gold"]["is_claim"], i["gold"]["modality"]) for i in items] == [
+            ("L01", True, "rapporté"), ("L02", False, "opinion")]
+    bad = _write_csv(tmp_path / "bad.csv", [["L01", "x", "", "FAIT", "assertif"],
+                                            ["L02", "y", "", "AUTRE", "certain"],
+                                            ["L02", "z", "", "AUTRE", "assertif"]])
+    problems = agreement.read_csv_annotation(bad)[1]
+    assert any("FAIT" in p for p in problems) and any("certain" in p for p in problems)
+    assert any("double" in p for p in problems)
+
+
+def _textbook_rows(prefix):
+    """Cas d'école : 20 oui/oui, 5 oui/non, 10 non/oui, 15 non/non → accord 70 %, kappa 0.4."""
+    pairs = [("AFFIRMATION", "AFFIRMATION")] * 20 + [("AFFIRMATION", "OPINION")] * 5
+    pairs += [("OPINION", "AFFIRMATION")] * 10 + [("OPINION", "OPINION")] * 15
+    a = [[f"{prefix}{k:02d}", "t", "", la, "assertif"] for k, (la, _) in enumerate(pairs)]
+    b = [[f"{prefix}{k:02d}", "t", "", lb, "assertif"] for k, (_, lb) in enumerate(pairs)]
+    return a, b
+
+
+def test_agreement_by_language_known_values(tmp_path):
+    fr_a, fr_b = _textbook_rows("F")
+    ar = [[f"A{k:02d}", "t", "", "AFFIRMATION" if k % 2 else "AUTRE", "assertif"]
+          for k in range(10)]
+    a = agreement.read_csv_annotation(_write_csv(tmp_path / "a.csv", fr_a + ar))[0]
+    b = agreement.read_csv_annotation(_write_csv(tmp_path / "b.csv", fr_b + ar))[0]
+    langs = {r[0]: "fr" for r in fr_a} | {r[0]: "ar" for r in ar}
+    report = agreement.agreement(a, b, langs)
+    fr, ar_stats = report["by_lang"]["fr"]["is_claim"], report["by_lang"]["ar"]["is_claim"]
+    assert (fr["n"], fr["agreement_pct"], fr["kappa"]) == (50, 70.0, 0.4)
+    assert (ar_stats["n"], ar_stats["agreement_pct"], ar_stats["kappa"]) == (10, 100.0, 1.0)
+    assert report["is_claim"]["n"] == 60 and report["fields"] == ["is_claim", "modality", "label"]
+    assert fr["class_counts"] == {"A": {"False": 25, "True": 25}, "B": {"False": 20, "True": 30}}
+    assert report["by_lang"]["ar"]["label"]["class_counts"]["A"] == {"AFFIRMATION": 5, "AUTRE": 5}
+
+
+def test_agreement_flags_class_imbalance(tmp_path):
+    rows = [[f"L{k:02d}", "t", "", "OPINION" if k < 2 else "AFFIRMATION", "assertif"]
+            for k in range(30)]
+    items = agreement.read_csv_annotation(_write_csv(tmp_path / "a.csv", rows))[0]
+    warnings = agreement.agreement(items, items)["warnings"]
+    assert any("global is_claim" in w and "rare" in w for w in warnings)
+    single = [[f"L{k:02d}", "t", "", "AFFIRMATION", "assertif"] for k in range(10)]
+    items = agreement.read_csv_annotation(_write_csv(tmp_path / "s.csv", single))[0]
+    warnings = agreement.agreement(items, items)["warnings"]
+    assert any("is_claim" in w and "qu'une classe" in w for w in warnings)
+    # Modalité à une seule classe : kappa de 1.0 dégénéré, signalé lui aussi
+    assert any("modality" in w and "qu'une classe" in w for w in warnings)
+
+
+def test_agreement_jsonl_against_csv_takes_language_from_jsonl(tmp_path):
+    a = [_item("fr-001"), _item("fr-002", lang="ar", script="arabic")]
+    b = agreement.read_csv_annotation(_write_csv(tmp_path / "b.csv", [
+        ["fr-001", "x", "", "AFFIRMATION", "assertif"],
+        ["fr-002", "y", "", "OPINION", "opinion"],
+    ]))[0]
+    report = agreement.agreement(a, b)
+    assert set(report["by_lang"]) == {"fr", "ar"} and report["fields"] == ["is_claim", "modality"]
+    assert report["spo_n"] == 0  # pas de triplet dans le CSV
+    assert {(d["id"], d["field"]) for d in report["disagreements"]} == {
+        ("fr-002", "is_claim"), ("fr-002", "modality")}
+
+
+def test_agreement_cli_with_csv_and_langs(tmp_path, capsys):
+    fr_a, fr_b = _textbook_rows("F")
+    a = _write_csv(tmp_path / "a.csv", fr_a)
+    b = _write_csv(tmp_path / "b.csv", fr_b)
+    langs = tmp_path / "corr.jsonl"
+    langs.write_text("".join(json.dumps({"id": r[0], "lang_source": "fr"}) + "\n" for r in fr_a),
+                     encoding="utf-8")
+    agreement.main([str(a), str(b), "--langs", str(langs)])
+    out = capsys.readouterr().out
+    assert "Langue fr (50 phrases)" in out and "accord  70.0 %" in out and "kappa  0.40" in out
+    with pytest.raises(SystemExit) as stop:
+        agreement.main([str(a), str(_write_csv(tmp_path / "x.csv", [["L1", "t", "", "?", "?"]]))])
+    assert stop.value.code == 2
 
 
 # --- Script de démonstration ---------------------------------------------------------------
