@@ -36,8 +36,52 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-004 | 2026-10-19 | A2 | Reproductibilité : échantillons annotés et lexique | `normalization.annotation`, `normalization.lexicon` | tirage refait ; lexique retrouvé ; fausses alertes sur la presse | 100/100 et 100/100 ; 55/78 (+ 23 variantes) ; 0/1 589 | tout est refaisable ; suite : kappa, presse d'une autre source |
 | EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
+| EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
 
 ## Entrées
+
+### EXP-A2-006 — Arabizi : modèle réentraîné avec la liste de mots neutres à jour
+- **Date** : 2026-10-21
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : rendre le fichier de poids régénérable avec le code actuel. Le modèle
+  d'EXP-A2-003 (7 oct.) a été entraîné avant l'ajout de 8 noms de lieux aux mots neutres
+  (EXP-A2-005, 19 oct.). Comme `prepare_latin` retire aussi ces mots à l'entraînement,
+  `python -m normalization.train_langid` ne redonnait plus le fichier commité (19 983 lignes sur
+  environ 20 000 différentes). Hypothèse : le réentraînement ne dégrade aucune mesure du pipeline.
+- **Données** : mêmes corpus et même graine (13) qu'EXP-A2-003 : arabizi, 66 241 textes pour
+  apprendre et 7 360 mis de côté ; français, 35 194 morceaux pour apprendre et 1 476 phrases `dev`
+  (2 941 textes avec leurs 5 premiers mots) ; français de test (416) ; eval_30 (34 phrases) ;
+  échantillon annoté en lettres latines (67 `t`, 16 `f`) ; test de bascule d'EXP-A2-005 (2 912 textes
+  × 7 ajouts = 20 384 variantes).
+- **Méthode / configuration** : réentraînement sans autre changement (régression logistique,
+  n-grammes de caractères 1-4, C = 0.5, 20 000 poids exportés). Comparaison de l'ancien et du nouveau
+  modèle sur exactement les mêmes textes, au même seuil 5.0 (script hors dépôt
+  `data/interim/langid/exp006_compare.py`). Entraînement lancé deux fois : fichiers identiques.
+  `train_langid.py` dit désormais quand le seuil est choisi par repli.
+- **Code** : commit `ded73f1` : `normalization/resources/arabizi_ngrams.json`,
+  `normalization/train_langid.py`.
+- **Résultats** (ancien → nouveau modèle) :
+  - nettoyage du corpus arabizi : 60 → 57 textes retirés comme français ;
+  - français `dev` classé arabizi au seuil 5.0 : 0 → 1 sur 2 941. Ce texte est « can you feel it a »
+    (score 4.79 → 5.10), de l'anglais rangé dans UD French-GSD. Aucun seuil n'atteint 0 : le script
+    garde 5.0 par repli ;
+  - français de test : 0/416 → 0/416 ; eval_30 identique : FR 10/10, AR 10/10, TN 12/14 ;
+  - bascules dues aux noms de lieux : 0 → 0 sur 20 384 ;
+  - échantillon annoté : TN classé arabizi 61 → 62 sur 67 (gagné : « Kalib rcd . ») ; FR classé
+    arabizi 4 → 5 sur 16 (perdu : « Bravo Mme Meherziya », cas « bravo + nom » que le guide laisse
+    ouvert) ;
+  - arabizi mis de côté retrouvé : 6 687 sur 7 360 (91,24 %). Pas strictement comparable aux 6 701
+    sur 7 363 d'EXP-A2-005 : changer la liste modifie les doublons, donc le tirage ;
+  - tests : 518 réussis ; `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient. Le seul écart négatif sur le français `dev` vient d'une erreur
+  d'étiquette du corpus (texte anglais) ; l'écart sur l'échantillon porte sur un cas que le guide ne
+  tranche pas nettement. Les mesures utiles au pipeline sont inchangées. Le seuil n'est pas réajusté
+  après avoir vu les résultats : il reste celui d'EXP-A2-003. Limite : le critère « aucun français
+  `dev` classé arabizi » n'est plus atteint au sens strict, à cause de ce texte anglais ; à revoir avec
+  le nettoyage des corpus.
+- **Décision / suite** : nouveau modèle retenu, régénérable à l'identique. Suite : test de
+  régénération (sauté sans corpus ni scikit-learn), exception dans `CONTRIBUTING.md`,
+  `linguist-generated` dans `.gitattributes`.
 
 ### EXP-B-005 — Lexiques selon l'écriture et verbe de parole précédé de « و » / « ف » collé
 - **Date** : 2026-10-20
