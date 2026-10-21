@@ -439,3 +439,26 @@ def test_french_comments_about_tunisia_are_french(text):
     # français. Avant EXP-A2-005, le mot "tunisie" suffisait à les faire classer arabizi.
     assert detect_script(text) == "latin"
     assert detect_language(text) == Lang.FR
+
+
+@pytest.mark.slow
+def test_arabizi_model_is_regenerable(tmp_path):
+    """Le fichier de poids versionné se régénère à l'identique (EXP-A2-006).
+
+    Condition de l'équipe pour versionner ce fichier. Lent (1 à 3 min) : ignoré en CI
+    (pytest -m "not slow"), et sauté sans scikit-learn ou sans les corpus de data/raw/langid/.
+    """
+    pytest.importorskip("sklearn")
+    from normalization import train_langid
+
+    corpora = ("tunizi_train", "TSAC", "UD_French-GSD")
+    needed = [train_langid.RAW / name for name in corpora] + [train_langid.SAMPLE]
+    missing = [str(path) for path in needed if not path.exists()]
+    if missing:
+        pytest.skip(f"corpus locaux absents : {missing}")
+    output = tmp_path / "arabizi_ngrams.json"
+    train_langid.main(output)  # écrit dans un dossier temporaire, jamais dans le dépôt
+    assert output.read_bytes() == train_langid.OUTPUT.read_bytes(), (
+        "fichier de poids non régénérable : relancer python -m normalization.train_langid "
+        "et noter l'expérience dans experiments.md"
+    )

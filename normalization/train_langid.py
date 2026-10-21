@@ -121,7 +121,7 @@ def rate(scores: list[float], threshold: float) -> float:
     return sum(1 for value in scores if value >= threshold) / len(scores)
 
 
-def main() -> None:
+def main(output: Path = OUTPUT) -> None:
     rng = random.Random(SEED)
 
     # --- 1. Données -------------------------------------------------------
@@ -190,13 +190,17 @@ def main() -> None:
         "threshold": threshold,
         "weights": exported,
     }
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    with OUTPUT.open("w", encoding="utf-8", newline="\n") as handle:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(model, handle, ensure_ascii=False, indent=0, sort_keys=True)
         handle.write("\n")
+    size = output.stat().st_size / 1024
+    print(f"modèle écrit : {output} ({len(exported)} poids, {size:.0f} Ko)")
+    if output.resolve() != OUTPUT.resolve():
+        # Écrit ailleurs (test de régénération) : langid lit toujours le fichier du dépôt,
+        # les mesures ci-dessous porteraient donc sur un autre modèle. On s'arrête ici.
+        return
     langid.load_arabizi_model.cache_clear()  # force langid à relire le nouveau fichier
-    size = OUTPUT.stat().st_size / 1024
-    print(f"modèle écrit : {OUTPUT} ({len(exported)} poids, {size:.0f} Ko)")
 
     # --- 5. Mesures finales, avec la fonction réellement livrée ------------
     test = [prepare(s) for s in load_french("test")]
