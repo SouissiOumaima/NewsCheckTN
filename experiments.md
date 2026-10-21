@@ -37,8 +37,60 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
 | EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
+| EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
 
 ## Entrées
+
+### EXP-A2-007 — Double annotation de la langue : accord entre annotateurs (kappa)
+- **Date** : 2026-10-21
+- **Auteur / Lot** : Membre 2 / Lot A2 ; secondes annotatrices : Membre 3 / Lot B (lettres
+  latines), une membre du Lot D (lettres arabes)
+- **Objectif / hypothèse** : vérifier que les guides d'annotation sont utilisables par une autre
+  personne, en mesurant l'accord avec le kappa de Cohen. Repères usuels (Landis et Koch) : au-dessus
+  de 0.6, accord substantiel ; au-dessus de 0.8, presque parfait.
+- **Données** : les deux échantillons d'EXP-A2-004 (TSAC, 100 commentaires chacun, graine 13, non
+  versionnés) : lettres arabes (`t` / `a` / `x`) et lettres latines (`t` / `f` / `x`). Annotateur 1 :
+  première passe d'EXP-A2-002 et EXP-A2-003, après application des règles écrites.
+- **Méthode / configuration** : copie vierge (`annotation blank`, toutes les étiquettes à `?`, textes
+  vérifiés identiques ligne à ligne), envoyée en privé avec une version du guide sans les comptages ni
+  les remarques sur des lignes de la première passe ; annotation seule, sans voir les sorties du
+  modèle. Une ligne oubliée (`?`) a été complétée par l'annotatrice, sans indication. Calcul :
+  `python -m normalization.annotation kappa` (3 classes) ; sorties gardées hors dépôt
+  (`data/interim/langid/kappa_latin.txt`, `kappa_arabic.txt`).
+- **Code** : `normalization/annotation.py`, commande `kappa` (commit `e001a7d`).
+- **Résultats** :
+  - lettres latines : accord observé 0.92, attendu par hasard 0.50, **kappa 0.84** ; 8 désaccords ;
+    répartitions 67 `t` / 16 `f` / 17 `x` (annotateur 1) et 67 `t` / 15 `f` / 18 `x` ;
+  - lettres arabes : accord observé 0.87, attendu par hasard 0.63, **kappa 0.65** ; 13 désaccords ;
+    répartitions 78 `t` / 15 `a` / 7 `x` (annotateur 1) et 76 `t` / 23 `a` / 1 `x` ;
+  - avec 100 textes, intervalle à 95 % d'environ ± 0.11 (latin) et ± 0.18 (arabe).
+- **Analyse** :
+  - latin : aucun texte `t` de l'annotateur 1 n'est `f` pour l'annotatrice ; 7 des 8 désaccords
+    opposent `x` à une langue. Cause principale (lignes 6, 26, 61, 84) : le guide ne dit pas quand un
+    mot d'origine française rend la phrase mélangée (emprunt courant comme « patron », ou mot
+    grammatical comme « mais ») ; l'annotateur 1 n'a pas tranché ces cas de la même façon partout.
+    Lignes 37 et 52 : écarts de l'annotateur 1 à son propre guide (« bravo » est passe-partout) ;
+    ligne 14 : écart de l'annotatrice au cas « bravo + nom → `f` » ; ligne 43, notée douteuse à la
+    première passe : `t` pour l'annotatrice ;
+  - arabe : aucun des 7 `x` de l'annotateur 1 n'est partagé (lignes 10, 15, 28, 43, 47, 76, 95) : la
+    règle « formule figée ou trop courte pour décider » n'a pas de seuil. Lignes 12, 33, 44, 71 : `t`
+    de l'annotateur 1 sur des textes standard dont le seul indice est une non-marque du guide (mot
+    familier commun, insulte, mot étranger). Ligne 20 : le cas ouvert « … معاك ». Ligne 40 : cas
+    réellement difficile. Le kappa est aussi abaissé par le déséquilibre des classes (77 % de `t`),
+    d'où un accord attendu par hasard de 0.63 ;
+  - lecture complémentaire, calculée après avoir vu les résultats et non retenue comme résultat : sur
+    les 92 lignes arabes sans `x` d'aucun côté, 87 accords et kappa d'environ 0.82. Le désaccord porte
+    surtout sur l'usage de `x`, peu sur tunisien / arabe standard ;
+  - limites : un seul second annotateur par échantillon ; 100 textes. Les deux annotatrices ont relu
+    la PR #3 avant d'annoter ; le guide du dépôt y cite des lignes douteuses de la première passe
+    (latin : ligne 43, avec son étiquette ; arabe : lignes 12, 20, 33, 71, 86, sans étiquette). La
+    ligne 43 latine et 4 de ces lignes arabes sont parmi les désaccords : influence possible, non
+    mesurable.
+- **Décision / suite** : guides retenus comme utilisables (latin : presque parfait ; arabe :
+  substantiel). Suite : adjudication des 21 désaccords avec chaque annotatrice pour fixer les
+  étiquettes de référence ; préciser dans les guides les emprunts français et l'usage de `x` ; retirer
+  du guide du dépôt les comptages et numéros de ligne avant toute nouvelle annotation ; remesurer les
+  modèles sur les étiquettes de référence.
 
 ### EXP-A2-006 — Arabizi : modèle réentraîné avec la liste de mots neutres à jour
 - **Date** : 2026-10-21
