@@ -164,6 +164,7 @@ def parse_article(html: str, url: str) -> dict:
     # Réunir les paragraphes
     article_text = "\n".join(paragraphs)
 
+   
     return {
         "doc_id": extract_doc_id(url),
         "source": "Tunifact",
@@ -172,7 +173,9 @@ def parse_article(html: str, url: str) -> dict:
         "lang": "fr",
         "text": article_text,
         "date": extract_date(soup),
+        "verdict": extract_verdict(soup),
     }
+
 
 
 
