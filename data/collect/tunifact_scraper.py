@@ -61,12 +61,67 @@ def extract_doc_id(url: str) -> str:
 
     return "tunifact-unknown"
 
+
+import re
+
+
+def extract_verdict(soup: BeautifulSoup) -> str | None:
+    """Extrait le verdict officiel de l'article Tunifact."""
+
+    # Chercher uniquement dans l'en-tête de l'article principal
+    header = soup.select_one("div.entry-header")
+
+    if header is None:
+        return None
+
+    verdict_classes = {
+        "ar-true": "vrai",
+        "ar-false": "faux",
+        "ar-warning": "trompeur",
+    }
+
+    for css_class, verdict in verdict_classes.items():
+        badge = header.select_one(f"span.{css_class}")
+
+        if badge is not None:
+            return verdict
+
+    # Verdict non reconnu : vérification manuelle nécessaire
+    return None
+
+
+def extract_date(soup: BeautifulSoup) -> str | None:
+    """Extrait la date de publication d'un article Tunifact."""
+
+    # Format de l'article français (698)
+    date_element = soup.select_one("span.post-on")
+
+    # Format de l'article arabe (937)
+    if date_element is None:
+        date_container = soup.select_one("div.entry-meta")
+
+        if date_container:
+            date_element = date_container.find("span")
+
+    if date_element is None:
+        return None
+
+    date_text = date_element.get_text(" ", strip=True)
+
+    match = re.search(
+        r"\d{4}-\d{2}-\d{2}(?:\s+\d{2}:\d{2})?",
+        date_text,
+    )
+
+    return match.group(0) if match else None
+
+
 def parse_article(html: str, url: str) -> dict:
-    """Extrait le titre et le texte principal d'un article Tunifact."""
+    """Extrait le titre, le texte et la date d'un article Tunifact."""
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # Récupérer le titre.
+    # Récupérer le titre
     title_element = soup.find("h1")
 
     if title_element:
@@ -74,7 +129,7 @@ def parse_article(html: str, url: str) -> dict:
     else:
         title = ""
 
-    # Trouver la zone principale de l'article.
+    # Trouver la zone principale de l'article
     article_container = soup.find(
         "div",
         class_="articles-height",
@@ -84,7 +139,7 @@ def parse_article(html: str, url: str) -> dict:
 
     if article_container:
 
-        # Trouver le conteneur du texte.
+        # Trouver le conteneur du texte
         content_container = article_container.find(
             "p",
             class_="font-large",
@@ -93,7 +148,6 @@ def parse_article(html: str, url: str) -> dict:
         if content_container:
 
             # Récupérer uniquement les paragraphes directs
-            # pour éviter les répétitions.
             for paragraph in content_container.find_all(
                 "p",
                 recursive=False,
@@ -107,18 +161,19 @@ def parse_article(html: str, url: str) -> dict:
                 if text:
                     paragraphs.append(text)
 
-    # Réunir les paragraphes.
+    # Réunir les paragraphes
     article_text = "\n".join(paragraphs)
 
     return {
-      "doc_id": extract_doc_id(url),
-    "source": "Tunifact",
-    "url": url,
-    "title": title,
-    "lang": "fr",
-    "text": article_text,
-    "date": None,
+        "doc_id": extract_doc_id(url),
+        "source": "Tunifact",
+        "url": url,
+        "title": title,
+        "lang": "fr",
+        "text": article_text,
+        "date": extract_date(soup),
     }
+
 
 
 def save_raw_html(html: str, filename: str) -> Path:
