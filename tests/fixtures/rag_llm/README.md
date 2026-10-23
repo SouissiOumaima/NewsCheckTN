@@ -23,3 +23,15 @@ tester le code du retrieval. Les chiffres ne doivent pas être cités comme de v
 - Le corpus (25 phrases Tunifact + 30 phrases TArC comme distracteurs) n'est **pas** versionné :
   `python -m rag_llm.build_tunifact_eval` l'écrit dans `data/interim/lot_d/` à partir de la
   branche `lot-a1-data` (droits de redistribution Tunifact non confirmés).
+
+## Jeu réel Tunifact v1 (EXP-D-006)
+
+- `claims_tunifact_v1.jsonl` : les 15 affirmations de v0 (identifiants de preuve des articles 698
+  et 937 convertis au format de l'export : `698-005` → `698-s0005`) + 6 affirmations sur l'article
+  933 (nationalité ; 4 sur la rumeur → faux, en AR, FR, tunisien en lettres arabes et arabizi ;
+  2 sur le texte de loi → vrai, en AR et FR). Traductions tunisiennes et arabizi rédigées par le
+  Lot D, à valider.
+- Corpus (non versionné) : `python -m rag_llm.build_tunifact_eval` (v1 par défaut) — export
+  `tunifact_sentences_46.jsonl` du Lot A1 (698, 933, 937 complets) + 613, 797, 890 de v0 +
+  30 phrases TArC ; 1re phrase de chaque article et fragments de moins de 15 caractères écartés.
+  84 passages au total.

@@ -14,7 +14,7 @@ from rag_llm.baseline_stance import (
     predict_stances,
     topic_overlap,
 )
-from rag_llm.build_tunifact_eval import build_corpus
+from rag_llm.build_tunifact_eval import article_of, build_corpus, merge_tunifact
 from rag_llm.evaluate_retrieval import compute_metrics, load_claims, run
 from rag_llm.retrieval import hybrid
 from rag_llm.retrieval.bm25 import BM25Index
@@ -310,17 +310,45 @@ def test_corpus_tunifact_exclut_la_rumeur_et_ajoute_les_distracteurs():
     assert ids == ["tunifact-1-002", "tarc-forum-0001"]
 
 
-def test_affirmations_tunifact_coherentes():
-    claims = load_claims(FIXTURES / "claims_tunifact_v0.jsonl")
+@pytest.mark.parametrize("version", ["v0", "v1"])
+def test_affirmations_tunifact_coherentes(version):
+    claims = load_claims(FIXTURES / f"claims_tunifact_{version}.jsonl")
     labels = {lab.value for lab in Label}
     assert len({c["claim_id"] for c in claims}) == len(claims)
     for c in claims:
         assert c["gold_label"] in labels and Lang(c["lang"])
         assert (c["gold_label"] == "preuves_insuffisantes") == (not c["gold_doc_ids"])
-        # preuves attendues : phrases d'un seul article, jamais la rumeur (-001)
-        articles = {d.rsplit("-", 1)[0] for d in c["gold_doc_ids"]}
-        assert len(articles) <= 1
-        assert not any(d.endswith("-001") for d in c["gold_doc_ids"])
+        # preuves attendues : phrases d'un seul article, jamais la 1re phrase (la rumeur)
+        assert len({article_of(d) for d in c["gold_doc_ids"]}) <= 1
+        assert not any(d.endswith(("-001", "-s0001")) for d in c["gold_doc_ids"])
+
+
+def test_v1_reprend_les_affirmations_v0_avec_les_nouveaux_identifiants():
+    v0 = {c["claim_id"]: c for c in load_claims(FIXTURES / "claims_tunifact_v0.jsonl")}
+    v1 = {c["claim_id"]: c for c in load_claims(FIXTURES / "claims_tunifact_v1.jsonl")}
+    assert set(v0) < set(v1)
+    for cid, c in v0.items():
+        assert v1[cid]["text"] == c["text"] and v1[cid]["gold_label"] == c["gold_label"]
+    assert v1["tf-c01"]["gold_doc_ids"][0] == "tunifact-698-s0005"  # 698-005 → 698-s0005
+
+
+def test_article_of_lit_les_deux_formats_d_identifiant():
+    assert article_of("tunifact-698-006") == article_of("tunifact-698-s0006") == "tunifact-698"
+
+
+def test_corpus_v1_fusionne_sans_doublon_et_ecarte_les_fragments():
+    export = [
+        {"sentence_id": "tunifact-1-s0001", "text": "la rumeur présentée", "lang": "ar"},
+        {"sentence_id": "tunifact-1-s0002", "text": "أبدا !!", "lang": "ar"},  # fragment
+        {"sentence_id": "tunifact-1-s0003", "text": "une vraie phrase de preuve", "lang": "ar"},
+    ]
+    older = [
+        {"id": "tunifact-1-002", "text": "ancienne version du même article", "lang": "ar"},
+        {"id": "tunifact-2-002", "text": "article absent de l'export", "lang": "fr"},
+    ]
+    merged = merge_tunifact(export, older)
+    ids = [r["doc_id"] for r in build_corpus(merged, [], min_chars=15)]
+    assert ids == ["tunifact-1-s0003", "tunifact-2-002"]
 
 
 # --- Lecture des nombres v2 (EXP-D-005) -----------------------------------------------

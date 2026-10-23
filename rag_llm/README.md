@@ -46,7 +46,7 @@
 | S2 | Baseline NLI par règles (`baseline_stance.py`) | ✅ fait (EXP-D-002) |
 | S3 | Verdict par gabarit + politique d'abstention v1 | ✅ fait (EXP-D-002) |
 | S4 | Retrieval dense multilingue + fusion RRF (EXP-D-003) | ✅ fait : hybride e5-base, Recall@5 0.67 → 0.94 |
-| — | 1re évaluation sur données réelles Tunifact (EXP-D-004) | ✅ BM25 ; hybride à mesurer sur Colab |
+| — | Évaluation sur données réelles Tunifact : v0 (EXP-D-004/005), v1 à 6 articles (EXP-D-006) | ✅ BM25 ; hybride à mesurer sur Colab |
 | S5 | Re-ranking cross-encoder | à faire |
 
 ## Choisir la méthode de retrieval
@@ -60,9 +60,10 @@ Mesures réelles : `notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb` (Colab).
 ## Jeu réel Tunifact (données du Lot A1)
 ```bash
 git fetch origin                                     # récupère la branche lot-a1-data
-python -m rag_llm.build_tunifact_eval                # → data/interim/lot_d/ (non versionné)
-python -m rag_llm.evaluate_retrieval --method all --corpus data/interim/lot_d/evidence_tunifact_v0.jsonl \
-    --claims tests/fixtures/rag_llm/claims_tunifact_v0.jsonl --split tunifact-v0 --exp-id EXP-D-004
+python -m rag_llm.build_tunifact_eval                # v1 → data/interim/lot_d/ (non versionné)
+python -m rag_llm.evaluate_retrieval --method all --corpus data/interim/lot_d/evidence_tunifact_v1.jsonl \
+    --claims tests/fixtures/rag_llm/claims_tunifact_v1.jsonl --split tunifact-v1 --exp-id EXP-D-006
+python -m rag_llm.build_tunifact_eval --version v0   # pour refaire EXP-D-004 / 005
 ```
 Ce jeu sert de **test** : ne pas régler de règle ou de seuil en le regardant.
 

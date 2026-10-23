@@ -26,6 +26,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-006 | 2026-10-23 | D | Jeu réel Tunifact v1 (6 articles) | BM25 + NLI par règles + gabarit, sans réglage | Hit@1 / Recall@5 ; exactitude verdict | 0.61 / 0.41 ; verdict 0.14, 1 verdict émis (faux) | nouvelle référence de test ; dense à mesurer (Colab) |
 | EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
 | EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
 | EXP-D-003 | 2026-10-19 | D | Retrieval dense + hybride RRF | MiniLM / e5-small / e5-base / bge-m3, RRF k=60 | Recall@5 / MRR | hybride e5-base 0.94 / 0.96 (BM25 0.67 / 0.91) ; verdict inchangé | e5-base retenu ; NLI = goulot ; re-ranking S5 |
@@ -35,6 +36,44 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 (stub = v1) ; cas ciblés 0/5 → 5/5 | v1 retenue ; suite : classifieur TN |
 
 ## Entrées
+
+### EXP-D-006 — Jeu de test réel Tunifact v1 (6 articles)
+- **Date** : 2026-10-23
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : agrandir le jeu de test réel avec la nouvelle livraison du Lot A1
+  (verdict et date fournis par article) et mesurer la chaîne actuelle, sans aucun réglage.
+- **Données** : Lot A1, branche `lot-a1-data`, commit `77a00b9` :
+  `data/exports/lot_d/tunifact_sentences_46.jsonl` (articles 698 → vrai, 933 → faux,
+  937 → trompeur ; segmentation automatique) + articles 613, 797, 890 de v0 + 30 phrases TArC.
+  Seul l'article 933 (nationalité des enfants de migrants, 25 phrases AR) est nouveau ; 698 et
+  937 sont des versions complètes d'articles de v0 (+2 et +4 phrases). Construction : 1re phrase
+  de chaque article écartée, fragments de moins de 15 caractères écartés (1 : « أبدا !! ») →
+  84 passages (54 Tunifact de 6 articles, 30 TArC). Affirmations : 21 = les 15 de v0
+  (identifiants convertis) + 6 sur l'article 933 (4 faux : AR, FR, TN lettres arabes, arabizi ;
+  2 vrai : AR, FR). Rédigées par une seule personne ; traductions TN / arabizi à valider.
+- **Méthode / configuration** : identique à EXP-D-005 (BM25, NLI par règles v2, gabarit). La
+  reconstruction de v0 redonne exactement les résultats d'EXP-D-005 (exactitude 0.20, couverture
+  0.067). Déterministe.
+- **Code** : `python -m rag_llm.build_tunifact_eval` ; `evaluate_retrieval` et `evaluate_verdict`
+  avec `--corpus data/interim/lot_d/evidence_tunifact_v1.jsonl --claims tests/fixtures/rag_llm/claims_tunifact_v1.jsonl`.
+- **Résultats — retrieval (BM25, n = 18 avec preuve)** : Hit@1 0.611, Hit@5 0.667,
+  Recall@5 0.411, MRR 0.630. Par groupe (Hit@1) : ar-arabic 0.83 (6), fr-latin 0.57 (7),
+  tn-arabic 0.50 (2), tn-arabizi 0.33 (3). Échecs (aucune preuve dans le top 5) : `tf-c08`,
+  `tf-c11`, `tf-c17`, `tf-c18`, `tf-c19`, `tf-c21` — toutes des affirmations FR, TN ou arabizi
+  dont l'article est en arabe. Score du 1er passage : 4.7 à 36.2 quand il est correct ; 2.7 à
+  12.1 pour les 3 affirmations sans preuve.
+- **Résultats — verdict** : exactitude 0.143, couverture 0.048, précision sélective 0.00
+  (1 verdict émis, faux : `tf-c03`), abstention justifiée 1.00, macro-F1 0.065, 0 citation invalide.
+  Les 6 affirmations de l'article 933 : abstention (preuves non décisives).
+- **Analyse** : la baisse par rapport à v0 (Hit@1 0.83 → 0.61) vient du nouvel article : il est
+  en arabe, et 4 de ses 6 affirmations sont dans une autre langue ou en tunisien, que BM25 ne
+  relie pas. C'est le cas que le retrieval hybride (EXP-D-003) doit corriger : à mesurer sur ce
+  jeu. Le verdict reste limité par le NLI par règles (aucune règle de nombre ni de démenti ne
+  s'applique aux affirmations juridiques de 933). Jeu encore petit (6 articles, 1 seul « vrai »,
+  1 seul article en français) : chiffres indicatifs.
+- **Décision / suite** : v1 devient le jeu de test du Lot D (v0 conservé pour la traçabilité) ;
+  mesurer l'hybride e5-base / bge-m3 sur v1 (notebook, section 7) ; demander au Lot A1 des
+  articles « vrai » et en français ; NLI du Lot C.
 
 ### EXP-D-005 — NLI par règles v2 : lecture des nombres
 - **Date** : 2026-10-20
