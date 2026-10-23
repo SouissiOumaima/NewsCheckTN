@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modèles et NLI · NewsCheck TN</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Lot C · modèles</div>
+      <h1>Modèles et NLI</h1>
+      <p class="lede">Le Lot C entraîne les modèles du projet : détection des affirmations vérifiables et NLI, qui dit si un passage soutient, contredit ou ne tranche pas une affirmation.</p>
+    </div>
+    <p class="notice todo"><strong>Page de départ, à compléter par le Lot C.</strong> Elle appelle déjà la route <code>/nli</code> de l'API. Le responsable du lot peut l'enrichir librement (exemples, explications, résultats), en gardant la base commune : <code>assets/style.css</code> et <code>assets/app.js</code>.</p>
+    <form class="card" id="form">
+      <label class="field">Affirmation<textarea id="claim" dir="auto" style="min-height:60px" required></textarea></label>
+      <label class="field">Passage de preuve<textarea id="ev" dir="auto" style="min-height:80px" required></textarea></label>
+      <div class="examples">Exemple :
+        <button type="button" class="chip" id="ex">chômage 25 % contre 16 %</button>
+      </div>
+      <div class="row"><button class="btn" type="submit">Comparer</button></div>
+    </form>
+    <div class="error" id="err" hidden></div>
+    <section class="card" id="res" hidden><h2>Position du passage</h2><div id="out"></div></section>
+  </main>
+  <script src="assets/app.js"></script>
+  <script>
+    NC.init("c");
+    document.getElementById("ex").addEventListener("click", () => {
+      document.getElementById("claim").value = "Le chômage en Tunisie a atteint 25 % en 2025.";
+      document.getElementById("ev").value = "Selon l'INS, le taux de chômage s'est établi à 16 % au deuxième trimestre 2025.";
+    });
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault(); const err = document.getElementById("err"); err.hidden = true;
+      try {
+        const r = await NC.api("/nli", { claim: document.getElementById("claim").value, evidence: document.getElementById("ev").value });
+        document.getElementById("out").innerHTML = `<p>${NC.stanceChip(r.stance, r.confidence)}</p>` +
+          (r.stance === "neutral" && !r.confidence ? `<p class="notice">Réponse « neutre » avec une confiance nulle : c'est le module provisoire, le modèle NLI n'est pas encore branché.</p>` : "");
+        document.getElementById("res").hidden = false;
+      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+    });
+  </script>
+</body>
+</html>

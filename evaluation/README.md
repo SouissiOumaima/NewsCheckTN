@@ -1,6 +1,6 @@
 # `evaluation/` — Lot E : Évaluation & tableau de bord (utilisé par tous)
 
-**Responsable : Membre 6 · Branche : `lot-e-integration`** — chaque lot y dépose ses résultats.
+**Partagé (pas de Membre 6) · Tableau de bord : Membre 5** — chaque lot y dépose ses résultats ; ils s'affichent dans la page « Évaluation » de la plateforme (`/app/evaluation.html`).
 
 ## Rôle
 - `metrics.py` : métriques **communes** pour que tous les lots se comparent de la même manière

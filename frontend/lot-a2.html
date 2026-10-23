@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Normalisation et langue · NewsCheck TN</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Lot A2 · normalisation</div>
+      <h1>Normalisation et langue</h1>
+      <p class="lede">Le Lot A2 nettoie chaque texte (Unicode, chiffres arabes, lettres étirées…) sans jamais modifier un nombre, une date ou un sigle, puis identifie la langue (français, arabe standard, tunisien) et l'écriture (arabe, latine, arabizi, mixte).</p>
+    </div>
+    <p class="notice todo"><strong>Page de départ, à compléter par le Lot A2.</strong> Elle appelle déjà la route <code>/normalize</code> de l'API. Le responsable du lot peut l'enrichir librement (exemples, explications, résultats), en gardant la base commune : <code>assets/style.css</code> et <code>assets/app.js</code>.</p>
+    <form class="card" id="form">
+      <label class="field">Texte<textarea id="text" dir="auto" style="min-height:80px" required></textarea></label>
+      <div class="examples">Exemples :
+        <button type="button" class="chip" data-ex="Le G20 se réunit à Tunis le 12 mars.">français</button>
+        <button type="button" class="chip" data-ex="نسبةُ البطالةِ ١٦٫٤٪ في ٢٠٢٣">arabe</button>
+        <button type="button" class="chip" data-ex="الحكومة باش تزيد في الشهرية برشا">tunisien</button>
+        <button type="button" class="chip" data-ex="barcha mahlek el jaw lyoum">arabizi</button>
+      </div>
+      <div class="row"><button class="btn" type="submit">Normaliser</button></div>
+    </form>
+    <div class="error" id="err" hidden></div>
+    <section class="card" id="res" hidden><h2>Document produit</h2><dl class="kv" id="out"></dl></section>
+  </main>
+  <script src="assets/app.js"></script>
+  <script>
+    NC.init("a2");
+    document.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => { document.getElementById("text").value = b.dataset.ex; }));
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault(); const err = document.getElementById("err"); err.hidden = true;
+      try {
+        const d = await NC.api("/normalize", { text: document.getElementById("text").value });
+        document.getElementById("out").innerHTML = `
+          <dt>texte d'origine</dt><dd>${NC.text(d.raw_text)}</dd>
+          <dt>texte normalisé</dt><dd>${NC.text(d.text)}</dd>
+          <dt>langue</dt><dd><span class="tag">${NC.esc(d.lang)}</span></dd>
+          <dt>écriture</dt><dd><span class="tag">${NC.esc(d.script)}</span></dd>`;
+        document.getElementById("res").hidden = false;
+      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+    });
+  </script>
+</body>
+</html>

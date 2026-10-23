@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Évaluation · NewsCheck TN</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .bars { display: grid; gap: 6px; }
+    .bar-row { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 56px; gap: 10px; align-items: center; font-size: 0.85rem; }
+    .bar-row .lab { overflow-wrap: anywhere; }
+    .bar-track { height: 16px; background: var(--line); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+    tr.open td { background: var(--accent-soft); }
+    tr.detail td { background: var(--bg); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Plateforme · tous les lots</div>
+      <h1>Tableau de bord d'évaluation</h1>
+      <p class="lede">Tous les fichiers de résultats écrits par les scripts d'évaluation des lots dans <code>evaluation/results/</code> (format commun de <code>evaluation/README.md</code>). Chaque ligne renvoie à une entrée de <code>experiments.md</code> par son identifiant.</p>
+    </div>
+    <p class="notice">Les fichiers de résultats ne sont pas versionnés : ce tableau montre ceux présents sur la machine où tourne l'API. Pour les voir, lance d'abord les évaluations de chaque lot (par exemple <code>python -m rag_llm.evaluate_retrieval</code>, <code>python -m linguistic_analysis.evaluate --rules</code>).</p>
+    <div class="error" id="err" hidden></div>
+    <section class="kpis" id="kpis"></section>
+
+    <section>
+      <div class="row" style="align-items:center;margin-bottom:10px">
+        <div class="examples" id="lots"></div>
+        <label class="field" style="flex:0 1 260px"><input type="text" id="q" placeholder="Filtrer (tâche, modèle, EXP…)" aria-label="Filtrer"></label>
+      </div>
+      <div class="table-wrap"><table class="t" id="tbl"></table></div>
+    </section>
+
+    <section class="card" id="cmp" hidden>
+      <div class="row" style="align-items:end">
+        <div style="flex:1 1 260px"><h2 style="margin:0">Comparer une mesure</h2>
+          <p class="sub" style="margin:0">Une barre par fichier affiché qui contient la mesure choisie.</p></div>
+        <label class="field" style="flex:0 1 240px">Mesure<select id="metric"></select></label>
+      </div>
+      <div class="bars" id="bars"></div>
+    </section>
+  </main>
+
+  <script src="assets/app.js"></script>
+  <script>
+    NC.init("evaluation");
+    const state = { rows: [], lot: "tous", q: "", open: null, metric: null };
+    const isNum = (v) => typeof v === "number" && Number.isFinite(v);
+    const scalars = (m) => Object.entries(m || {}).filter(([, v]) => isNum(v));
+    const dateOf = (r) => r.date || ((r.file.match(/_(\d{8})\.json$/) || [])[1] || "").replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
+    const groupsOf = (m) => {
+      const key = Object.keys(m || {}).find((k) => k.startsWith("by_") && m[k] && typeof m[k] === "object");
+      return key ? [key, m[key]] : null;
+    };
+    const label = (r) => [r.task, r.model, r.split].filter(Boolean).join(" · ") || r.file;
+
+    function visible() {
+      const q = state.q.trim().toLowerCase();
+      return state.rows.filter((r) => (state.lot === "tous" || String(r.lot) === state.lot) &&
+        (!q || JSON.stringify([r.file, r.exp_id, r.task, r.model, r.split]).toLowerCase().includes(q)));
+    }
+
+    function renderLots() {
+      const lots = ["tous", ...new Set(state.rows.map((r) => String(r.lot ?? "?")))].sort((a, b) => a === "tous" ? -1 : b === "tous" ? 1 : a.localeCompare(b));
+      document.getElementById("lots").innerHTML = lots.map((l) => `<button type="button" class="chip" data-l="${NC.esc(l)}" aria-pressed="${state.lot === l}">${l === "tous" ? "tous les lots" : "Lot " + NC.esc(l)}</button>`).join("");
+      document.querySelectorAll("[data-l]").forEach((b) => b.addEventListener("click", () => { state.lot = b.dataset.l; state.open = null; render(); }));
+    }
+
+    function detail(r) {
+      const sc = scalars(r.metrics);
+      const g = groupsOf(r.metrics);
+      let gtable = "";
+      if (g) {
+        const [key, groups] = g;
+        const cols = [...new Set(Object.values(groups).flatMap((v) => scalars(v).map(([k]) => k)))].slice(0, 8);
+        gtable = `<h2 style="margin-top:12px">Par groupe (${NC.esc(key)})</h2><div class="table-wrap"><table class="t"><thead><tr><th>Groupe</th>${cols.map((c) => `<th class="n">${NC.esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+          Object.entries(groups).map(([name, v]) => `<tr><td>${NC.esc(name)}</td>${cols.map((c) => `<td class="n">${isNum(v?.[c]) ? NC.fmt(v[c], c === "n" || Number.isInteger(v[c]) ? 0 : 3) : "—"}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
+      }
+      return `<dl class="kv"><dt>fichier</dt><dd>${NC.esc(r.file)}</dd>${sc.map(([k, v]) => `<dt>${NC.esc(k)}</dt><dd class="num">${NC.fmt(v, Number.isInteger(v) ? 0 : 3)}</dd>`).join("")}</dl>${gtable}`;
+    }
+
+    function renderTable(rows) {
+      const head = `<thead><tr><th>Lot</th><th>EXP</th><th>Tâche · modèle · jeu</th><th>Date</th><th>Mesures principales</th></tr></thead>`;
+      const body = rows.length ? rows.map((r) => {
+        if (r.error) return `<tr><td>?</td><td colspan="4" class="error">${NC.esc(r.file)} : ${NC.esc(r.error)}</td></tr>`;
+        const main = scalars(r.metrics).filter(([k]) => k !== "n").slice(0, 4).map(([k, v]) => `<span class="tag">${NC.esc(k)} ${NC.fmt(v, Number.isInteger(v) ? 0 : 2)}</span>`).join(" ");
+        const open = state.open === r.file;
+        return `<tr class="click${open ? " open" : ""}" data-f="${NC.esc(r.file)}" tabindex="0" aria-expanded="${open}"><td>${NC.esc(r.lot ?? "?")}</td><td><span class="tag">${NC.esc(r.exp_id || "—")}</span></td><td>${NC.esc(label(r))}</td><td class="num">${NC.esc(dateOf(r))}</td><td>${main || '<span class="empty">aucune mesure numérique</span>'}</td></tr>` +
+          (open ? `<tr class="detail"><td colspan="5">${detail(r)}</td></tr>` : "");
+      }).join("") : `<tr><td colspan="5" class="empty">Aucun fichier de résultats pour ce filtre.</td></tr>`;
+      const tbl = document.getElementById("tbl");
+      tbl.innerHTML = head + `<tbody>${body}</tbody>`;
+      tbl.querySelectorAll("tr.click").forEach((tr) => {
+        const toggle = () => { state.open = state.open === tr.dataset.f ? null : tr.dataset.f; render(); };
+        tr.addEventListener("click", toggle);
+        tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+      });
+    }
+
+    function renderCompare(rows) {
+      const metrics = [...new Set(rows.flatMap((r) => scalars(r.metrics).map(([k]) => k)))].filter((k) => k !== "n");
+      const box = document.getElementById("cmp");
+      box.hidden = !metrics.length;
+      if (!metrics.length) return;
+      if (!metrics.includes(state.metric)) state.metric = metrics[0];
+      const sel = document.getElementById("metric");
+      sel.innerHTML = metrics.map((m) => `<option${m === state.metric ? " selected" : ""}>${NC.esc(m)}</option>`).join("");
+      const data = rows.filter((r) => isNum(r.metrics?.[state.metric])).map((r) => [`${r.lot ? "Lot " + r.lot + " · " : ""}${label(r)}`, r.metrics[state.metric]]);
+      const max = Math.max(1, ...data.map(([, v]) => v));
+      document.getElementById("bars").innerHTML = data.map(([l, v]) => `<div class="bar-row" title="${NC.esc(l)} : ${v}"><span class="lab">${NC.esc(l)}</span><span class="bar-track"><span class="bar-fill" style="display:block;width:${Math.max(0, v) / max * 100}%"></span></span><span class="num">${NC.fmt(v, Number.isInteger(v) ? 0 : 2)}</span></div>`).join("");
+    }
+
+    function render() {
+      const rows = visible();
+      renderLots(); renderTable(rows); renderCompare(rows);
+      const lots = new Set(state.rows.map((r) => r.lot)).size;
+      const dates = state.rows.map(dateOf).filter(Boolean).sort();
+      document.getElementById("kpis").innerHTML = `
+        <div class="kpi"><div class="k">Fichiers de résultats</div><div class="v">${state.rows.length}</div></div>
+        <div class="kpi"><div class="k">Lots représentés</div><div class="v">${lots}</div></div>
+        <div class="kpi"><div class="k">Dernier résultat</div><div class="v" style="font-size:1rem;padding-top:4px">${NC.esc(dates.at(-1) || "—")}</div></div>`;
+    }
+
+    document.getElementById("q").addEventListener("input", (e) => { state.q = e.target.value; render(); });
+    document.getElementById("metric").addEventListener("change", (e) => { state.metric = e.target.value; renderCompare(visible()); });
+    (async () => {
+      try {
+        const { results } = await NC.api("/results");
+        state.rows = results; render();
+      } catch (ex) {
+        const err = document.getElementById("err"); err.hidden = false; err.textContent = ex.message;
+      }
+    })();
+  </script>
+</body>
+</html>

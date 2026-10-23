@@ -1,6 +1,6 @@
 # `api/` — Lot E : API FastAPI
 
-**Responsable : Membre 6 · Branche : `lot-e-integration`**
+**Partagé par toute l'équipe (pas de Membre 6) · Chaque lot maintient ses routes · Relecture : 2 membres**
 
 ## Rôle
 Exposer le pipeline et chacune de ses étapes via HTTP, pour le frontend et pour tester chaque lot isolément.
@@ -21,6 +21,13 @@ Documentation interactive : http://localhost:8000/docs
 | POST | `/nli` | C | `{"claim", "evidence", "lang"}` | `StanceResult` |
 | POST | `/verdict` | D | `{"claim", "lang", "k"}` | `Verdict` |
 | POST | `/check` | tous | `{"text"}` | `{"verdicts": [Verdict]}` |
+| POST | `/verdict/detail` | D | `{"claim", "lang", "k", "nli": "lot-c"\|"regles"}` | `{"corpus_size", "nli", "evidences": [Evidence + rank, stance, confidence], "verdict"}` |
+| GET  | `/corpus/stats` | A1 | — | `{"size", "by_source", "sample"}` |
+| GET  | `/results` | tous | — | `{"results": [...]}` : fichiers de `evaluation/results/`, allégés |
+| GET  | `/app/` | E | — | pages de la plateforme (`frontend/`) |
+
+Le corpus de preuves est lu dans `data/processed/evidence_corpus.jsonl`, ou dans le fichier indiqué par
+la variable d'environnement `EVIDENCE_CORPUS` (voir `frontend/README.md`).
 
 ## Conventions
 - L'API ne contient **aucune logique métier** : elle appelle les points d'entrée des lots.

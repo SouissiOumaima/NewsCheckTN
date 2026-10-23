@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Données et corpus de preuves · NewsCheck TN</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Lot A1 · données</div>
+      <h1>Données et corpus de preuves</h1>
+      <p class="lede">Le Lot A1 constitue les données du projet : corpus de preuves (articles de fact-checking), affirmations à annoter, paires NLI et data cards. Cette page montre le corpus de preuves que l'API utilise en ce moment.</p>
+    </div>
+    <p class="notice todo"><strong>Page de départ, à compléter par le Lot A1.</strong> Elle appelle déjà la route <code>/corpus/stats</code> de l'API. Le responsable du lot peut l'enrichir librement (exemples, explications, résultats), en gardant la base commune : <code>assets/style.css</code> et <code>assets/app.js</code>.</p>
+    <div class="error" id="err" hidden></div>
+    <section class="kpis" id="kpis"></section>
+    <section><h2>Passages par source</h2><div class="table-wrap"><table class="t"><thead><tr><th>Source</th><th class="n">Passages</th></tr></thead><tbody id="src"></tbody></table></div></section>
+    <section><h2>Premiers passages</h2><div class="stack" id="sample"></div></section>
+  </main>
+  <script src="assets/app.js"></script>
+  <script>
+    NC.init("a1");
+    (async () => {
+      const err = document.getElementById("err");
+      try {
+        const s = await NC.api("/corpus/stats");
+        document.getElementById("kpis").innerHTML = `<div class="kpi"><div class="k">Passages chargés</div><div class="v">${s.size}</div></div>
+          <div class="kpi"><div class="k">Sources</div><div class="v">${Object.keys(s.by_source).length}</div></div>`;
+        if (s.size <= 2) document.getElementById("kpis").insertAdjacentHTML("afterend", `<p class="notice">L'API n'a trouvé que l'échantillon de démonstration : aucun corpus n'est installé. L'API lit <code>data/processed/evidence_corpus.jsonl</code>, ou le fichier indiqué par la variable <code>EVIDENCE_CORPUS</code> (voir <code>frontend/README.md</code>).</p>`);
+        document.getElementById("src").innerHTML = Object.entries(s.by_source).map(([k, n]) => `<tr><td>${NC.esc(k)}</td><td class="n">${n}</td></tr>`).join("");
+        document.getElementById("sample").innerHTML = s.sample.map((e) => `<div class="ev"><div class="h"><span class="doc">${NC.esc(e.doc_id)}</span><span>${NC.esc(e.source)}</span>${e.date ? `<span>${NC.esc(e.date)}</span>` : ""}</div><div class="tx">${NC.text(e.text)}</div></div>`).join("");
+      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+    })();
+  </script>
+</body>
+</html>

@@ -8,12 +8,18 @@ Format attendu de data/processed/evidence_corpus.jsonl (une ligne par passage) :
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from common.schemas import Evidence
 
 DATA_DIR = Path(__file__).resolve().parent
-EVIDENCE_CORPUS = DATA_DIR / "processed" / "evidence_corpus.jsonl"
+# Chemin modifiable par la variable d'environnement EVIDENCE_CORPUS : permet de faire
+# tourner l'API sur un corpus non versionné (ex. data/interim/lot_d/evidence_tunifact_v1.jsonl,
+# droits de redistribution non confirmés) sans le copier dans data/processed/.
+EVIDENCE_CORPUS = Path(
+    os.getenv("EVIDENCE_CORPUS") or DATA_DIR / "processed" / "evidence_corpus.jsonl"
+)
 
 # Petit échantillon de démonstration utilisé tant que le vrai corpus n'existe pas.
 _SAMPLE = [
