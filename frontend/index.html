@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NewsCheck TN</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -35,6 +35,12 @@
     </section>
 
     <section>
+      <h2>Explorer la plateforme</h2>
+      <p class="sub">Chaque lot a sa page : on peut y tester sa brique seule.</p>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <section>
       <h2>Ce que fait la chaîne</h2>
       <div class="table-wrap">
         <table class="t">
@@ -54,6 +60,7 @@
   <script src="assets/app.js"></script>
   <script>
     NC.init("accueil");
+    NC.tiles(document.getElementById("tiles"), "accueil");
     const EXAMPLES = [
       "Le chômage en Tunisie a atteint 25 % en 2025. Le gouvernement a annoncé de nouvelles mesures pour l'emploi.",
       "أعلنت الوزارة أن نسبة البطالة في تونس بلغت 25 بالمائة سنة 2025.",

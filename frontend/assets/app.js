@@ -3,6 +3,7 @@
  * Fournit l'objet global `NC` :
  *   NC.PAGES            liste des pages du menu (ajouter une page = une ligne ici)
  *   NC.init(pageId)     dessine l'en-tête commun et vérifie que l'API répond
+ *   NC.tiles(el, id)    cartes de navigation vers les autres pages
  *   NC.api(path, body)  appelle l'API (GET si body absent, sinon POST JSON)
  *   NC.esc, NC.text, NC.fmt, NC.verdictChip, NC.verdictBox, NC.LABELS : aides d'affichage
  *
@@ -12,13 +13,20 @@
  */
 const NC = (() => {
   const PAGES = [
-    { id: "accueil", href: "index.html", label: "Vérifier un texte" },
-    { id: "a1", href: "lot-a1.html", label: "A1 · Données" },
-    { id: "a2", href: "lot-a2.html", label: "A2 · Normalisation" },
-    { id: "b", href: "lot-b.html", label: "B · Affirmations" },
-    { id: "c", href: "lot-c.html", label: "C · Modèles et NLI" },
-    { id: "d", href: "lot-d.html", label: "D · Preuves et verdict" },
-    { id: "evaluation", href: "evaluation.html", label: "Évaluation" },
+    { id: "accueil", href: "index.html", icon: "✦", label: "Vérifier un texte",
+      desc: "Coller un texte et obtenir un verdict cité pour chaque affirmation." },
+    { id: "a1", href: "lot-a1.html", icon: "🗂️", label: "A1 · Données",
+      desc: "Le corpus de preuves utilisé par l'API : sources et passages." },
+    { id: "a2", href: "lot-a2.html", icon: "🔤", label: "A2 · Normalisation",
+      desc: "Nettoyage du texte, langue et écriture (arabe, latin, arabizi)." },
+    { id: "b", href: "lot-b.html", icon: "🧩", label: "B · Affirmations",
+      desc: "Extraction des affirmations vérifiables, sujet-prédicat-objet, modalité." },
+    { id: "c", href: "lot-c.html", icon: "🧠", label: "C · Modèles et NLI",
+      desc: "Position d'un passage face à une affirmation : soutient, contredit, neutre." },
+    { id: "d", href: "lot-d.html", icon: "🔎", label: "D · Preuves et verdict",
+      desc: "Recherche des passages, verdict cité ou abstention." },
+    { id: "evaluation", href: "evaluation.html", icon: "📊", label: "Évaluation",
+      desc: "Les résultats de tous les lots, par langue et par expérience." },
   ];
   const LABELS = {
     vrai: "Vrai", faux: "Faux", trompeur: "Trompeur", preuves_insuffisantes: "Preuves insuffisantes",
@@ -73,11 +81,11 @@ const NC = (() => {
   }
 
   function header(pageId) {
-    const nav = PAGES.map((p) => `<a href="${p.href}"${p.id === pageId ? ' aria-current="page"' : ""}>${esc(p.label)}</a>`).join("");
+    const nav = PAGES.map((p) => `<a href="${p.href}"${p.id === pageId ? ' aria-current="page"' : ""}><span class="ic" aria-hidden="true">${p.icon}</span>${esc(p.label)}</a>`).join("");
     const el = document.createElement("header");
     el.className = "nc-header";
     el.innerHTML = `<div class="in">
-        <a class="nc-brand" href="index.html">NewsCheck <span>TN</span></a>
+        <a class="nc-brand" href="index.html"><span class="logo" aria-hidden="true">✓</span><span>NewsCheck <span class="tn">TN</span></span></a>
         <nav class="nc-nav" aria-label="Pages de la plateforme">${nav}</nav>
         <div class="nc-api" id="nc-api"><span class="dot"></span><span id="nc-api-txt">API…</span><button type="button" id="nc-api-edit">changer</button></div>
       </div>
@@ -121,7 +129,14 @@ const NC = (() => {
     document.body.append(f);
   }
 
+  /** Cartes de navigation vers les autres pages (utilisées sur l'accueil). */
+  function tiles(el, exceptId) {
+    el.innerHTML = PAGES.filter((p) => p.id !== exceptId).map((p) => `
+      <a class="tile" href="${p.href}"><span class="ic" aria-hidden="true">${p.icon}</span>
+        <span class="t">${esc(p.label)}</span><span class="d">${esc(p.desc)}</span></a>`).join("");
+  }
+
   function init(pageId) { header(pageId); footer(); ping(); }
 
-  return { PAGES, LABELS, STANCES, init, api, apiBase, esc, text, fmt, verdictChip, stanceChip, verdictBox };
+  return { PAGES, LABELS, STANCES, init, tiles, api, apiBase, esc, text, fmt, verdictChip, stanceChip, verdictBox };
 })();

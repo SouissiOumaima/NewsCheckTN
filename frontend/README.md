@@ -59,7 +59,8 @@ sans toucher au frontend.
 ## Fichiers communs
 
 - `assets/style.css` : couleurs (thème clair et sombre), composants `.card`, `.btn`, `.chip`, `.tag`,
-  `.verdict-chip`, `.verdict`, `.ev` (passage), `.kpi`, `table.t`, `.notice`.
+  `.verdict-chip`, `.verdict`, `.ev` (passage), `.kpi`, `table.t`, `.notice`, `.tiles` / `.tile`.
+  Style « moderne et coloré » : dégradé violet → bleu (`--grad`), cartes très arrondies, puces en pilule.
 - `assets/app.js` : objet global `NC`.
   - `NC.init("<id>")` dessine l'en-tête et le pied de page, et vérifie que l'API répond.
   - `NC.api("/route")` fait un GET ; `NC.api("/route", corps)` fait un POST JSON. Les erreurs sont
@@ -75,7 +76,7 @@ L'adresse de l'API se change dans l'en-tête (« changer ») ; le choix est gard
 
 1. Copier une page de départ (par exemple `lot-b.html`) et garder la structure :
    `<main class="page">`, `page-head`, puis des `.card`.
-2. Si c'est une nouvelle page, ajouter **une ligne** dans `NC.PAGES` (`assets/app.js`) : elle
+2. Si c'est une nouvelle page, ajouter **une ligne** dans `NC.PAGES` (`assets/app.js`), avec une icône et une courte description : elle
    apparaît alors dans le menu de toutes les pages.
 3. Si la page a besoin d'une nouvelle route, l'ajouter dans `api/main.py` avec un test dans
    `tests/test_api.py`.
