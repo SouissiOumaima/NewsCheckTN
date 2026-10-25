@@ -25,6 +25,10 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-C-007 | 2026-10-24 | C | Ablation raw vs normalisé | XLM-R + LoRA, seed42, test gelé | macro-F1 ; bootstrap | raw 0,7108 vs normalisé 0,6671 ; p=0,188 | raw retenu ; API alignée sur raw |
+| EXP-C-006 | 2026-10-24 | C | Baseline neuronale | MiniLM figé + LR, 3 runs | macro-F1 | 0,6350 ± 0,0000 | baseline de comparaison conservée |
+| EXP-C-005 | 2026-10-24 | C | Bootstrap apparié | TF-IDF vs XLM-R seed42, 1 000 réplications | Δ macro-F1 ; IC 95 % ; p | +0,0673 ; [-0,0468 ; 0,1860] ; p=0,254 | gain non concluant statistiquement |
+| EXP-C-003 | 2026-10-23 | C | Évaluation détaillée XLM-R + LoRA | seed 42, test gelé 120 | macro-F1 | 0.7108 ; FR 0.9148 / AR 0.6989 / TN 0.6445 | analyse d'erreurs à compléter |
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 | EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 (stub = v1) ; cas ciblés 0/5 → 5/5 | v1 retenue ; suite : classifieur TN |
@@ -34,6 +38,60 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
 
 ## Entrées
+
+### EXP-C-007 — Ablation texte brut contre texte normalisé et alignement API
+- **Date** : 2026-10-24
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : vérifier l'effet de la normalisation A2 sur Model 1 et éviter que le modèle déployé reçoive une représentation différente de celle du test.
+- **Données** : `claim_detection_600.jsonl`, test gelé de 120 phrases ; XLM-R seed42.
+- **Méthode / configuration** : même architecture et split ; entraînement/évaluation `--text-mode raw`, puis `--text-mode normalized`. Bootstrap apparié à 1 000 réplications.
+- **Code** : `models/encoders/train_xlmr_claim_detection.py`, `models/encoders/evaluate_claim_detection.py`, `pipeline.py`, `api/main.py`.
+- **Résultats** : raw = 0,7108 ; normalisé = 0,6671 ; différence normalisé − raw = −0,0436 ; IC 95 % [-0,1184 ; 0,0202], p = 0,188. FR reste à 0,9148 ; AR 0,6989 → 0,6527 ; TN 0,6445 → 0,5791. Tests manuels API : `/extract` arabe et tunisien, puis `/check`, tous HTTP 200.
+- **Analyse** : la baisse observée après normalisation n'est pas statistiquement significative, mais le raw est supérieur sur ce test. Le pipeline extrait toujours les claims normalisés pour les lots aval ; il classe désormais leurs phrases brutes correspondantes avec fallback normalisé si les segmentations divergent.
+- **Décision / suite** : raw retenu pour Model 1 et inférence API alignée. Ne pas sélectionner un checkpoint sur le test ; seed42 reste le checkpoint de référence.
+
+### EXP-C-006 — Baseline neuronale MiniLM figée
+- **Date** : 2026-10-24
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : ajouter la baseline neuronale exigée et mesurer ce qu'apporte un encodeur multilingue sans fine-tuning.
+- **Données** : mêmes 480 entraînement / 120 test gelé que les autres systèmes.
+- **Méthode / configuration** : `paraphrase-multilingual-MiniLM-L12-v2` utilisé comme embeddings figés, puis régression logistique multiclasses ; seeds 42, 123 et 2026.
+- **Code** : `models/baselines/claim_detection_embedding_logreg.py`.
+- **Résultats** : macro-F1 = 0,6350 ± 0,0000 ; FR 0,8228, AR 0,8002, TN 0,4886.
+- **Analyse** : MiniLM aide FR/AR, mais échoue nettement sur le tunisien et reste sous TF-IDF globalement.
+- **Décision / suite** : baseline conservée pour comparaison ; XLM-R + LoRA reste le modèle avancé.
+
+### EXP-C-005 — Bootstrap apparié TF-IDF contre XLM-R
+- **Date** : 2026-10-24
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : déterminer si l'écart seed42 XLM-R contre baseline classique est compatible avec le hasard d'échantillonnage du test.
+- **Données** : les mêmes 120 prédictions de TF-IDF et XLM-R seed42, appariées par identifiant.
+- **Méthode / configuration** : 1 000 rééchantillonnages avec remise ; macro-F1 ; p-value bilatérale.
+- **Code** : `models/evaluation/bootstrap_paired_macro_f1.py`.
+- **Résultats** : TF-IDF 0,6435 ; XLM-R 0,7108 ; Δ = +0,0673 ; IC 95 % [-0,0468 ; 0,1860] ; p = 0,254.
+- **Analyse** : l'IC contient zéro ; le test de 120 phrases ne permet pas de conclure à une amélioration statistiquement significative.
+- **Décision / suite** : rapporter l'amélioration observée avec son incertitude ; augmenter le test pour une conclusion plus forte.
+
+### EXP-C-003 — Évaluation par langue du checkpoint Model 1 déployé
+- **Date** : 2026-10-23
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : mesurer le checkpoint de référence (`seed42`) sur le test gelé et vérifier
+  si les performances varient selon la langue.
+- **Données** : 120 exemples de test de `claim_detection_600.jsonl` ; métadonnées de langue revues,
+  soit 26 FR, 30 AR et 64 TN dans le test.
+- **Méthode / configuration** : checkpoint XLM-R + LoRA `claim_detection_xlmr_lora_seed42` ; même
+  protocole qu'EXP-C-002. Évaluation par `models/encoders/evaluate_claim_detection.py` sur Colab GPU.
+- **Code** : fichiers `models/encoders/evaluate_claim_detection.py` et
+  `data/prepare_claim_detection_dataset.py`.
+- **Résultats** : exactitude 0.7917 ; macro-F1 globale **0.7108**. Macro-F1 par langue : FR =
+  **0.9148** (n=26), AR = **0.6989** (n=30), TN = **0.6445** (n=64). F1 par classe : AFFIRMATION
+  0.8824, OPINION 0.5000, AUTRE 0.7500. Aucun exemple `unk`.
+- **Analyse** : la classe OPINION est la plus difficile (rappel 0.4211), donc le modèle la confond
+  encore fréquemment avec les deux autres classes. Le score TN, plus faible et porté par le plus grand
+  groupe, demande une revue ciblée des erreurs arabizi/mixed. Les sous-groupes FR et AR restent petits.
+- **Décision / suite** : retenir seed42 pour l'intégration (choix fixé avant cette évaluation) ; analyser
+  les erreurs exportées avant toute modification de modèle. L'analyse de 30 erreurs est documentée
+  dans `docs/lot-c_error_analysis_results.md` : 25 erreurs seed42 et 5 erreurs distinctes seed2026.
 
 ### EXP-B-005 — Lexiques selon l'écriture et verbe de parole précédé de « و » / « ف » collé
 - **Date** : 2026-10-20
@@ -266,3 +324,48 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Résultats** : 22 tests passent ; le pipeline s'abstient (attendu, NLI non implémentée).
 - **Analyse** : —
 - **Décision / suite** : chaque lot remplace son stub.
+
+### EXP-C-001 — Baseline TF-IDF + régression logistique pour la détection d'affirmations
+- **Date** : 2026-10-21
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : établir une baseline reproductible de check-worthiness binaire :
+  `AFFIRMATION` contre `OPINION` ou `AUTRE`. Les n-grammes de caractères doivent donner un point de
+  comparaison qui tolère partiellement les écritures arabes, arabizi et françaises, sans modèle pré-entraîné.
+- **Données** : 60 extraits revus par Lot A1, lus dans
+  `data/annotations/normalized/tarc_review_30.jsonl` (18 affirmations, 7 opinions, 5 autres ; 25 TN,
+  5 FR) et `data/annotations/normalized/tunifact_review_30.jsonl` (30 affirmations ; 15 AR, 15 FR).
+  Les 60 phrases sans labels, les annotations privées et les extraits sans annotation ne sont pas utilisés.
+  Le corpus est très déséquilibré (48 positifs / 12 négatifs) et trop petit pour une conclusion générale.
+- **Méthode / configuration** : split stratifié 80/20, graine 42, avec les 12 IDs de test figés dans
+  `data/splits/claim_detection_pilot_seed42.json` avant toute itération. TF-IDF de caractères
+  `char_wb`, n-grammes 3-5, puis `LogisticRegression(max_iter=1000, class_weight="balanced")`.
+  Code : `models/baselines/claim_detection_tfidf.py`.
+- **Résultats** : 48 entraînement / 12 test ; macro-F1 = **0.4286**. Macro-F1 par langue dans le
+  test : AR 0.5000, FR 0.5000, TN 0.2000. Rapport brut :
+  `evaluation/results/claim_detection_tfidf_seed42.json`.
+- **Analyse** : résultat de référence uniquement, non publiable : le test comprend très peu de négatifs
+  et les sources/langues sont confondues avec les labels (Tunifact est entièrement positif). Les scores
+  par langue reposent sur des sous-groupes minuscules et ne permettent aucune comparaison fiable.
+- **Décision / suite** : baseline conservée; ne pas régler ses hyperparamètres sur ce test. Quand Lot A1/B
+  livre des annotations supplémentaires, conserver ce test ou définir un nouveau split documenté, ajouter
+  trois graines et comparer à XLM-R. Le NLI attend le fichier de paires `claim/evidence/label`.
+
+### EXP-C-002 — XLM-RoBERTa + LoRA pour la détection d'affirmations
+- **Date** : 2026-10-23
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : comparer un encodeur multilingue fine-tuné à la baseline classique sur les
+  trois classes `AFFIRMATION`, `OPINION`, `AUTRE`.
+- **Données** : `data/processed/claim_detection_600.jsonl`, 600 phrases originales annotées. Test fixé :
+  120 IDs dans `data/splits/claim_detection_multiclass_600_seed42.json`. Pour chaque seed, les 480 autres
+  phrases sont séparées en 408 entraînement et 72 validation, sans toucher au test.
+- **Méthode / configuration** : `FacebookAI/xlm-roberta-base`, LoRA (r=8, alpha=16, dropout=0.1,
+  modules query/value), 8 époques, learning rate 2e-4, batch size 8, meilleure époque sélectionnée sur
+  macro-F1 validation. Exécution GPU Colab. Code : `models/encoders/train_xlmr_claim_detection.py`.
+- **Résultats** : macro-F1 test : seed 42 = 0.7108 ; seed 123 = 0.7715 ; seed 2026 = 0.7250 ;
+  moyenne ± écart-type = **0.7357 ± 0.0317**. Baseline TF-IDF = 0.6435.
+- **Analyse** : XLM-R améliore la baseline de 0.0922 point de macro-F1 sur ce test. L'écart-type de 0.0317
+  signale une variance non négligeable, attendue avec 600 exemples et 120 exemples de test. Les résultats
+  par langue du checkpoint retenu sont documentés dans EXP-C-003.
+- **Décision / suite** : XLM-R + LoRA est retenu comme modèle avancé du Model 1. Conserver les trois
+  checkpoints et le split; compléter l'analyse d'erreurs, les résultats par langue et le bootstrap apparié
+  contre la baseline avant le rapport final.
