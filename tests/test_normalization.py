@@ -462,3 +462,32 @@ def test_arabizi_model_is_regenerable(tmp_path):
         "fichier de poids non régénérable : relancer python -m normalization.train_langid "
         "et noter l'expérience dans experiments.md"
     )
+
+
+@pytest.mark.parametrize("token", ["8ali", "8odwa", "s8ir", "lou8a", "fer8a"])
+def test_digit_8_is_arabizi(token):
+    # 8 = غ en arabizi tunisien (EXP-A2-008, revue de la PR #3).
+    from normalization.normalize import _is_arabizi_token
+
+    assert _is_arabizi_token(token)
+
+
+@pytest.mark.parametrize("token", ["A380", "8h", "8eme", "8bits", "B8"])
+def test_digit_8_false_friends_are_not_arabizi(token):
+    from normalization.normalize import _is_arabizi_token
+
+    assert not _is_arabizi_token(token)
+
+
+def test_digit_8_example_from_review():
+    doc = normalize("8ali barcha")
+    assert doc.script == "arabizi"
+    assert doc.lang == Lang.TN
+
+
+def test_historical_rule_ignores_digit_8():
+    # Tirage des échantillons et entraînement gardent la règle d'origine, sans le 8.
+    from normalization.normalize import ARABIZI_DIGITS_V1, detect_script_by_rules
+
+    assert detect_script_by_rules("8ali barcha") == "arabizi"
+    assert detect_script_by_rules("8ali barcha", digits=ARABIZI_DIGITS_V1) == "latin"

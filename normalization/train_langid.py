@@ -23,7 +23,7 @@ import random
 from pathlib import Path
 
 from normalization import langid
-from normalization.normalize import detect_script_by_rules, normalize
+from normalization.normalize import ARABIZI_DIGITS_V1, detect_script_by_rules, normalize
 
 RAW = Path("data/raw/langid")
 SAMPLE = Path("data/interim/langid/tsac_latin_sample.tsv")  # annoté à la main, jamais appris
@@ -59,7 +59,11 @@ def load_arabizi() -> list[str]:
     for name in ("train_pos.txt", "train_neg.txt", "test_pos.txt", "test_neg.txt"):
         # Règles seules : le choix des exemples ne doit pas dépendre d'un modèle déjà entraîné.
         lines = read_lines(RAW / "TSAC" / name)
-        texts += [t for t in lines if detect_script_by_rules(normalize(t).text) == "arabizi"]
+        # Règle d'origine, sans le 8 : les exemples (donc le modèle) restent ceux d'EXP-A2-006.
+        texts += [
+            t for t in lines
+            if detect_script_by_rules(normalize(t).text, digits=ARABIZI_DIGITS_V1) == "arabizi"
+        ]
     return texts
 
 
