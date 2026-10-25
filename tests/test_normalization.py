@@ -527,3 +527,24 @@ def test_evaluate_save_writes_dashboard_format(tmp_path, monkeypatch):
     assert (record["exp_id"], record["lot"], record["task"]) == ("EXP-A2-008", "A2", "langid")
     assert record["dataset"] == "tests/fixtures/linguistic_analysis/eval_30.jsonl"
     assert record["metrics"]["by_lang"] == {"fr": {}}
+
+
+def test_presentation_helpers_are_public():
+    # Revue de la PR #3 (Lot D) : annotation.py et lexicon.py n'importent plus de noms internes.
+    from normalization.langid import ARABIC_WORD
+    from normalization.normalize import ARABIC_PRESENTATION, expand_presentation_forms
+
+    assert expand_presentation_forms("\ufefb") == "\u0644\u0627"  # ligature lam-alef -> 2 lettres
+    assert ARABIC_PRESENTATION.search("\ufefb")
+    assert ARABIC_WORD.findall("abc \u0628\u0631\u0634\u0627") == ["\u0628\u0631\u0634\u0627"]
+
+
+@pytest.mark.xfail(strict=True, reason="limite connue (README) : mot seul tout en majuscules")
+def test_all_caps_arabizi_single_word_limit():
+    assert normalize("SA7A").script == "arabizi"
+
+
+@pytest.mark.xfail(strict=True, reason="limite connue (README) : verbe standard en ش hors liste")
+def test_standard_sh_verb_missing_from_list_limit():
+    text = "الاقتصاد ما ينتعش بسرعة في هذه الظروف"  # arabe standard
+    assert normalize(text).lang == Lang.AR

@@ -61,7 +61,7 @@ _ARABIC_LETTER_MAP = str.maketrans(
 # "Formes de présentation" : anciens codes où une lettre arabe est stockée
 # déjà dessinée (isolée, initiale, ligature lam-alef...). Certains PDF et
 # vieux sites en produisent. On les reconvertit en lettres normales.
-_ARABIC_PRESENTATION = re.compile(r"[\uFB50-\uFDFF\uFE70-\uFEFC]+")
+ARABIC_PRESENTATION = re.compile(r"[\uFB50-\uFDFF\uFE70-\uFEFC]+")
 
 # Chiffres arabes-indiens et persans -> chiffres 0-9, pour que "٢٠٢٣" dans une
 # affirmation retrouve "2023" dans une preuve. La VALEUR ne change pas.
@@ -172,7 +172,7 @@ def _count_letters(text: str) -> tuple[int, int]:
 
 def _mask(text: str) -> str:
     """Retire ce qui n'est pas de la langue (liens, adresses) et déplie l'arabe "dessiné"."""
-    return _expand_presentation_forms(_PROTECTED.sub(" ", text))
+    return expand_presentation_forms(_PROTECTED.sub(" ", text))
 
 
 def detect_script_by_rules(text: str, digits: frozenset[str] = ARABIZI_DIGITS) -> str:
@@ -223,7 +223,7 @@ def detect_language(text: str) -> Lang:
     """Identifie la langue : script, puis marques dialectales en lettres arabes."""
     # TODO(Lot A2): classifieur appris pour le tunisien sans mot du lexique et
     # pour l'arabizi sans chiffres (voir experiments.md).
-    if sum(_count_letters(_expand_presentation_forms(_PROTECTED.sub(" ", text)))) == 0:
+    if sum(_count_letters(expand_presentation_forms(_PROTECTED.sub(" ", text)))) == 0:
         return Lang.UNKNOWN  # vide, ou seulement chiffres / emojis / liens
     script = detect_script(text)
     if script == "arabizi":
@@ -231,7 +231,7 @@ def detect_language(text: str) -> Lang:
     if script in ("arabic", "mixed"):
         # Même repli que dans normalize(), pour que la fonction donne la même
         # réponse sur un texte brut et sur un texte déjà normalisé.
-        folded = normalize_arabic(_expand_presentation_forms(text))
+        folded = normalize_arabic(expand_presentation_forms(text))
         return Lang.TN if is_dialectal_arabic(folded) else Lang.AR
     return Lang.FR
 
@@ -240,9 +240,9 @@ def detect_language(text: str) -> Lang:
 # 3. Normalisation
 # ---------------------------------------------------------------------------
 
-def _expand_presentation_forms(text: str) -> str:
+def expand_presentation_forms(text: str) -> str:
     """Remplace les lettres arabes "déjà dessinées" (ligature lam-alef...) par des lettres."""
-    return _ARABIC_PRESENTATION.sub(
+    return ARABIC_PRESENTATION.sub(
         lambda run: unicodedata.normalize("NFKC", run.group()), text
     )
 
@@ -298,7 +298,7 @@ def normalize(text: str) -> Document:
     #    "10²" en "102", ce qui change un nombre.
     text = unicodedata.normalize("NFC", text)
     #    Exception ciblée : les formes de présentation arabes, sans risque.
-    text = _expand_presentation_forms(text)
+    text = expand_presentation_forms(text)
 
     # 2. Caractères invisibles.
     text = _INVISIBLE.sub("", text)

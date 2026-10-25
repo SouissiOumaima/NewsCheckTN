@@ -15,17 +15,16 @@ des fichiers texte s'ouvrent mieux dans l'éditeur que l'arabe dans un terminal.
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from collections import Counter
 from pathlib import Path
 
 from common.schemas import Lang
 from normalization.annotation import SAMPLES, load_tsac, read_annotations
-from normalization.langid import find_dialect_markers, load_markers
+from normalization.langid import ARABIC_WORD, find_dialect_markers, load_markers
 from normalization.normalize import (
-    _expand_presentation_forms,
     detect_script_by_rules,
+    expand_presentation_forms,
     normalize,
     normalize_arabic,
 )
@@ -33,7 +32,6 @@ from normalization.normalize import (
 PADT = Path("data/raw/langid/UD_Arabic-PADT")
 OUT = Path("data/interim/langid")
 MIN_TEXTS = 12  # un candidat doit apparaître dans au moins 12 commentaires TSAC
-ARABIC_WORD = re.compile(r"[ء-يٮ-ۓ]+")  # lettres arabes seules
 
 
 def load_padt(split: str) -> list[str]:
@@ -45,7 +43,7 @@ def load_padt(split: str) -> list[str]:
 
 def folded(text: str) -> str:
     """Même forme que celle que lit la règle dans le pipeline (voir detect_language)."""
-    return normalize_arabic(_expand_presentation_forms(text))
+    return normalize_arabic(expand_presentation_forms(text))
 
 
 def words(text: str) -> set[str]:

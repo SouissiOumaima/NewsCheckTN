@@ -24,7 +24,7 @@ from collections import Counter
 from pathlib import Path
 
 from normalization.normalize import (
-    _ARABIC_PRESENTATION,
+    ARABIC_PRESENTATION,
     ARABIZI_DIGITS_V1,
     detect_script_by_rules,
     normalize,
@@ -103,7 +103,7 @@ def candidates(texts: list[str], script: str) -> list[str]:
         # Lettres arabes : texte brut, sans les lettres "dessinées" (voir ci-dessus).
         # Lettres latines : texte normalisé, comme dans le pipeline.
         arabic = script == "arabic"
-        seen = _ARABIC_PRESENTATION.sub(" ", text) if arabic else normalize(text).text
+        seen = ARABIC_PRESENTATION.sub(" ", text) if arabic else normalize(text).text
         # Règle d'origine, sans le 8 : le tirage du 2026-10-07 doit rester identique.
         if detect_script_by_rules(seen, digits=ARABIZI_DIGITS_V1) == script:
             pool.append(text)
