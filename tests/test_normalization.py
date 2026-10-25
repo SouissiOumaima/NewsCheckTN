@@ -491,3 +491,39 @@ def test_historical_rule_ignores_digit_8():
 
     assert detect_script_by_rules("8ali barcha") == "arabizi"
     assert detect_script_by_rules("8ali barcha", digits=ARABIZI_DIGITS_V1) == "latin"
+
+
+def test_evaluate_default_dataset_does_not_depend_on_current_folder():
+    # Revue de la PR #3 (Lot D) : chemin construit depuis l'emplacement de evaluate.py.
+    from normalization import evaluate
+
+    assert evaluate.DEFAULT_DATASET.is_absolute()
+    assert evaluate.DEFAULT_DATASET.exists()
+
+
+def test_evaluate_scores_precision_recall_f1():
+    from normalization.evaluate import scores
+
+    examples = [{"lang": "fr"}, {"lang": "fr"}, {"lang": "tn"}]
+    result = scores(examples, ["fr", "tn", "tn"], "lang")
+    # fr : 1 bonne prédiction sur 1 (précision 1), 1 retrouvée sur 2 (rappel 0.5).
+    assert result["by_class"]["fr"] == {"precision": 1.0, "recall": 0.5, "f1": 0.6667, "support": 2}
+    assert result["by_class"]["tn"]["precision"] == 0.5
+    assert result["macro_f1"] == 0.6667
+    assert result["accuracy"] == 0.6667
+
+
+def test_evaluate_save_writes_dashboard_format(tmp_path, monkeypatch):
+    import json
+
+    from normalization import evaluate
+
+    monkeypatch.setattr(evaluate, "RESULTS_DIR", tmp_path)  # jamais dans le vrai dossier
+    lang = {"n": 3, "accuracy": 0.5, "macro_f1": 0.5, "by_class": {"fr": {}}}
+    path = evaluate.save_results(lang, None, "EXP-A2-008", "regles-ngrams", "dev",
+                                 evaluate.DEFAULT_DATASET)
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert path.name.startswith("a2_langid_regles-ngrams_")
+    assert (record["exp_id"], record["lot"], record["task"]) == ("EXP-A2-008", "A2", "langid")
+    assert record["dataset"] == "tests/fixtures/linguistic_analysis/eval_30.jsonl"
+    assert record["metrics"]["by_lang"] == {"fr": {}}
