@@ -38,8 +38,46 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
 | EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
 | EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
+| EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
 
 ## Entrées
+
+### EXP-A2-008 — Arabizi : chiffre 8 (= غ) dans la règle à chiffres
+- **Date** : 2026-10-25
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : suggestion de la revue de la PR #3 (Lot D) : en arabizi tunisien, 8
+  remplace غ (« 8ali », « 8odwa »), absent de la règle (`235679`). Hypothèse : l'ajouter ne crée
+  aucune fausse alerte sur le français et apporte un gain, sans changer les résultats déjà publiés.
+- **Données** : UD French-GSD (train 14 450, dev 1 476, test 416 phrases) ; commentaires TSAC + Tunizi
+  en lettres latines, sans doublon (78 173) ; échantillon annoté en lettres latines (100 textes).
+- **Méthode / configuration** : mesure avant tout changement de code, avec la liste de chiffres
+  modifiée en mémoire seulement (script hors dépôt `data/interim/langid/exp008_digit8.py`, sortie
+  `exp008_digit8.txt`) ; lecture des 40 mots avec 8 les plus fréquents. Puis code : deux constantes
+  publiques, `ARABIZI_DIGITS_V1` (règle d'origine) et `ARABIZI_DIGITS` (avec le 8, utilisée par le
+  pipeline) ; `annotation.py` et `train_langid.py` gardent la règle d'origine, pour que l'échantillon
+  publié (EXP-A2-004) et le modèle (EXP-A2-006) ne changent pas. « 8bit » et « 8bits » ajoutés aux
+  faux amis.
+- **Code** : commit `a21b902` : `normalization/normalize.py`, `normalization/annotation.py`,
+  `normalization/train_langid.py`, `tests/test_normalization.py`.
+- **Résultats** :
+  - français classé arabizi par les règles : train 7 → 7, dev 1 → 1, test 0 → 0 : aucune nouvelle
+    fausse alerte ;
+  - commentaires en lettres latines reconnus arabizi par les règles seules : 50 166 → 50 346
+    (+180) ; décision finale (règles + modèle) modifiée pour 20 textes, tous de `latin` à `arabizi`
+    (« darban lou8a », « el 8ira », « ye 8oul »…) ;
+  - mots avec 8 reconnus : tous tunisiens parmi les 40 plus fréquents (8ir, 8ali, 8alta, 8oul,
+    8odwa…) ; un faux ami vu dans les exemples, « 8bits », dans un commentaire par ailleurs tunisien ;
+  - échantillon annoté : aucune ligne ne change ;
+  - preuves après le changement : 470 tests réussis (12 nouveaux), modèle régénéré à l'identique
+    (test lent), tirage latin refait identique (100 sur 100), `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient. Sur 180 textes gagnés par les règles, 160 étaient déjà reconnus
+  par le modèle à n-grammes : le gain net pour la détection est faible (20 sur 78 173). Ce chiffre
+  est optimiste pour le modèle, car Tunizi fait partie de ses données d'entraînement. L'intérêt
+  principal du 8 est ailleurs : les textes trop courts pour que le modèle se prononce, et la future
+  translittération arabizi → arabe (« 8ali » → غالي). Garder deux règles explicites évite qu'un
+  changement de la règle du pipeline modifie en silence un résultat déjà publié.
+- **Décision / suite** : retenu. Suite : translittération arabizi → arabe pour le Lot D (3 candidats
+  par mot avec score, meilleure phrase, nombres et mots français intacts).
 
 ### EXP-A2-007 — Double annotation de la langue : accord entre annotateurs (kappa)
 - **Date** : 2026-10-21
