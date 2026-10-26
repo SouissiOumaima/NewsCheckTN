@@ -36,8 +36,44 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-004 | 2026-10-19 | A2 | Reproductibilité : échantillons annotés et lexique | `normalization.annotation`, `normalization.lexicon` | tirage refait ; lexique retrouvé ; fausses alertes sur la presse | 100/100 et 100/100 ; 55/78 (+ 23 variantes) ; 0/1 589 | tout est refaisable ; suite : kappa, presse d'une autre source |
 | EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
+| EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
 
 ## Entrées
+
+### EXP-B-006 — Tunisien en lettres arabes identifié par le Lot A2 : liste d'erreurs attendues
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : prise en compte de la PR #3 d'A2 (tunisien en lettres arabes identifié
+  `tn`, donc analysé par les règles au lieu de Stanza) ; mise à jour de la liste d'erreurs attendues.
+  Hypothèse : les erreurs du mode parseurs dues au tunisien envoyé à Stanza (catégories E7 et E2)
+  disparaissent, sans effet sur le mode règles.
+- **Données** : `eval_30.jsonl` (34 phrases, 22 affirmations, gold inchangé), jeu de **développement**,
+  un seul annotateur. Langue fournie par A2 pour les 5 phrases de tunisien en lettres arabes : `tn`
+  pour tn-a1, tn-a2, tn-a4 et tn-a5, `ar` pour tn-a3 (toujours analysée par Stanza).
+- **Méthode / configuration** : aucun changement du code du Lot B. Fusion de `main` (PR #3 du Lot A2,
+  `add268e`) dans `lot-b-linguistic`, puis `python -m linguistic_analysis.evaluate --compare` avant et
+  après la fusion (bootstrap apparié, 1000 tirages, graine 20261015). spaCy 3.8 `fr_core_news_md`,
+  Stanza 1.15 `ar`. Les fichiers de résultats portent encore l'identifiant `EXP-B-005` (constante
+  `EXP_ID` de `evaluate.py`, non modifiée dans ce commit).
+- **Code** : branche `lot-b-linguistic`, fusion de `origin/main` et mise à jour de
+  `tests/fixtures/linguistic_analysis/error_categories.json` (section `corrigees_exp_b_006`).
+- **Résultats** (avant → après la fusion) :
+  - parseurs : sujet / prédicat / objet 0.95 / 0.91 / 0.82 → 0.95 / 0.95 / 0.86 ; triplet exact
+    0.77 → 0.86 ; 7 → 5 erreurs (disparues : tn-a1:obj et tn-a4:predicate ; aucune erreur nouvelle) ;
+  - règles : inchangé (sujet / prédicat / objet 0.95 / 0.95 / 0.91, triplet 0.91, 4 erreurs) ;
+  - triplet exact par groupe en mode parseurs : TN lettres arabes 0.00 → 1.00 (2 affirmations) ; FR
+    0.88, AR 0.86, arabizi 1.00 et mixte 0.50 inchangés ;
+  - détection d'affirmation, modalité et coréférence inchangées (1.00) ;
+  - comparaison appariée parseurs − règles, triplet exact : −0.14 [−0.35 ; +0.05] → −0.04
+    [−0.21 ; +0.10] ; différence toujours non établie.
+- **Analyse** : le gain vient entièrement de l'amont : les deux phrases concernées sont maintenant
+  analysées par les règles, déjà correctes sur elles. Le groupe TN en lettres arabes ne compte que
+  2 affirmations : l'écart de 0.00 à 1.00 ne doit pas être lu comme une mesure. tn-a3, toujours
+  étiquetée `ar`, reste analysée par Stanza. Erreurs restantes avec parseurs : arbre spaCy faux (fr-02,
+  3 erreurs), découpage dû au repli ة → ه (ar-01, point L7) et objet de mx-2. Limites : eval_30 est un
+  jeu de développement, annoté par une seule personne ; aucun gold pour la source, le temps et le lieu.
+- **Décision / suite** : liste d'erreurs attendues mise à jour (`corrigees_exp_b_006`). Mesure de
+  référence sur `eval_100` une fois verrouillé.
 
 ### EXP-B-005 — Lexiques selon l'écriture et verbe de parole précédé de « و » / « ف » collé
 - **Date** : 2026-10-20
