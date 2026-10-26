@@ -24,18 +24,25 @@ En cas de doute réel : `x`. Un doute honnête vaut mieux qu'une étiquette forc
 - Une faute d'orthographe en arabe standard : `حقيقتا`.
 - Un mot étranger : `برافو`, `لوك`.
 - Les lettres étirées, les emojis, la ponctuation répétée.
-- Un mot familier commun à tout le monde arabe, s'il est seul : `فلوس`, `حلو`, `زبالة`.
-- Une insulte ou un nom propre.
+- Un mot familier commun à plusieurs pays arabes, s'il est seul : `فلوس`, `زبالة` (exception
+  décidée pour `حلو` / `حلوة` : voir « Cas tranchés lors de l'adjudication »).
+- Une insulte ou un nom propre : on les met de côté et on décide avec les autres mots. Ce n'est
+  jamais une raison de mettre `x`.
+- Un mot étranger écrit en lettres arabes (`لوك`, `برافو`, `ساكس`) : mis de côté de la même façon.
 
 ## Cas tranchés lors de la première passe
 - Phrase standard contenant un seul mot dialectal : `t`.
 - Phrase standard avec `الي` pour `الذي` : `t` (ce mot fait échouer l'analyseur standard, cf. EXP-B-001, E7).
 - Arabe standard avec fautes d'orthographe : `a`.
-- Vœu ou formule religieuse seule : `x`.
+- Formule religieuse figée seule (« ما شاء الله ») : `x`. Un vœu rédigé en arabe standard
+  (« بالتوفيق والنجاح… ») : `a`.
 
-## Cas ouverts, à trancher après la double annotation
-- Phrase standard qui se termine par `معاك` ou `معاه` : la règle 2 donnerait `t`.
-- Phrases où les deux lectures de la première passe diffèrent : lignes 12, 20, 33, 71, 86.
+## Cas tranchés lors de l'adjudication (2026-10-26)
+- Phrase standard qui se termine par `معاك` ou `معاه` : `a` (cette forme seule ne suffit pas).
+- `حلو` / `حلوة` (« beau », « bonne idée ») : compté comme marque tunisienne, bien qu'il soit
+  employé dans d'autres pays arabes. Décision à confirmer sur un échantillon plus grand.
+- Seuil proposé « moins de 3 mots arabes après retrait des noms propres, des insultes et des mots
+  étrangers → `x` » : discuté, non retenu pour l'instant.
 
 ## Procédure
 - Fichier TSV, une ligne par texte : étiquette, tabulation, texte. On ne modifie que l'étiquette.
@@ -45,10 +52,8 @@ En cas de doute réel : `x`. Un doute honnête vaut mieux qu'une étiquette forc
 ## Première passe (2026-10-07)
 - Données : 100 commentaires de TSAC (Facebook, licence LGPL-3.0), en lettres arabes, 3 mots ou plus,
   doublons retirés, tirage aléatoire de graine 13. Le fichier n'est pas versionné (`data/interim/`).
-- Un annotateur, Membre 2. Lecture sans règle écrite : 91 `t`, 9 `a`, 0 `x`.
-  Après application de la règle ci-dessus : **78 `t`, 15 `a`, 7 `x`**.
-- Conclusion : environ une ligne sur cinq n'est pas clairement du tunisien. TSAC ne peut pas servir
-  tel quel d'exemples de tunisien.
+- Les comptages, le kappa et les décisions ligne par ligne sont dans `experiments.md`
+  (EXP-A2-002, 007 et 009). Ils ne figurent pas ici, pour ne pas influencer un futur annotateur.
 
 ## Textes en lettres latines (ajout du 2026-10-07)
 
@@ -62,7 +67,7 @@ l'origine de son auteur.
 | `x` | indécidable : les deux langues dans la même phrase, ou aucun mot qui permette de trancher |
 
 Fichier : `data/interim/langid/tsac_latin_sample.tsv` (100 commentaires TSAC en lettres latines sans
-chiffre d'arabizi, 3 mots ou plus, graine 13). Premier passage, un annotateur : 67 `t`, 16 `f`, 17 `x`.
+chiffre d'arabizi, 3 mots ou plus, graine 13). Comptages et kappa : `experiments.md`.
 
 Cas décidés :
 
@@ -73,10 +78,16 @@ Cas décidés :
   les autres mots de la phrase.
 - Lettres étirées, majuscules, émoticônes et ponctuation n'entrent pas en compte.
 
-Cas ouverts, à discuter avec le second annotateur :
+Cas tranchés lors de l'adjudication (2026-10-26) :
 
-- « bravo + nom » en `f` : choix cohérent, mais ces lignes ne contiennent presque pas de français.
-  Les compter à part dans les mesures.
-- Ligne 43 : annotée `f`, alors que son dernier mot est une forme tunisienne (`t` ?).
+- Un mot français isolé ou un emprunt courant (« patron », « flop », « point », « mais ») dans une
+  phrase tunisienne ne la rend pas mélangée : `t`. `x` seulement si au moins deux mots français
+  se suivent.
+- Les insultes sont mises de côté : elles ne changent pas la langue de la phrase.
+- « bravo + nom » reste `f`, mais ces lignes sont comptées à part dans les mesures (cas fragile :
+  presque aucun mot de langue).
+
+Cas encore ouvert :
+
 - Les phrases mêlées restent `x`, donc hors mesure : prévoir une étiquette ou un jeu à part pour
   mesurer ce cas, fréquent dans les textes réels.

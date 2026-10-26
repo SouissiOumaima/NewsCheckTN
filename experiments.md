@@ -39,8 +39,49 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
 | EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
 | EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
+| EXP-A2-009 | 2026-10-26 | A2 | Adjudication de l'annotation et analyse d'erreurs (≥ 30) | 21 désaccords tranchés à deux ; règles ajoutées au guide ; erreurs classées | langue par classe sur les étiquettes de référence ; erreurs par catégorie | arabe : `a` 23/23, `t` 41/77 ; latin : `f` 12/16, `t` 65/70 ; 45 erreurs en 10 catégories | référence retenue ; suite : lexique élargi, affixes, négation contractée |
 
 ## Entrées
+
+### EXP-A2-009 — Adjudication de l'annotation et analyse d'erreurs
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 2 / Lot A2, avec les secondes annotatrices des Lots B et D
+- **Objectif / hypothèse** : (a) fixer des étiquettes de référence pour les deux échantillons
+  annotés, en tranchant les 21 désaccords d'EXP-A2-007 ; (b) analyser au moins 30 erreurs de
+  l'identification de langue, classées par cause, comme l'exige le palier Bronze.
+- **Données** : les deux échantillons d'EXP-A2-004 (TSAC, 100 textes chacun, non versionnés).
+  Fichiers de référence créés à côté des fichiers d'origine, qui restent inchangés (le kappa
+  d'EXP-A2-007 reste vérifiable) : `tsac_arabic_sample_reference.tsv` et
+  `tsac_latin_sample_reference.tsv`.
+- **Méthode / configuration** : séance d'adjudication commune (lettres arabes avec le Lot D, lettres
+  latines avec le Lot B), une règle écrite par décision. Lettres arabes : 10 étiquettes changées sur 13
+  désaccords ; lettres latines : 4 sur 8. Après la séance, l'annotateur 1 a remis en question 3 lignes
+  sur lesquelles les deux annotateurs étaient d'accord (74, 82, 86) et une ligne tranchée à deux (44) :
+  les étiquettes communes sont gardées, ces lignes sont signalées (catégorie A8). Puis
+  `normalization.evaluate --errors` sur les fichiers de référence et classement des erreurs.
+- **Code** : `normalization/evaluate.py` (commit `305ecfb`) ; guide `docs/lot-a2_guide_annotation.md`
+  et analyse `docs/lot-a2_analyse_erreurs.md` (ce commit).
+- **Résultats** :
+  - règles ajoutées au guide : insultes et mots étrangers mis de côté (jamais une raison de `x`) ;
+    `حلو` / `حلوة` compté comme marque tunisienne ; `معاك` / `معاه` en fin de phrase standard ne
+    suffit pas ; vœu en arabe standard → `a` ; en lettres latines, un emprunt ou un mot français
+    isolé ne rend pas la phrase mélangée ; seuil de 3 mots pour `x` discuté, non retenu ;
+  - sur les étiquettes de référence : lettres arabes, `a` 23/23, `t` 41/77 (0,53) ; lettres latines,
+    `f` 12/16, `t` 65/70 (0,93). Première passe, pour comparaison : `a` 15/15, `t` 41/78 ; `f` 11/16,
+    `t` 62/67 ;
+  - 45 erreurs classées en 10 catégories (détail : `docs/lot-a2_analyse_erreurs.md`). Lettres arabes
+    (36) : mot absent du lexique 7, variante orthographique 6, affixe collé 5, négation contractée 4,
+    texte très court 4, marque écartée par choix 3, construction 2, étiquette discutable 5. Lettres
+    latines (9) : « bravo + nom » 4, texte court ou sous le seuil 5.
+- **Analyse** : le rappel du tunisien en lettres arabes (0,53) ne change pas avec l'adjudication ; ses
+  erreurs ont des causes précises. 21 sur 36 (A1 à A4) sont réparables par des règles (lexique plus
+  grand, variantes, affixes, négation contractée), à condition de remesurer les fausses alertes sur la
+  presse. Les erreurs en lettres latines viennent surtout de textes de 1 à 3 mots, prix du seuil
+  prudent, et de la règle fragile « bravo + nom ». Limites : une seule séance d'adjudication ; `حلو`
+  compté comme marque sur 2 lignes seulement ; 4 lignes signalées restent à revoir.
+- **Décision / suite** : étiquettes de référence retenues pour les mesures suivantes. Suite :
+  lexique élargi, affixes et négation contractée (une expérience, mesurée sur la presse et sur ces
+  références) ; revoir les lignes A8 avec la seconde annotatrice.
 
 ### EXP-A2-008 — Arabizi : chiffre 8 (= غ) dans la règle à chiffres
 - **Date** : 2026-10-25
