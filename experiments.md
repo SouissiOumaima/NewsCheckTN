@@ -40,8 +40,50 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
 | EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
 | EXP-A2-009 | 2026-10-26 | A2 | Adjudication de l'annotation et analyse d'erreurs (≥ 30) | 21 désaccords tranchés à deux ; règles ajoutées au guide ; erreurs classées | langue par classe sur les étiquettes de référence ; erreurs par catégorie | arabe : `a` 23/23, `t` 41/77 ; latin : `f` 12/16, `t` 65/70 ; 45 erreurs en 10 catégories | référence retenue ; suite : lexique élargi, affixes, négation contractée |
+| EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
 
 ## Entrées
+
+### EXP-A2-010 — Perplexité : repérer les textes bruités
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : repérer les segments bruités (encodage abîmé, lettres au hasard) avant
+  l'annotation et l'analyse (plan S3). Hypothèse : un modèle de langue appris sur des commentaires
+  donne une perplexité nettement plus haute à un texte cassé qu'à un commentaire ordinaire.
+- **Données** : commentaires TSAC (4 fichiers) et Tunizi (`tunizi_train`), préparés par `normalize`,
+  minuscules, emojis et symboles retirés, 3 mots ou plus, doublons retirés, non versionnés. Rangés par
+  alphabet (≥ 90 % de lettres arabes ou ≤ 10 %, textes mêlés exclus), mélangés (graine 13), découpés
+  80 / 10 / 10 : lettres arabes 4 556 / 569 / 569 ; lettres latines 53 804 / 6 725 / 6 725.
+- **Méthode / configuration** : modèle de langue à n-grammes de caractères, ordre 4, interpolation des
+  ordres 1 à 4 (poids 0,1 / 0,2 / 0,3 / 0,4), lissage add-one à l'ordre 1 ; un modèle par alphabet.
+  Seuil = 95e centile des perplexités de dev (5 % de fausses alertes visées) ; le test ne sert qu'à
+  mesurer. Bruit artificiel sur 1 000 textes de test : « encodage » (UTF-8 relu en Windows-1252),
+  « lettres » (30 % des lettres remplacées au hasard), « mélange » (lettres de chaque mot mélangées).
+  AUC sur 300 textes propres × 300 bruités ; baseline aléatoire : AUC 0,5.
+  Commande : `python -X utf8 -m normalization.perplexity` ; sortie gardée hors dépôt
+  (`data/interim/langid/exp010_perplexity.txt`), modèle dans `data/interim/langid/perplexity_model.pkl`.
+- **Code** : `normalization/perplexity.py` (`perplexity`, `is_noisy`), 3 tests dans
+  `tests/test_normalization.py` (ce commit).
+- **Résultats** :
+  - lettres arabes : seuil 11,4 ; textes propres de test signalés 4,7 % ; repérés : encodage 100 %
+    (AUC 1,000), lettres 99,6 % (0,999), mélange 99,5 % (0,997) ;
+  - lettres latines : seuil 13,2 ; textes propres de test signalés 5,3 % ; repérés : encodage 12,3 %
+    (AUC 0,532), lettres 99,3 % (0,996), mélange 99,0 % (0,990) ;
+  - textes réels de dev les plus « surprenants » : en lettres latines, accents décoratifs dans de
+    l'arabizi (« jàwna a7là jàw »), suites de chiffres, répétitions ; en lettres arabes, lettres rares
+    mais propres au tunisien (ڨ) et lettres d'autres alphabets proches (ھ) ;
+  - tests : 477 réussis ; `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient pour les lettres au hasard et mélangées (≥ 99 %) dans les deux
+  alphabets, et pour l'encodage abîmé en lettres arabes. Le taux de fausses alertes sur test (4,7 % et
+  5,3 %) confirme le seuil réglé sur dev. Limite : en lettres latines, l'encodage abîmé n'est presque
+  pas repéré (AUC 0,53, proche du hasard), car l'arabizi n'a presque pas de lettres accentuées et la
+  relecture en Windows-1252 le laisse quasi inchangé. Les textes réels les plus surprenants ne sont pas
+  du bruit mais une écriture atypique : la perplexité mesure l'écart à un commentaire ordinaire, et
+  pénalise des lettres légitimes du tunisien (ڨ), rares dans TSAC.
+- **Décision / suite** : retenu pour **signaler** les textes (`is_noisy`), pas pour les supprimer
+  (risque de perdre du tunisien authentique). Suite : règle de détection des motifs d'encodage abîmé
+  (« Ã », « Ø ») pour les lettres latines ; mesurer le taux de textes signalés sur les nouvelles
+  annotations du Lot A1.
 
 ### EXP-A2-009 — Adjudication de l'annotation et analyse d'erreurs
 - **Date** : 2026-10-26

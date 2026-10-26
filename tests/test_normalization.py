@@ -548,3 +548,29 @@ def test_all_caps_arabizi_single_word_limit():
 def test_standard_sh_verb_missing_from_list_limit():
     text = "الاقتصاد ما ينتعش بسرعة في هذه الظروف"  # arabe standard
     assert normalize(text).lang == Lang.AR
+
+def test_perplexity_model_prefers_seen_text():
+    # EXP-A2-010 : un texte proche des textes appris est moins « surprenant » qu'un texte au hasard.
+    from normalization.perplexity import CharNgramModel
+
+    model = CharNgramModel().fit(["barcha nas t7eb el bled", "barcha flous", "el bled behya"] * 5)
+    assert model.perplexity("barcha nas") < model.perplexity("zqxv wkpj")
+
+
+def test_perplexity_is_none_without_model(tmp_path, monkeypatch):
+    from normalization import perplexity as ppl
+
+    monkeypatch.setattr(ppl, "MODEL_FILE", tmp_path / "absent.pkl")  # pas de modèle entraîné
+    ppl.load_model.cache_clear()
+    assert ppl.perplexity("barcha nas") is None
+    assert ppl.is_noisy("barcha nas") is None
+    ppl.load_model.cache_clear()
+
+
+def test_perplexity_encoding_noise_changes_arabic_text():
+    import random
+
+    from normalization.perplexity import corrupt
+
+    word = "الحكومة"
+    assert corrupt(word, "encodage", random.Random(0), []) != word
