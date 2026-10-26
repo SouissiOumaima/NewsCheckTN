@@ -2,7 +2,7 @@
 
 Lancer : uvicorn api.main:app --reload   (depuis la racine du repo)
 Doc interactive : http://localhost:8000/docs
-Plateforme web  : http://localhost:8000/app/   (pages de frontend/, servies par l'API)
+Plateforme web  : http://localhost:8000/app/
 """
 
 from __future__ import annotations
@@ -21,8 +21,7 @@ from pydantic import BaseModel, Field
 import pipeline
 from common.schemas import Claim, Evidence, Lang
 from data.loaders import load_evidence_corpus
-from linguistic_analysis.claim_extraction import extract_claims
-from models.claim_detector import filter_checkworthy
+from models.claim_detector import filter_checkworthy, model_status
 from models.nli.stance import predict_stance, predict_stances
 from normalization.normalize import normalize
 from rag_llm.retrieval.hybrid import retrieve
@@ -30,13 +29,10 @@ from rag_llm.verdict import generate_verdict
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "evaluation" / "results"
-# Champs volumineux des fichiers de résultats, inutiles au tableau de bord.
 HEAVY_RESULT_KEYS = {"items", "per_claim", "bootstrap", "errors"}
 
 app = FastAPI(title="NewsCheck TN API", version="0.2.0")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 class TextIn(BaseModel):
@@ -49,21 +45,21 @@ class ClaimIn(BaseModel):
     k: int = Field(5, ge=1, le=50)
 
 
-class VerdictDetailIn(ClaimIn):
-    # "lot-c" : NLI du Lot C (models.nli.stance) ; "regles" : NLI provisoire du Lot D, pour
-    # les démonstrations tant que le modèle du Lot C n'est pas branché.
-    nli: Literal["lot-c", "regles"] = "lot-c"
-
-
 class NLIIn(BaseModel):
     claim: str
     evidence: str
     lang: Lang = Lang.FR
 
 
+class VerdictDetailIn(ClaimIn):
+    """Option NLI affichée par la page Lot D de la plateforme."""
+
+    nli: Literal["lot-c", "regles"] = "lot-c"
+
+
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "version": app.version}
+    return {"status": "ok", "version": app.version, "claim_detector": model_status()}
 
 
 @app.post("/normalize")  # Lot A2
@@ -73,7 +69,8 @@ def normalize_route(body: TextIn) -> dict:
 
 @app.post("/extract")  # Lots B + C
 def extract_route(body: TextIn) -> dict:
-    claims = filter_checkworthy(extract_claims(normalize(body.text)))
+    claims, raw_texts = pipeline._claims_for_model1(body.text)
+    claims = filter_checkworthy(claims, classification_texts=raw_texts)
     return {"claims": [asdict(c) for c in claims]}
 
 
@@ -103,50 +100,85 @@ def check_route(body: TextIn) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Routes de la plateforme web (Lot E partagé)
+# Plateforme web partagée (Lot E) et informations Lot C.
 # ---------------------------------------------------------------------------
+
+
+@app.get("/model-c/model1")
+def model1_route() -> dict:
+    """Résumé public du Model 1, utilisé par la page Lot C."""
+    return {
+        "task": "Détection d'affirmations vérifiables",
+        "classes": ["AFFIRMATION", "OPINION", "AUTRE"],
+        "threshold": 0.5,
+        "model": model_status(),
+        "evaluation": {
+            "exp_id": "EXP-C-003",
+            "split": "test gelé (n=120)",
+            "accuracy": 0.7916666666666666,
+            "macro_f1": 0.7107843137254902,
+            "by_lang": {
+                "fr": {"n": 26, "macro_f1": 0.9148148148148149},
+                "ar": {"n": 30, "macro_f1": 0.698898898898899},
+                "tn": {"n": 64, "macro_f1": 0.6445406445406445},
+            },
+        },
+        "nli": {
+            "status": "baseline",
+            "message": "Le fine-tuning NLI attend les paires claim–evidence annotées par Lot A1.",
+        },
+    }
 
 
 def _stance_function(nli: str):
     if nli == "lot-c":
         return predict_stances
     try:
-        from rag_llm.baseline_stance import predict_stances as rules  # Lot D (PR #4)
+        from rag_llm.baseline_stance import predict_stances as rules
     except ImportError:
-        raise HTTPException(501, "Le NLI par règles du Lot D n'est pas encore dans main.") from None
+        raise HTTPException(
+            501, "Le NLI par règles du Lot D n'est pas encore disponible."
+        ) from None
     return rules
 
 
-@app.post("/verdict/detail")  # Lot D — détail pour la page « Preuves et verdict »
+@app.post("/verdict/detail")
 def verdict_detail_route(body: VerdictDetailIn) -> dict:
+    """Détail retrieval/NLI/verdict pour la page Lot D."""
     claim = Claim(text=body.claim, lang=body.lang)
-    corpus = load_evidence_corpus()
-    evidences = retrieve(claim, corpus, k=body.k)
+    evidences = retrieve(claim, load_evidence_corpus(), k=body.k)
     stances = _stance_function(body.nli)(claim, evidences)
     verdict = generate_verdict(claim, stances)
     return {
-        "corpus_size": len(corpus),
+        "corpus_size": len(load_evidence_corpus()),
         "nli": body.nli,
         "evidences": [
-            {**asdict(s.evidence), "rank": i, "stance": s.stance.value, "confidence": s.confidence}
-            for i, s in enumerate(stances, start=1)
+            {
+                **asdict(item.evidence),
+                "rank": rank,
+                "stance": item.stance.value,
+                "confidence": item.confidence,
+            }
+            for rank, item in enumerate(stances, start=1)
         ],
         "verdict": asdict(verdict),
     }
 
 
-@app.get("/corpus/stats")  # Lot A1 — état du corpus de preuves chargé par l'API
+@app.get("/corpus/stats")
 def corpus_stats_route() -> dict:
+    """Résumé du corpus chargé, pour la page Lot A1."""
     corpus = load_evidence_corpus()
     return {
         "size": len(corpus),
-        "by_source": dict(Counter(e.source for e in corpus).most_common()),
-        "sample": [asdict(e) for e in corpus[:5]],
+        "by_source": dict(Counter(item.source for item in corpus).most_common()),
+        "sample": [asdict(item) for item in corpus[:5]],
     }
 
 
-@app.get("/results")  # tous les lots — fichiers de evaluation/results/ pour le tableau de bord
+@app.get("/results")
 def results_route() -> dict:
+    """Expose les fichiers JSON légers de ``evaluation/results`` au dashboard."""
     results = []
     for path in sorted(RESULTS_DIR.glob("*.json")):
         try:
@@ -155,12 +187,16 @@ def results_route() -> dict:
             results.append({"file": path.name, "error": "fichier JSON illisible"})
             continue
         if isinstance(data, dict):
-            light = {k: v for k, v in data.items() if k not in HEAVY_RESULT_KEYS}
-            results.append({"file": path.name, **light})
+            results.append(
+                {
+                    "file": path.name,
+                    **{key: value for key, value in data.items() if key not in HEAVY_RESULT_KEYS},
+                }
+            )
     return {"results": results}
 
 
-# Pages web (frontend/), montées en dernier pour ne masquer aucune route.
+# Les assets statiques sont montés en dernier : ils ne masquent aucune route API.
 FRONTEND_DIR = ROOT / "frontend"
 if FRONTEND_DIR.is_dir():
     app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="app")

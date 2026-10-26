@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Modèles et NLI · NewsCheck TN</title>
+  <title>Modèles · NewsCheck TN</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -11,37 +11,101 @@
   <main class="page">
     <div class="page-head">
       <div class="eyebrow">Lot C · modèles</div>
-      <h1>Modèles et NLI</h1>
-      <p class="lede">Le Lot C entraîne les modèles du projet : détection des affirmations vérifiables et NLI, qui dit si un passage soutient, contredit ou ne tranche pas une affirmation.</p>
+      <h1>Détection d'affirmations et NLI</h1>
+      <p class="lede">Model 1 utilise XLM-R + LoRA pour garder les affirmations vérifiables. Model 2 comparera ensuite une affirmation avec une preuve.</p>
     </div>
-    <p class="notice todo"><strong>Page de départ, à compléter par le Lot C.</strong> Elle appelle déjà la route <code>/nli</code> de l'API. Le responsable du lot peut l'enrichir librement (exemples, explications, résultats), en gardant la base commune : <code>assets/style.css</code> et <code>assets/app.js</code>.</p>
-    <form class="card" id="form">
-      <label class="field">Affirmation<textarea id="claim" dir="auto" style="min-height:60px" required></textarea></label>
-      <label class="field">Passage de preuve<textarea id="ev" dir="auto" style="min-height:80px" required></textarea></label>
-      <div class="examples">Exemple :
-        <button type="button" class="chip" id="ex">chômage 25 % contre 16 %</button>
-      </div>
-      <div class="row"><button class="btn" type="submit">Comparer</button></div>
-    </form>
+
     <div class="error" id="err" hidden></div>
-    <section class="card" id="res" hidden><h2>Position du passage</h2><div id="out"></div></section>
+
+    <section class="card">
+      <div class="row" style="align-items:center;justify-content:space-between">
+        <div><h2 style="margin:0">Model 1 · XLM-R + LoRA</h2><p class="sub" id="model-desc">Chargement de l'état du modèle…</p></div>
+        <span class="tag" id="model-status">API…</span>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="table-wrap" id="langs" hidden></div>
+      <p class="notice" style="margin-bottom:0">Le score indique la probabilité <code>P(AFFIRMATION)</code>. Une phrase est gardée seulement si le label prédit est <code>AFFIRMATION</code> et si son score est au moins 0,50.</p>
+    </section>
+
+    <section class="card">
+      <h2>Tester la détection d'affirmation</h2>
+      <p class="sub">Saisis une phrase en français, arabe standard ou tunisien. Le pipeline normalise le texte, extrait le candidat, puis appelle le vrai checkpoint XLM-R + LoRA.</p>
+      <form id="detect-form">
+        <label class="field">Phrase<textarea id="detect-text" dir="auto" style="min-height:80px" required></textarea></label>
+        <div class="examples">Exemples :
+          <button type="button" class="chip" data-detect="Le taux de chômage en Tunisie est de 16,4 % en 2023.">affirmation</button>
+          <button type="button" class="chip" data-detect="Cette décision est injuste.">opinion</button>
+          <button type="button" class="chip" data-detect="هل سترتفع الأسعار غداً؟">question</button>
+        </div>
+        <div class="row"><button class="btn" type="submit">Détecter</button></div>
+      </form>
+      <div id="detect-out" hidden style="margin-top:16px"></div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="align-items:center;justify-content:space-between"><div><h2 style="margin:0">Model 2 · NLI</h2><p class="sub" id="nli-state">Le modèle NLI est en préparation.</p></div><span class="tag">supports · refutes · neutral</span></div>
+      <p class="notice">Le fine-tuning NLI attend des paires annotées <code>claim</code>–<code>evidence</code> avec les labels <code>supports</code>, <code>refutes</code> ou <code>neutral</code>. Le test ci-dessous utilise le baseline actuellement disponible.</p>
+      <form id="nli-form">
+        <label class="field">Affirmation<textarea id="claim" dir="auto" style="min-height:60px" required></textarea></label>
+        <label class="field">Passage de preuve<textarea id="ev" dir="auto" style="min-height:80px" required></textarea></label>
+        <div class="examples">Exemple : <button type="button" class="chip" id="nli-example">chômage 25 % contre 16 %</button></div>
+        <div class="row"><button class="btn" type="submit">Comparer</button></div>
+      </form>
+      <div id="nli-out" hidden style="margin-top:16px"></div>
+    </section>
   </main>
+
   <script src="assets/app.js"></script>
   <script>
     NC.init("c");
-    document.getElementById("ex").addEventListener("click", () => {
+    const err = document.getElementById("err");
+    const fail = (message) => { err.hidden = false; err.textContent = message; };
+
+    function renderModel(data) {
+      const e = data.evaluation, model = data.model;
+      document.getElementById("model-desc").textContent = `${data.task} · ${data.classes.join(" / ")}`;
+      document.getElementById("model-status").textContent = model.status === "loaded" ? "XLM-R + LoRA chargé" : "fallback heuristique";
+      document.getElementById("kpis").innerHTML = `
+        <div class="kpi"><div class="k">Macro-F1 test</div><div class="v">${NC.fmt(e.macro_f1, 3)}</div><div class="sub">${NC.esc(e.split)}</div></div>
+        <div class="kpi"><div class="k">Accuracy</div><div class="v">${NC.fmt(e.accuracy, 3)}</div><div class="sub">checkpoint seed42</div></div>
+        <div class="kpi"><div class="k">Seuil</div><div class="v">${NC.fmt(data.threshold, 2)}</div><div class="sub">P(AFFIRMATION)</div></div>`;
+      const body = Object.entries(e.by_lang).map(([lang, value]) => `<tr><td>${NC.esc(lang.toUpperCase())}</td><td class="n">${NC.fmt(value.macro_f1, 3)}</td><td class="n">${value.n}</td></tr>`).join("");
+      const langs = document.getElementById("langs");
+      langs.innerHTML = `<table class="t"><thead><tr><th>Langue</th><th class="n">Macro-F1</th><th class="n">Exemples test</th></tr></thead><tbody>${body}</tbody></table>`;
+      langs.hidden = false;
+      document.getElementById("nli-state").textContent = data.nli.message;
+    }
+
+    document.querySelectorAll("[data-detect]").forEach((button) => button.addEventListener("click", () => {
+      document.getElementById("detect-text").value = button.dataset.detect;
+    }));
+    document.getElementById("detect-form").addEventListener("submit", async (event) => {
+      event.preventDefault(); err.hidden = true;
+      try {
+        const response = await NC.api("/extract", { text: document.getElementById("detect-text").value });
+        const out = document.getElementById("detect-out");
+        out.hidden = false;
+        out.innerHTML = response.claims.length
+          ? `<h3>Affirmation(s) retenue(s)</h3>${response.claims.map((claim) => `<div class="notice">${NC.text(claim.text)}<br><span class="tag">P(AFFIRMATION) ${NC.fmt(claim.checkworthiness, 3)}</span></div>`).join("")}`
+          : `<div class="notice">Aucune affirmation vérifiable n'a été retenue par le Model 1 pour cette phrase.</div>`;
+      } catch (ex) { fail(ex.message); }
+    });
+
+    document.getElementById("nli-example").addEventListener("click", () => {
       document.getElementById("claim").value = "Le chômage en Tunisie a atteint 25 % en 2025.";
       document.getElementById("ev").value = "Selon l'INS, le taux de chômage s'est établi à 16 % au deuxième trimestre 2025.";
     });
-    document.getElementById("form").addEventListener("submit", async (e) => {
-      e.preventDefault(); const err = document.getElementById("err"); err.hidden = true;
+    document.getElementById("nli-form").addEventListener("submit", async (event) => {
+      event.preventDefault(); err.hidden = true;
       try {
-        const r = await NC.api("/nli", { claim: document.getElementById("claim").value, evidence: document.getElementById("ev").value });
-        document.getElementById("out").innerHTML = `<p>${NC.stanceChip(r.stance, r.confidence)}</p>` +
-          (r.stance === "neutral" && !r.confidence ? `<p class="notice">Réponse « neutre » avec une confiance nulle : c'est le module provisoire, le modèle NLI n'est pas encore branché.</p>` : "");
-        document.getElementById("res").hidden = false;
-      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+        const response = await NC.api("/nli", { claim: document.getElementById("claim").value, evidence: document.getElementById("ev").value });
+        const out = document.getElementById("nli-out");
+        out.hidden = false;
+        out.innerHTML = `<h3>Position du passage</h3><p>${NC.stanceChip(response.stance, response.confidence)}</p>`;
+      } catch (ex) { fail(ex.message); }
     });
+
+    (async () => { try { renderModel(await NC.api("/model-c/model1")); } catch (ex) { fail(ex.message); } })();
   </script>
 </body>
 </html>
