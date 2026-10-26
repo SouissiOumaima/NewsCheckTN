@@ -21,7 +21,7 @@ l'exige la démo Bronze. Voir l'en-tête de `bronze.py` pour les 6 règles.
 
 ```bash
 python -m models.nli.bronze_eval --version v3 --tune                          # seuils (train + val)
-python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-003 # une seule fois
+python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-009 # une seule fois
 ```
 
 ## Modèle NLI pré-entraîné (après le Bronze)

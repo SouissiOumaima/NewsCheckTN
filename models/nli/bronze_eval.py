@@ -274,7 +274,7 @@ def main() -> None:
     ap.add_argument("--version", required=True)
     ap.add_argument("--split", default="test", choices=["val", "test"])
     ap.add_argument("--tune", action="store_true")
-    ap.add_argument("--exp-id", default="EXP-C-003")
+    ap.add_argument("--exp-id", default="EXP-C-009")
     args = ap.parse_args()
     if args.tune:
         tune(args.version)
