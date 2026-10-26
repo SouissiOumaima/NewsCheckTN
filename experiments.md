@@ -26,6 +26,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-007 | 2026-10-26 | D | Palier Bronze : baselines triviales, verdict avec le NLI Bronze du Lot C, erreurs | BM25 top-5 + NLI Bronze (Lot C) + gabarit ; test Tunifact v1 gelé | Rappel@5 ; exactitude et macro-F1 du verdict | Rappel@5 0.411 vs 0.060 (aléatoire) ; verdict exact. 0.238 vs 0.524 (majorité), macro-F1 0.188 vs 0.172 ; 40 + 16 erreurs classées | configuration Bronze retenue ; suite : translittération A2, jeu de test élargi |
 | EXP-D-006 | 2026-10-23 | D | Jeu réel Tunifact v1 (6 articles) | BM25 + NLI par règles + gabarit, sans réglage | Hit@1 / Recall@5 ; exactitude verdict | 0.61 / 0.41 ; verdict 0.14, 1 verdict émis (faux) | nouvelle référence de test ; dense à mesurer (Colab) |
 | EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
 | EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
@@ -45,6 +46,89 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
 
 ## Entrées
+
+### EXP-D-007 — Palier Bronze : baselines triviales, verdict avec le NLI Bronze du Lot C, erreurs
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : mesurer les composants Bronze du Lot D (retrieval BM25, verdict par
+  gabarit) sur le test gelé, face aux baselines triviales exigées par la revue Bronze ; remplacer
+  le NLI provisoire du Lot D par le NLI Bronze du Lot C ; classer les erreurs.
+- **Données** :
+  - dev : jeu fictif v2 (`tests/fixtures/rag_llm/`, 20 affirmations, 15 passages) ;
+  - test : Tunifact v1, **gelé le 23/10/2026** (EXP-D-006, commit `ff08633`) ; 21 affirmations
+    (18 avec preuve), 84 passages reconstruits depuis `lot-a1-data@77a00b9`. Empreintes SHA-256
+    dans `data/splits/lot_d_tunifact_v1.json` : affirmations `9e2acf6f1d1954d9e91e24ada642b62ddf495047f84424a7335ab09b74a625b8`,
+    corpus `ae0a351a32f6ce47046e78739ccf35a8076e9647a2fef7a1d70a7e7f134af362`
+    (vérification : `python -m rag_llm.freeze_test --check`). Le test n'a servi à régler aucun
+    paramètre.
+- **Méthode / configuration** :
+  - retrieval BM25 (k1 = 1.5, b = 0.75), top 5 ; verdict par gabarit (seuils inchangés depuis
+    EXP-D-002) ;
+  - NLI : **NLI Bronze du Lot C** (`models/nli/bronze.py`, règles R1–R6, seuils réglés par le
+    Lot C sur train + val du corpus NLI v3, dont le split test contient les 6 articles de ce test :
+    pas de fuite). Ce choix est fixé par l'architecture (le NLI relève du Lot C ;
+    `rag_llm/baseline_stance.py` est documenté comme provisoire depuis EXP-D-002), il n'a pas été
+    fait au vu des scores du test. Le NLI provisoire du Lot D est mesuré pour comparaison ;
+  - baselines : passage aléatoire (espérance exacte du tirage, sans graine), classe majoritaire du
+    dev (`faux`) appliquée partout, toujours s'abstenir ;
+  - correctif de `baseline_stance.py` : un chiffre collé à des lettres en arabizi (« 5obez »,
+    « 3am ») n'est plus lu comme un nombre. Trouvé en démonstration sur une phrase hors test
+    (« soum 5obez 190 millimes »), puis vérifié : dev 0.70 et test 0.143 inchangés.
+  - Composants déterministes : un seul passage sur le test. Nécessite le NLI Bronze du Lot C
+    (PR #7) dans le dépôt.
+- **Code** : `python -m rag_llm.bronze_report` (`--stance rules` pour la comparaison) ;
+  erreurs dans `docs/lot-d_erreurs_bronze.csv` (sans texte de preuve) et
+  `evaluation/results/lot-d_erreurs_lot-c.csv` (avec les textes, non versionné : droits Tunifact).
+- **Résultats — tableau 1 (test ; dev entre parenthèses)** :
+
+  | Composant | Méthode Bronze | Baseline triviale | Métrique | Baseline | Bronze | N test |
+  |-----------|----------------|-------------------|----------|----------|--------|--------|
+  | Retrieval | BM25 | passage aléatoire | Rappel@5 (↑) | 0.060 (0.333) | **0.411** (0.667) | 18 |
+  | Retrieval | BM25 | passage aléatoire | MRR (↑) | 0.116 (0.302) | **0.630** (0.907) | 18 |
+  | Verdict | gabarit + NLI Bronze C | classe majoritaire (`faux`) | exactitude (↑) | **0.524** (0.600) | 0.238 (0.500) | 21 |
+  | Verdict | gabarit + NLI Bronze C | classe majoritaire (`faux`) | macro-F1 (↑) | 0.172 (0.187) | **0.188** (0.375) | 21 |
+  | Verdict | gabarit + NLI Bronze C | toujours s'abstenir | exactitude (↑) | 0.143 (0.100) | **0.238** (0.500) | 21 |
+
+  Verdict (test) : couverture 0.333, précision sélective 0.429 (3 verdicts justes sur 7 émis),
+  abstention justifiée 0.667 (2 sur 3), 0 citation invalide. Avec le NLI provisoire du Lot D :
+  exactitude 0.143, macro-F1 0.065, couverture 0.048 (dev : 0.700, 0.524, 0.650).
+- **Résultats — tableau 2 (test, par langue / écriture)** :
+
+  | Groupe | N | Rappel@5 BM25 | Rappel@5 aléatoire | Exactitude du verdict |
+  |--------|---|---------------|--------------------|-----------------------|
+  | FR | 9 | 0.357 | 0.060 | 0.444 |
+  | AR | 7 | 0.650 | 0.060 | 0.143 |
+  | Tunisien (arabe) | 2 | 0.167 | 0.060 | 0.000 |
+  | Tunisien (arabizi) | 3 | 0.222 | 0.060 | 0.000 |
+
+  Rappel@5 calculé sur les affirmations qui ont une preuve (FR 7, AR 6, tunisien 2 + 3).
+- **Résultats — tableau 3 (erreurs ; test + dev)** :
+  - retrieval BM25, chaque preuve attendue absente du top 5 : **52** (40 test + 12 dev) — langue
+    croisée 24 (16 + 8), arabizi 12 (10 + 2), tunisien en lettres arabes 9 (7 + 2), même langue
+    classé après le top 5 : 4 (4 + 0), paraphrase sans mot commun 3 (3 + 0) ;
+  - verdict : **26** (16 test + 10 dev), toutes les erreurs des deux jeux — preuve retrouvée mais
+    non décisive 8, bonne preuve non retrouvée 7, position inversée vrai ↔ faux 5, « trompeur »
+    non produit par le gabarit 3, preuves jugées contradictoires 2, verdict émis sans preuve 1.
+    Moins de 30 : le test ne compte que 21 affirmations ; aucune erreur n'est omise.
+- **Analyse** :
+  1. BM25 bat nettement le hasard (Rappel@5 × 7, MRR × 5). 45 de ses 52 échecs viennent du
+     croisement de langues et du dialecte : sans mot commun, BM25 ne peut rien retrouver. C'est ce
+     que corrige la recherche dense (EXP-D-003, hors palier Bronze) et ce que la translittération
+     arabizi du Lot A2 doit améliorer.
+  2. Le NLI Bronze du Lot C rend le verdict utile : couverture 0.048 → 0.333, exactitude 0.143 →
+     0.238, et le démenti « Tunifact a classé comme fausse… » est enfin reconnu (`tf-c02`,
+     `tf-c03`). Les affirmations françaises en profitent le plus (0.444).
+  3. En exactitude, le verdict reste **sous la classe majoritaire** (0.238 contre 0.524) : le test
+     est déséquilibré (11 affirmations fausses sur 21, comme la plupart des articles de
+     fact-checking) et « tout est faux » n'est jamais en abstention. En macro-F1, qui compte
+     chaque verdict à égalité, le système dépasse légèrement cette baseline (0.188 contre 0.172).
+  4. Erreur la plus grave : `tf-c13` (« Le ministère de l'Éducation a annulé l'examen du
+     baccalauréat 2026 ») reçoit « faux » en citant deux phrases de l'article sur le bac, qui ne
+     parlent pas d'annulation : l'abstention justifiée passe de 1.00 à 0.67.
+  5. Petit jeu (21 affirmations, 6 articles) : chiffres indicatifs.
+- **Décision / suite** : configuration Bronze retenue : BM25 + NLI Bronze du Lot C + gabarit. Suite :
+  translittération arabizi (Lot A2), test élargi à d'autres articles du Lot A1, label « trompeur »
+  et recherche dense au palier Silver.
 
 ### EXP-B-006 — Tunisien en lettres arabes identifié par le Lot A2 : liste d'erreurs attendues
 - **Date** : 2026-10-26
