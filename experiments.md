@@ -108,7 +108,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   sur lesquelles les deux annotateurs étaient d'accord (74, 82, 86) et une ligne tranchée à deux (44) :
   les étiquettes communes sont gardées, ces lignes sont signalées (catégorie A8). Puis
   `normalization.evaluate --errors` sur les fichiers de référence et classement des erreurs.
-- **Code** : `normalization/evaluate.py` (commit `305ecfb`) ; guide `docs/lot-a2_guide_annotation.md`
+- **Code** : `normalization/evaluate.py` (commit `3df2b10`) ; guide `docs/lot-a2_guide_annotation.md`
   et analyse `docs/lot-a2_analyse_erreurs.md` (ce commit).
 - **Résultats** :
   - règles ajoutées au guide : insultes et mots étrangers mis de côté (jamais une raison de `x`) ;
@@ -147,7 +147,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   pipeline) ; `annotation.py` et `train_langid.py` gardent la règle d'origine, pour que l'échantillon
   publié (EXP-A2-004) et le modèle (EXP-A2-006) ne changent pas. « 8bit » et « 8bits » ajoutés aux
   faux amis.
-- **Code** : commit `a21b902` : `normalization/normalize.py`, `normalization/annotation.py`,
+- **Code** : commit `76e92e8` : `normalization/normalize.py`, `normalization/annotation.py`,
   `normalization/train_langid.py`, `tests/test_normalization.py`.
 - **Résultats** :
   - français classé arabizi par les règles : train 7 → 7, dev 1 → 1, test 0 → 0 : aucune nouvelle
@@ -238,7 +238,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   modèle sur exactement les mêmes textes, au même seuil 5.0 (script hors dépôt
   `data/interim/langid/exp006_compare.py`). Entraînement lancé deux fois : fichiers identiques.
   `train_langid.py` dit désormais quand le seuil est choisi par repli.
-- **Code** : commit `ded73f1` : `normalization/resources/arabizi_ngrams.json`,
+- **Code** : commit `e365e55` : `normalization/resources/arabizi_ngrams.json`,
   `normalization/train_langid.py`.
 - **Résultats** (ancien → nouveau modèle) :
   - nettoyage du corpus arabizi : 60 → 57 textes retirés comme français ;
