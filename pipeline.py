@@ -22,7 +22,7 @@ import json
 import sys
 from dataclasses import asdict
 
-from common.schemas import Verdict
+from common.schemas import Document, Verdict
 from data.loaders import load_evidence_corpus  # Lot A1
 from linguistic_analysis.claim_extraction import extract_claims  # Lot B
 from models.claim_detector import filter_checkworthy  # Lot C
@@ -32,9 +32,25 @@ from rag_llm.retrieval.hybrid import retrieve  # Lot D
 from rag_llm.verdict import generate_verdict  # Lot D
 
 
-def check_text(text: str, k: int = 5) -> list[Verdict]:
+def _claims_for_model1(text: str):
+    """Extrait les claims normalisés et leurs phrases brutes pour Model 1.
+
+    Lot B et les étapes aval conservent le document normalisé. Model 1 est
+    cependant entraîné en ``raw`` : il reçoit donc les phrases provenant d'un
+    document brut parallèle. Si les segmentations diffèrent, on retombe sans
+    risque sur le texte normalisé plutôt que d'associer deux phrases fausses.
+    """
     doc = normalize(text)
-    claims = filter_checkworthy(extract_claims(doc))
+    claims = extract_claims(doc)
+    raw_doc = Document(raw_text=text, text=text, lang=doc.lang, script=doc.script)
+    raw_claims = extract_claims(raw_doc)
+    raw_texts = [claim.text for claim in raw_claims] if len(raw_claims) == len(claims) else None
+    return claims, raw_texts
+
+
+def check_text(text: str, k: int = 5) -> list[Verdict]:
+    claims, raw_texts = _claims_for_model1(text)
+    claims = filter_checkworthy(claims, classification_texts=raw_texts)
     corpus = load_evidence_corpus()
     verdicts = []
     for claim in claims:
