@@ -32,6 +32,7 @@ from common.schemas import Document, Lang
 SPACY_FR_MODEL = "fr_core_news_md"
 STANZA_AR_PROCESSORS = "tokenize,mwt,pos,lemma,depparse"
 TN_LEXICON = Path(__file__).resolve().parent / "resources" / "tn_lexicon.json"
+VERB_LEXICON = Path(__file__).resolve().parent / "resources" / "verbs.json"
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?؟])\s+")
 
@@ -74,7 +75,10 @@ def _load_spacy_fr() -> Any | None:
         return None
     import spacy
 
-    return spacy.load(SPACY_FR_MODEL)
+    try:
+        return spacy.load(SPACY_FR_MODEL)
+    except Exception:  # modèle installé mais incompatible ou corrompu
+        return None
 
 
 @lru_cache(maxsize=None)
@@ -176,6 +180,86 @@ def _tn_lexicon() -> dict[str, str]:
     return lexicon
 
 
+_FR_ER_ENDINGS = (
+    "e", "ent", "ait", "aient", "a", "èrent", "era", "eront", "erait", "eraient",
+    "é", "ée", "és", "ées",
+)
+_AR_PAST_SUFFIXES = ("", "ت", "وا", "و", "ا")
+_AR_PRESENT_SUFFIXES = ("", "ون", "ان", "وا")
+
+
+def _french_er_forms(lemma: str) -> set[str]:
+    """Formes de 3e personne et participes d'un verbe en -er (« manger » → « mangeait »)."""
+    stem = lemma[:-2]
+    forms = set()
+    for ending in _FR_ER_ENDINGS:
+        if ending[0] in "ao" and stem.endswith("g"):
+            forms.add(stem + "e" + ending)  # mangea
+        elif ending[0] in "ao" and stem.endswith("c"):
+            forms.add(stem[:-1] + "ç" + ending)  # lança
+        else:
+            forms.add(stem + ending)
+    return forms
+
+
+def _arabic_forms(past: str) -> set[str]:
+    """Passé, présent et futur générés à partir du passé (3e pers. masc. sing.).
+
+    Radical du présent = passé sans le ا initial (« ارتفع » → « يرتفع », « اعلن » → « يعلن »).
+    """
+    past = fold(past)
+    stem = past[1:] if past.startswith("ا") and len(past) > 3 else past
+    forms = {past + suffix for suffix in _AR_PAST_SUFFIXES}
+    for prefix in ("ي", "ت", "ن"):
+        for suffix in _AR_PRESENT_SUFFIXES:
+            forms |= {prefix + stem + suffix, "س" + prefix + stem + suffix}
+    return forms
+
+
+@lru_cache(maxsize=1)
+def verb_lexicon() -> dict[str, frozenset[str]]:
+    """Formes verbales repliées pour l'étiquetage par règles : `forms` (toutes), `modals`
+    (modaux français) et `ar_intransitive` (verbes arabes sans objet direct)."""
+    data = json.loads(VERB_LEXICON.read_text(encoding="utf-8"))
+    intransitive: set[str] = set()
+    for past in data["ar_intransitive"]:
+        intransitive |= _arabic_forms(past)
+    forms = set(intransitive)
+    for lemma in data["fr_er"]:
+        forms |= _french_er_forms(fold(lemma))
+    for past in data["ar_past"]:
+        forms |= _arabic_forms(past)
+    for key in ("fr_forms", "fr_modals", "ar_forms", "tn_forms"):
+        forms |= {fold(form) for form in data[key]}
+    return {
+        "forms": frozenset(forms),
+        "modals": frozenset(fold(form) for form in data["fr_modals"]),
+        "ar_intransitive": frozenset(intransitive),
+    }
+
+
+def _verb_candidates(key: str) -> set[str]:
+    """La forme, sans la conjonction و / ف collée (« وارتفع »), et sans le ش / ch final de la
+    négation tunisienne ما…ش (« هبطتش », « habtetch »)."""
+    candidates = {key}
+    if key[:1] in ("و", "ف") and len(key) > 3:
+        candidates.add(key[1:])
+    for suffix in ("ش", "ch"):
+        if key.endswith(suffix) and len(key) > len(suffix) + 2:
+            candidates.add(key[: -len(suffix)])
+    return candidates
+
+
+def _is_verb_form(key: str) -> bool:
+    forms = verb_lexicon()["forms"]
+    return any(c in forms or _tn_lexicon().get(c) == "VERB" for c in _verb_candidates(key))
+
+
+def is_intransitive_verb(text: str) -> bool:
+    """Verbe arabe sans objet direct (« ارتفعت », « وتراجع »), d'après `ar_intransitive`."""
+    return bool(_verb_candidates(fold(text)) & verb_lexicon()["ar_intransitive"])
+
+
 def _rule_upos(kind: str, text: str) -> str:
     if kind == "num":
         return "NUM"
@@ -184,7 +268,9 @@ def _rule_upos(kind: str, text: str) -> str:
     key = fold(text)
     if kind == "elision":
         return _tn_lexicon().get(key, "DET")
-    return _tn_lexicon().get(key, "X")
+    if key in _tn_lexicon():
+        return _tn_lexicon()[key]
+    return "VERB" if _is_verb_form(key) else "X"
 
 
 def _analyze_rules(text: str, offset: int) -> list[Token]:

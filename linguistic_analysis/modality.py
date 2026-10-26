@@ -14,8 +14,9 @@ Sources des labels :
 - `interrogatif`, `souhait`, `opinion` : repris de `factuality.classify_factuality`, pour ne pas
   maintenir deux détections divergentes (indices `question:` / `souhait:`, décision `is_opinion`) ;
 - `rapporté`, `conditionnel`, `hypothétique` : lexiques `resources/modality_<langue>.json`
-  (`{label: {marqueur: poids}}`), le patron « si » + imparfait, la morphologie avec arbre
-  (`Mood=Cnd`) et, pour le rapporté, un verbe de parole suivi d'une complétive (voir `spo`).
+  (`{label: {marqueur: poids}}`, choisis comme dans `factuality.lexicon_codes`), le patron
+  « si » + imparfait, la morphologie avec arbre (`Mood=Cnd`) et, pour le rapporté, un verbe de
+  parole suivi d'une complétive (voir `spo`).
 
 Certitude : `1 - max(poids des marqueurs trouvés)`, tous labels confondus, puis baisse
 supplémentaire du poids du groupe `certitude_niée` (« il n'est pas certain que »), bornée à 0.
@@ -34,9 +35,8 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from common.schemas import Lang
 from linguistic_analysis import factuality, spo
-from linguistic_analysis.factuality import LEXICONS_BY_LANG, find_marker, match_text
+from linguistic_analysis.factuality import find_marker, match_text
 from linguistic_analysis.preprocessing import Sentence
 from linguistic_analysis.types import DEFAULT_MODALITY, MODALITY_LABELS
 
@@ -80,8 +80,9 @@ def load_lexicon(lang: str) -> dict[str, dict[str, float]]:
 
 
 def _markers(sentence: Sentence, group: str) -> dict[str, float]:
+    """Marqueurs du groupe dans les lexiques de `factuality.lexicon_codes` (le premier prime)."""
     out: dict[str, float] = {}
-    for code in LEXICONS_BY_LANG.get(sentence.lang, LEXICONS_BY_LANG[Lang.UNKNOWN]):
+    for code in reversed(factuality.lexicon_codes(sentence)):
         out.update(load_lexicon(code).get(group, {}))
     return out
 
