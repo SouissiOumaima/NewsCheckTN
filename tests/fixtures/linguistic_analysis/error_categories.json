@@ -1,5 +1,5 @@
 {
-  "_description": "Classement des erreurs du Lot B sur eval_30. Sections regles / parseurs : erreurs du système actuel (EXP-B-004) ; classement établi pour EXP-B-001 (2e passage), voir docs/lot-b_analyse_erreurs_bronze.md. Section corrigees_exp_b_002 : erreurs EXP-B-001 corrigées par le repérage des compléments de source / temps / lieu. Section corrigees_exp_b_003 : erreurs corrigées par le lexique verbal du mode règles et le sujet verbe-sujet-objet. Section corrigees_exp_b_004 : erreurs corrigées par le complément du participe gardé dans le sujet. Clé = '<id>:<champ>'. Une seule catégorie principale par erreur (E1-E8). Les tests vérifient que ce classement couvre exactement les erreurs produites par le système.",
+  "_description": "Classement des erreurs du Lot B sur eval_30. Sections regles / parseurs : erreurs du système actuel (EXP-B-006) ; classement établi pour EXP-B-001 (2e passage), voir docs/lot-b_analyse_erreurs_bronze.md. Section corrigees_exp_b_002 : erreurs EXP-B-001 corrigées par le repérage des compléments de source / temps / lieu. Section corrigees_exp_b_003 : erreurs corrigées par le lexique verbal du mode règles et le sujet verbe-sujet-objet. Section corrigees_exp_b_004 : erreurs corrigées par le complément du participe gardé dans le sujet. Section corrigees_exp_b_006 : erreurs du mode parseurs disparues quand le Lot A2 identifie le tunisien en lettres arabes (tn, analysé par les règles). Clé = '<id>:<champ>'. Une seule catégorie principale par erreur (E1-E8). Les tests vérifient que ce classement couvre exactement les erreurs produites par le système.",
   "regles": {
     "mx-2:obj": {"cat": "E4", "cause": "verbe désormais reconnu : objet = reste de la phrase (adverbe « barcha », temps « had el chhar », apposition « surtout el 5odra ») ; objet nul auparavant faute de verbe"},
     "ar-02:subject": {"cat": "E4", "cause": "phrase nominale : aucune règle sans verbe en mode règles"},
@@ -11,9 +11,7 @@
     "fr-02:subject": {"cat": "E2", "cause": "spaCy : « stations » racine, « inaugurées » en acl, « dessalement » ADV : pas de verbe racine ni de sujet"},
     "fr-02:predicate": {"cat": "E2", "cause": "spaCy : participe analysé comme modifieur du nom (acl)"},
     "fr-02:obj": {"cat": "E2", "cause": "spaCy : arbre sans racine verbale, aucun triplet"},
-    "ar-01:obj": {"cat": "E7", "cause": "« نسبة » normalisé en « نسبه » est découpé par Stanza en نسب + ه ; « 15 » devient l'objet (point L7)"},
-    "tn-a1:obj": {"cat": "E7", "cause": "tunisien étiqueté ar en amont : le modèle de l'arabe standard ne reconnaît pas le complémenteur « اللي » (X/nmod) ; correct en mode règles"},
-    "tn-a4:predicate": {"cat": "E2", "cause": "Stanza : « ما » analysé DET/obl et non négation, donc exclu du prédicat"}
+    "ar-01:obj": {"cat": "E7", "cause": "« نسبة » normalisé en « نسبه » est découpé par Stanza en نسب + ه ; « 15 » devient l'objet (point L7)"}
   },
   "corrigees_exp_b_002": {
     "regles": {
@@ -63,5 +61,12 @@
       "ar-01:obj": {"cat": "E4", "cause": "conséquence du sujet coupé : « على تونس » passe dans l'objet"}
     },
     "parseurs": {}
+  },
+  "corrigees_exp_b_006": {
+    "regles": {},
+    "parseurs": {
+      "tn-a1:obj": {"cat": "E7", "cause": "tunisien étiqueté ar en amont : le modèle de l'arabe standard ne reconnaît pas le complémenteur « اللي » (X/nmod) ; correct en mode règles"},
+      "tn-a4:predicate": {"cat": "E2", "cause": "Stanza : « ما » analysé DET/obl et non négation, donc exclu du prédicat"}
+    }
   }
 }

@@ -1,0 +1,102 @@
+# Marques dialectales (tunisien) en lettres arabes — Lot A2.
+# Un mot par ligne ; les lignes qui commencent par # sont des commentaires.
+# Les mots sont écrits dans leur forme APRÈS normalisation (ة -> ه, أ إ آ -> ا, ى -> ي).
+# Critère d'entrée : mot-outil ou tournure fréquente en tunisien, sans emploi courant
+# en arabe standard. Exclus volontairement : الي / لي (confondus avec إلى), ياسر (prénom),
+# خاطر, متاع seul dans un texte religieux, les verbes en نـ (نحب = "nous aimons" en standard).
+
+# --- quantité, intensité
+برشا
+برشه
+ملا
+شويه
+
+# --- négation
+موش
+مش
+ماهوش
+ماهيش
+مانيش
+معادش
+ماعادش
+فماش
+مافماش
+مفماش
+
+# --- futur, but, relatif
+باش
+بش
+اللي
+
+# --- présentatifs
+راك
+راكم
+راهو
+راهي
+راني
+رانا
+راهم
+
+# --- interrogatifs
+اش
+شنوه
+شنيه
+شكون
+اشكون
+علاش
+علاه
+قداش
+كيفاش
+كفاش
+وقتاش
+
+# --- temps, manière
+ديما
+توا
+هكا
+هكه
+كيما
+
+# --- démonstratifs
+هاذي
+هاذا
+هاذاكا
+هاذوما
+هذوما
+
+# --- possession, pronoms
+متاع
+متاعك
+متاعو
+متاعي
+متاعها
+متاعهم
+متع
+عندو
+منو
+روحو
+قلبو
+احنا
+
+# --- adjectifs et tournures typiques
+باهي
+باهيه
+ماسط
+ماسطه
+لاسط
+امسط
+مساطه
+محلا
+محلاه
+محلاها
+محلاك
+محلاهم
+مزيانه
+بربي
+برجوليه
+يزي
+ياخي
+خويا
+راجل
+الراجل
+التوانسه
