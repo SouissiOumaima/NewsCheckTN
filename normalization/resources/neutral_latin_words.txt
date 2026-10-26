@@ -1,0 +1,36 @@
+# Mots "neutres" en lettres latines — Lot A2.
+# Mots français ou internationaux que les Tunisiens emploient tels quels dans leurs
+# commentaires en arabizi ("bravo ya m3alem"). Dans les corpus, ils apparaissent donc
+# presque uniquement du côté arabizi, et un modèle apprendrait à tort "bravo = tunisien".
+# Le modèle les ignore : ils ne comptent ni pour le français ni pour l'arabizi.
+# Un mot par ligne, en minuscules, sans lettres répétées ("bravooo" est reconnu comme "bravo").
+bravo
+merci
+top
+super
+ok
+oui
+non
+respect
+chapeau
+courage
+normal
+clip
+tv
+star
+lol
+mdr
+wow
+mr
+# Noms de lieux tunisiens (EXP-A2-005) : ils s'écrivent pareil dans une phrase française
+# et dans un commentaire en arabizi, donc ne disent rien de la langue. Sans eux, le modèle
+# prenait "les quatorze meilleurs clubs tunisiens" ou "voyage en tunisie c bien" pour de
+# l'arabizi. Lettres doublées écrites une fois : "tunisiene" couvre "tunisienne".
+tunisie
+tunisien
+tunisiens
+tunisiene
+tunisienes
+tunis
+sfax
+kairouan
