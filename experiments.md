@@ -54,6 +54,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
 | EXP-A2-009 | 2026-10-26 | A2 | Adjudication de l'annotation et analyse d'erreurs (≥ 30) | 21 désaccords tranchés à deux ; règles ajoutées au guide ; erreurs classées | langue par classe sur les étiquettes de référence ; erreurs par catégorie | arabe : `a` 23/23, `t` 41/77 ; latin : `f` 12/16, `t` 65/70 ; 45 erreurs en 10 catégories | référence retenue ; suite : lexique élargi, affixes, négation contractée |
 | EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
+| EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 
 ## Entrées
 
@@ -87,6 +88,59 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - Par langue : fr 0.779 (n = 25), ar 0.776 (n = 31). Articles du test du Lot D : 0.767 (n = 30).
 - **Analyse** : le modèle tranche rarement à tort (précision 0.93–0.95 sur supports / refutes) ; ses erreurs vont presque toutes vers « neutral », ce qui mène le verdict du Lot D à s'abstenir plutôt qu'à affirmer une erreur. Pas d'écart entre français et arabe. Limites : petit test (IC large), corpus v3 encore en correction, aucune paire en tunisien ou en arabizi.
 - **Décision / suite** : baseline retenue et branchée dans `models/nli/stance.py` (utilisable par le Lot D). Suite : affiner ce même modèle sur le train (plutôt qu'entraîner XLM-R depuis zéro sur 174 paires), 3 graines, comparaison bootstrap à cette baseline ; mesures officielles une seule fois sur la v4 du corpus ; demander au Lot A1 des paires en tunisien.
+
+### EXP-A2-011 — Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : donner, pour chaque composant du Lot A2, le score sur un jeu gelé à côté
+  d'une baseline triviale, séparer dev et test, mesurer le normaliseur et regrouper les erreurs en
+  4 à 6 familles, comme l'exige le guide de la revue Bronze. Aucun réglage : mesure seulement.
+- **Données** :
+  - **test** : `tests/fixtures/linguistic_analysis/eval_30.jsonl` (34 phrases : 10 FR, 10 arabe
+    standard, 14 tunisien dont 5 en lettres arabes, 5 en arabizi, 4 mixtes), jamais utilisé pour
+    écrire les règles du Lot A2 (EXP-A2-002) ; gelé au commit `85fb77d` (2026-10-20),
+    SHA-256 `1d0bcfaa4b2a01fbd428fb18240174e309ac9877dc474a4dc1399e15e9dd34ce` ;
+  - **dev (mise au point)** : références adjudiquées d'EXP-A2-009, non versionnées, gelées le
+    2026-10-26 : `tsac_arabic_sample_reference.tsv` (100 textes : 77 `t`, 23 `a`), SHA-256
+    `a59f3d27621a4f4d4297f7d73b80301418767197316fb785cb7f0f32bb4ad92f` ; `tsac_latin_sample_reference.tsv` (86 textes décidés : 70 `t`, 16 `f`), SHA-256
+    `1703f003cc0132c148ca46bf92b86ea05270d8851eb3d447109e366985877a46`. Ces échantillons ont servi à écrire le guide et à choisir des mots (EXP-A2-002) :
+    ils ne sont pas un test ;
+  - rappel, tests de fausses alertes : PADT `test` (680 phrases, EXP-A2-004), UD French-GSD `test`
+    (416 phrases, EXP-A2-003 / 008).
+- **Méthode / configuration** : `python -X utf8 -m normalization.review` (déterministe). Baselines :
+  « majorité » (toujours la classe la plus fréquente du jeu) ; « alphabet seul » (lettres arabes →
+  `ar`, sinon `fr` : le comportement d'avant le Lot A2). Normaliseur : textes dont les nombres sont
+  identiques avant et après `normalize` (chiffres arabes-indiens convertis comptés comme conservés),
+  et mots différents avant / après, contre la baseline « copie de la source ». Erreurs du dev
+  exportées avec leur catégorie d'EXP-A2-009, regroupées en 5 familles. Sortie gardée hors dépôt :
+  `data/interim/langid/bronze_review.txt` et `bronze_erreurs.csv` (textes du corpus, non versionnés).
+- **Code** : `normalization/review.py`, 3 tests dans `tests/test_normalization_review.py` (ce commit) ;
+  tableaux de la revue dans `docs/lot-a2_revue_bronze.md`.
+- **Résultats** (macro-F1 / exactitude) :
+  - test eval_30 : système 0.94 / 0.94 ; majorité 0.19 / 0.41 ; alphabet seul 0.50 / 0.59. Par
+    classe : `ar` F1 0.95, `fr` 0.95, `tn` 0.92 (rappel 0.86). Par langue et alphabet : ar/arabe
+    10/10, fr/latin 10/10, tn/arabe 4/5, tn/arabizi 5/5, tn/mixte 3/4 ;
+  - dev lettres arabes : système 0.63 / 0.64 ; majorité 0.43 / 0.77 ; alphabet seul 0.19 / 0.23.
+    `ar` : précision 0.39, rappel 1.00 ; `tn` : précision 1.00, rappel 0.53 ;
+  - dev lettres latines : système 0.83 / 0.90 ; majorité 0.45 / 0.81 ; alphabet seul 0.16 / 0.19.
+    `fr` F1 0.73 ; `tn` F1 0.94 ;
+  - normaliseur (220 textes des trois jeux) : nombres conservés 29/29 textes (copie : 29/29) ;
+    mots différents 1 366 → 1 340, soit 1.9 % de moins (copie : 0 %) ;
+  - erreurs du dev (45) : lexique incomplet 13, morphologie dialectale 11, texte trop court ou sous
+    le seuil 9, effet d'une règle choisie 7, étiquette discutable 5 ; aucune sans catégorie ;
+  - tests : 540 réussis ; `ruff check .` sans remarque.
+- **Analyse** : sur le test, le Lot A2 dépasse nettement les deux baselines (0.94 contre 0.50 pour
+  l'alphabet seul, qui ne voit jamais le tunisien). Sur le dev en lettres arabes, la majorité a une
+  meilleure exactitude (0.77 contre 0.64) mais une macro-F1 bien plus basse (0.43 contre 0.63) : elle
+  répond `tn` partout et ne trouve jamais l'arabe standard ; avec 77 % de `tn`, seule la macro-F1
+  rend compte des deux classes. Le système est prudent (précision `tn` 1.00, aucune presse classée
+  tunisienne) au prix du rappel (0.53). Le normaliseur respecte la règle d'or ; sa réduction du
+  vocabulaire est modeste, car son rôle est une forme canonique, pas une réduction forte. Limites :
+  test petit (34 phrases, 5 en tunisien lettres arabes), annoté par une seule personne (Lot B) ;
+  les scores du dev sont optimistes, ce jeu ayant servi à la mise au point.
+- **Décision / suite** : chiffres retenus pour la revue Bronze (tableaux dans
+  `docs/lot-a2_revue_bronze.md`). Suite : tirer un échantillon TSAC neuf, jamais vu, et le faire
+  annoter par deux personnes pour disposer d'un vrai test du tunisien.
 
 ### EXP-A2-010 — Perplexité : repérer les textes bruités
 - **Date** : 2026-10-26
