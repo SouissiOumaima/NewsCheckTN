@@ -18,6 +18,7 @@ import random
 import re
 import time
 from datetime import date
+from pathlib import Path
 
 from common.schemas import Claim, Evidence, Lang
 from evaluation.metrics import precision_recall_f1
@@ -107,7 +108,7 @@ def main() -> None:
     info = nli.backend_info()
     if info["status"] != "loaded":
         raise SystemExit(f"Le modèle NLI n'est pas chargé ({info}) : résultats non significatifs.")
-    model_tag = re.sub(r"[^a-z0-9.-]+", "-", info["model"].split("/")[-1].lower())
+    model_tag = re.sub(r"[^a-z0-9._-]+", "-", Path(info["model"]).name.lower())
 
     print(
         f"{info['backend']} · {info['model']} · {args.split} "

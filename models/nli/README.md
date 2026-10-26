@@ -7,15 +7,29 @@ Le Lot D s'en sert pour rendre le verdict.
 | Fichier | Rôle |
 |---|---|
 | `stance.py` | inférence, contrat `predict_stance` / `predict_stances` → `StanceResult` |
+| `bronze.py` | **palier Bronze** : position par lexique et règles (moteur par défaut de la démo) |
+| `bronze_eval.py` | réglage des seuils sur train + val, évaluation, ablation TF-IDF, CSV des erreurs |
 | `data.py` | préparation du corpus NLI du Lot A1, test gelé, contrôle de fuite |
 | `evaluate.py` | macro-F1, par classe, confusion, par langue, IC 95 % (bootstrap) |
+| `train.py` | affinage du modèle de la baseline sur `train`, meilleure époque choisie sur `val` |
+| `compare.py` | bootstrap apparié : différence de macro-F1 entre deux modèles, moyenne ± écart-type |
 
-## Version actuelle : baseline sans entraînement
+## Palier Bronze (revue) : position par lexique
+
+Moteur par défaut (`NLI_BACKEND=bronze`) : règles classiques, sans modèle à télécharger, comme
+l'exige la démo Bronze. Voir l'en-tête de `bronze.py` pour les 6 règles.
+
+```bash
+python -m models.nli.bronze_eval --version v3 --tune                          # seuils (train + val)
+python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-003 # une seule fois
+```
+
+## Modèle NLI pré-entraîné (après le Bronze)
 
 Modèle NLI multilingue déjà entraîné sur XNLI (arabe et français inclus), utilisé tel quel :
 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` (environ 1 Go au premier lancement).
 Prémisse = la preuve, hypothèse = l'affirmation ; entailment → supports,
-contradiction → refutes. Variables : `NLI_BACKEND` (`zero-shot` par défaut, ou `stub`) et
+contradiction → refutes. Variables : `NLI_BACKEND=zero-shot` et
 `NLI_MODEL` (autre modèle, ou plus tard le checkpoint fine-tuné du Lot C).
 
 Sans torch / transformers, ou si le modèle ne se charge pas, la réponse est « neutre » avec une
@@ -36,6 +50,27 @@ python -m models.nli.evaluate --version v3 --split test --exp-id EXP-C-0XX
 
 `data.py` écrit les identifiants des parties dans `data/splits/nli_<version>_by_article_seed42.json`
 (versionnable, sans texte) et les paires dans `data/interim/lot_c/nli/` (privé).
+
+## Affiner le modèle (Model 2 entraîné)
+
+On part de la baseline et on continue l'entraînement sur `train` (4 époques, lr 1e-5, lot de 8).
+La validation choisit la meilleure époque ; l'époque 0 (baseline) est candidate, donc si
+l'affinage n'aide pas sur `val`, on garde la baseline. Le test n'est jamais regardé pendant
+l'entraînement. Trois graines, comme pour le Model 1 :
+
+```bash
+python -m models.nli.train --version v3 --seed 42      # puis 123, puis 2026
+NLI_MODEL=models/checkpoints/nli_mdeberta-ft_v3_seed42 \
+    python -m models.nli.evaluate --version v3 --split test --exp-id EXP-C-0XX
+python -m models.nli.compare \
+    --baseline predictions_v3_test_mdeberta-v3-base-xnli-multilingual-nli-2mil7.jsonl \
+    --models predictions_v3_test_nli_mdeberta-ft_v3_seed42.jsonl \
+             predictions_v3_test_nli_mdeberta-ft_v3_seed123.jsonl \
+             predictions_v3_test_nli_mdeberta-ft_v3_seed2026.jsonl
+```
+
+Chaque checkpoint pèse environ 1,1 Go (`models/checkpoints/`, non versionné). Sur processeur,
+compter environ 8 Go de mémoire ; un GPU (Colab) est beaucoup plus rapide.
 
 ## Règles du découpage
 

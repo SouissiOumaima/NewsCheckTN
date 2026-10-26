@@ -143,3 +143,65 @@ def test_metriques():
     assert m["accuracy"] == 0.5
     assert m["confusion"]["supports"]["refutes"] == 1
     assert abs(m["macro_f1"] - (0.6667 + 0 + 0.6667) / 3) < 1e-3
+
+
+def test_correspondance_des_labels_et_choix_de_l_epoque():
+    from models.nli.train import best_epoch, label_ids
+
+    ids = label_ids({"entailment": 0, "neutral": 1, "contradiction": 2})
+    assert ids == {"supports": 0, "neutral": 1, "refutes": 2}
+    hist = [
+        {"epoch": 0, "val_macro_f1": 0.70},
+        {"epoch": 1, "val_macro_f1": 0.75},
+        {"epoch": 2, "val_macro_f1": 0.75},
+    ]
+    assert best_epoch(hist)["epoch"] == 1  # égalité : la plus ancienne
+    assert (
+        best_epoch([{"epoch": 0, "val_macro_f1": 0.8}, {"epoch": 1, "val_macro_f1": 0.6}])["epoch"]
+        == 0
+    )
+
+
+def test_bootstrap_apparie():
+    from models.nli.compare import paired_bootstrap
+
+    gold = ["supports", "refutes", "neutral"] * 10
+    same = paired_bootstrap(gold, gold, gold, n=200)
+    assert same["diff"] == 0 and same["p_value"] == 1.0
+    worse = ["neutral"] * 30
+    better = paired_bootstrap(gold, worse, gold, n=200)
+    assert better["diff"] > 0 and better["ci95"][0] > 0 and better["p_value"] == 0.0
+
+
+def test_bronze_indices_lexicaux():
+    from models.nli import bronze
+
+    s = bronze.signals(
+        "Le chômage a atteint 25 % en 2025.", "Le chômage a atteint 15 % en 2025, selon l'INS."
+    )
+    assert s.number_conflict is False and s.numbers_match is False  # 2025 commun, 25 absent
+    s = bronze.signals("Le taux de chômage est de 25 %.", "Le taux de chômage est de 15 %.")
+    assert s.number_conflict
+    s = bronze.signals("الصورة مفبركة", "الصورة غير مفبركه")
+    assert s.negation_mismatch
+    # limite connue (non corrigée après la mesure du test) : « و » collé cache la négation
+    assert not bronze.signals("الصورة مفبركة", "الصورة اصليه وغير مفبركه").negation_mismatch
+    s = bronze.signals("Le ministère a confirmé la hausse.", "Le ministère a démenti cette rumeur.")
+    assert s.refute_cue
+    assert (
+        bronze.predict("Le couscous est un plat.", "La bourse de Tunis a progressé.")[0]
+        == "neutral"
+    )
+
+
+def test_bronze_par_le_contrat(monkeypatch):
+    monkeypatch.setenv("NLI_BACKEND", "bronze")
+    stance.set_classifier(None)
+    claim = Claim(text="Le taux de chômage est de 25 %.", lang=Lang.FR)
+    res = stance.predict_stances(
+        claim,
+        [ev("Le taux de chômage est de 15 %.", "a"), ev("Le taux de chômage est de 25 %.", "b")],
+    )
+    assert [r.stance for r in res] == [Stance.REFUTES, Stance.SUPPORTS]
+    assert stance.backend_info()["backend"] == "bronze"
+    stance.set_classifier(None)

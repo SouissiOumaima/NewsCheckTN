@@ -4,16 +4,13 @@ Contrat (utilisé par le Lot D et par l'API `/nli`) :
     predict_stance(claim, evidence) -> StanceResult
     predict_stances(claim, evidences) -> list[StanceResult]
 
-Version actuelle : **baseline sans entraînement** (« zero-shot »). Un modèle NLI multilingue déjà
-entraîné sur XNLI (arabe et français inclus) est utilisé tel quel :
-    prémisse = le passage de preuve, hypothèse = l'affirmation
-    entailment → supports, contradiction → refutes, neutral → neutral
-La confiance est la probabilité de la classe prédite.
-
-Configuration (variables d'environnement) :
-    NLI_BACKEND = zero-shot (défaut) | stub
-    NLI_MODEL   = identifiant Hugging Face ou dossier local du modèle
-                  (défaut : DEFAULT_MODEL ; plus tard, le checkpoint fine-tuné du Lot C)
+Trois moteurs, choisis par la variable d'environnement NLI_BACKEND :
+    bronze    (défaut) règles par lexique (`models/nli/bronze.py`) : composant classique du palier
+              Bronze, sans dépendance ni modèle à télécharger ; c'est lui que montre la démo ;
+    zero-shot modèle NLI multilingue déjà entraîné sur XNLI (mDeBERTa-v3), utilisé tel quel
+              (prémisse = preuve, hypothèse = affirmation ; entailment → supports,
+              contradiction → refutes) ; NLI_MODEL = autre modèle ou checkpoint affiné du Lot C ;
+    stub      toujours « neutre » (tests).
 
 Si torch / transformers ne sont pas installés, ou si le modèle ne se charge pas (pas d'accès
 réseau, par exemple), la fonction répond « neutre » avec une confiance 0 : l'API ne tombe pas et
@@ -88,19 +85,42 @@ def _load_zero_shot(model_name: str) -> Classifier:
     return classify
 
 
+def _bronze_classifier(pairs: Sequence[tuple[str, str]]) -> list[dict[str, float]]:
+    """Règles par lexique (palier Bronze), au même format que les modèles : {classe: score}."""
+    from models.nli.bronze import predict
+
+    out = []
+    for premise, hypothesis in pairs:
+        label, confidence = predict(hypothesis, premise)
+        rest = (1.0 - confidence) / 2
+        out.append(
+            {
+                lab: (confidence if lab == label else rest)
+                for lab in ("supports", "refutes", "neutral")
+            }
+        )
+    return out
+
+
 def _get_classifier() -> Classifier | None:
     global _classifier, _info
     if _classifier is not None:
         return _classifier
-    if (os.getenv("NLI_BACKEND") or "zero-shot") == "stub":
+    backend = os.getenv("NLI_BACKEND") or "bronze"
+    if backend == "stub":
         _info = {"backend": "stub", "model": "", "status": "neutre fixe (NLI_BACKEND=stub)"}
         return None
+    if backend == "bronze":
+        _classifier = _bronze_classifier
+        _info = {"backend": "bronze", "model": "regles-lexique", "status": "loaded"}
+        return _classifier
     if _info["status"] == "unavailable":
         return None  # échec déjà constaté : on ne retente pas à chaque appel
     name = _model_name()
     try:
         _classifier = _load_zero_shot(name)
-        _info = {"backend": "zero-shot", "model": name, "status": "loaded"}
+        backend = "zero-shot" if name == DEFAULT_MODEL else "fine-tuned"
+        _info = {"backend": backend, "model": name, "status": "loaded"}
     except Exception as exc:  # dépendances absentes, pas de réseau, modèle invalide…
         log.warning("NLI : modèle %s indisponible (%s) ; réponse « neutre » par défaut.", name, exc)
         _info = {"backend": "stub", "model": name, "status": "unavailable"}
