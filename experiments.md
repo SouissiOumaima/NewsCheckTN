@@ -26,6 +26,12 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-D-006 | 2026-10-23 | D | Jeu réel Tunifact v1 (6 articles) | BM25 + NLI par règles + gabarit, sans réglage | Hit@1 / Recall@5 ; exactitude verdict | 0.61 / 0.41 ; verdict 0.14, 1 verdict émis (faux) | nouvelle référence de test ; dense à mesurer (Colab) |
+| EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
+| EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
+| EXP-D-003 | 2026-10-19 | D | Retrieval dense + hybride RRF | MiniLM / e5-small / e5-base / bge-m3, RRF k=60 | Recall@5 / MRR | hybride e5-base 0.94 / 0.96 (BM25 0.67 / 0.91) ; verdict inchangé | e5-base retenu ; NLI = goulot ; re-ranking S5 |
+| EXP-D-002 | 2026-10-07 | D | Verdict par gabarit + abstention v1 | BM25 top-5 + NLI par règles | précision sélective / couverture | 0.92 / 0.65 ; TN 0 verdict émis | retenu pour Bronze ; LLM en S6 |
+| EXP-D-001 | 2026-10-07 | D | Retrieval baseline | BM25 (k1=1.5, b=0.75), jeu de dev fictif | Hit@1 / MRR | 0.87 / 0.89 ; arabizi 0.50 | baseline retenue ; dense en S4 |
 | EXP-B-001 | 2026-10-04 | B | Extraction d'affirmations (SPO, modalité, coréférence) | règles ; règles + spaCy FR / Stanza AR | modalité ; triplet SPO exact | modalité 1.00 ; SPO 0.46 (règles et parseurs) | Bronze retenu ; Silver : objets, lexique verbal |
 | EXP-A2-001 | 2026-10-06 | A2 | Normalisation + identification de langue et de script | règles : stub vs v1 | exactitude langue (eval_30) ; cas FR ciblés | 0.82 sur 34 phrases (stub = v1) ; 5 cas ciblés : 0 → 5 bien classés | v1 retenue ; suite : classifieur TN |
 | EXP-A2-002 | 2026-10-07 | A2 | Tunisien en lettres arabes | règle : lexique de 78 marques + négation | langue TN sur eval_30 ; rappel TN sur échantillon annoté | eval_30 (14 phrases TN) : 8 → 12 bien classées ; échantillon (78 TN, 15 standard) : 41 TN et 15 standard bien classées | règle retenue comme référence ; suite : classifieur |
@@ -36,6 +42,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-004 | 2026-10-19 | A2 | Reproductibilité : échantillons annotés et lexique | `normalization.annotation`, `normalization.lexicon` | tirage refait ; lexique retrouvé ; fausses alertes sur la presse | 100/100 et 100/100 ; 55/78 (+ 23 variantes) ; 0/1 589 | tout est refaisable ; suite : kappa, presse d'une autre source |
 | EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
+| EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
 | EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
 | EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
 | EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
@@ -256,6 +263,167 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   régénération (sauté sans corpus ni scikit-learn), exception dans `CONTRIBUTING.md`,
   `linguist-generated` dans `.gitattributes`.
 
+### EXP-B-006 — Tunisien en lettres arabes identifié par le Lot A2 : liste d'erreurs attendues
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : prise en compte de la PR #3 d'A2 (tunisien en lettres arabes identifié
+  `tn`, donc analysé par les règles au lieu de Stanza) ; mise à jour de la liste d'erreurs attendues.
+  Hypothèse : les erreurs du mode parseurs dues au tunisien envoyé à Stanza (catégories E7 et E2)
+  disparaissent, sans effet sur le mode règles.
+- **Données** : `eval_30.jsonl` (34 phrases, 22 affirmations, gold inchangé), jeu de **développement**,
+  un seul annotateur. Langue fournie par A2 pour les 5 phrases de tunisien en lettres arabes : `tn`
+  pour tn-a1, tn-a2, tn-a4 et tn-a5, `ar` pour tn-a3 (toujours analysée par Stanza).
+- **Méthode / configuration** : aucun changement du code du Lot B. Fusion de `main` (PR #3 du Lot A2,
+  `add268e`) dans `lot-b-linguistic`, puis `python -m linguistic_analysis.evaluate --compare` avant et
+  après la fusion (bootstrap apparié, 1000 tirages, graine 20261015). spaCy 3.8 `fr_core_news_md`,
+  Stanza 1.15 `ar`. Les fichiers de résultats portent encore l'identifiant `EXP-B-005` (constante
+  `EXP_ID` de `evaluate.py`, non modifiée dans ce commit).
+- **Code** : branche `lot-b-linguistic`, fusion de `origin/main` et mise à jour de
+  `tests/fixtures/linguistic_analysis/error_categories.json` (section `corrigees_exp_b_006`).
+- **Résultats** (avant → après la fusion) :
+  - parseurs : sujet / prédicat / objet 0.95 / 0.91 / 0.82 → 0.95 / 0.95 / 0.86 ; triplet exact
+    0.77 → 0.86 ; 7 → 5 erreurs (disparues : tn-a1:obj et tn-a4:predicate ; aucune erreur nouvelle) ;
+  - règles : inchangé (sujet / prédicat / objet 0.95 / 0.95 / 0.91, triplet 0.91, 4 erreurs) ;
+  - triplet exact par groupe en mode parseurs : TN lettres arabes 0.00 → 1.00 (2 affirmations) ; FR
+    0.88, AR 0.86, arabizi 1.00 et mixte 0.50 inchangés ;
+  - détection d'affirmation, modalité et coréférence inchangées (1.00) ;
+  - comparaison appariée parseurs − règles, triplet exact : −0.14 [−0.35 ; +0.05] → −0.04
+    [−0.21 ; +0.10] ; différence toujours non établie.
+- **Analyse** : le gain vient entièrement de l'amont : les deux phrases concernées sont maintenant
+  analysées par les règles, déjà correctes sur elles. Le groupe TN en lettres arabes ne compte que
+  2 affirmations : l'écart de 0.00 à 1.00 ne doit pas être lu comme une mesure. tn-a3, toujours
+  étiquetée `ar`, reste analysée par Stanza. Erreurs restantes avec parseurs : arbre spaCy faux (fr-02,
+  3 erreurs), découpage dû au repli ة → ه (ar-01, point L7) et objet de mx-2. Limites : eval_30 est un
+  jeu de développement, annoté par une seule personne ; aucun gold pour la source, le temps et le lieu.
+- **Décision / suite** : liste d'erreurs attendues mise à jour (`corrigees_exp_b_006`). Mesure de
+  référence sur `eval_100` une fois verrouillé.
+
+### EXP-D-006 — Jeu de test réel Tunifact v1 (6 articles)
+- **Date** : 2026-10-23
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : agrandir le jeu de test réel avec la nouvelle livraison du Lot A1
+  (verdict et date fournis par article) et mesurer la chaîne actuelle, sans aucun réglage.
+- **Données** : Lot A1, branche `lot-a1-data`, commit `77a00b9` :
+  `data/exports/lot_d/tunifact_sentences_46.jsonl` (articles 698 → vrai, 933 → faux,
+  937 → trompeur ; segmentation automatique) + articles 613, 797, 890 de v0 + 30 phrases TArC.
+  Seul l'article 933 (nationalité des enfants de migrants, 25 phrases AR) est nouveau ; 698 et
+  937 sont des versions complètes d'articles de v0 (+2 et +4 phrases). Construction : 1re phrase
+  de chaque article écartée, fragments de moins de 15 caractères écartés (1 : « أبدا !! ») →
+  84 passages (54 Tunifact de 6 articles, 30 TArC). Affirmations : 21 = les 15 de v0
+  (identifiants convertis) + 6 sur l'article 933 (4 faux : AR, FR, TN lettres arabes, arabizi ;
+  2 vrai : AR, FR). Rédigées par une seule personne ; traductions TN / arabizi à valider.
+- **Méthode / configuration** : identique à EXP-D-005 (BM25, NLI par règles v2, gabarit). La
+  reconstruction de v0 redonne exactement les résultats d'EXP-D-005 (exactitude 0.20, couverture
+  0.067). Déterministe.
+- **Code** : `python -m rag_llm.build_tunifact_eval` ; `evaluate_retrieval` et `evaluate_verdict`
+  avec `--corpus data/interim/lot_d/evidence_tunifact_v1.jsonl --claims tests/fixtures/rag_llm/claims_tunifact_v1.jsonl`.
+- **Résultats — retrieval (BM25, n = 18 avec preuve)** : Hit@1 0.611, Hit@5 0.667,
+  Recall@5 0.411, MRR 0.630. Par groupe (Hit@1) : ar-arabic 0.83 (6), fr-latin 0.57 (7),
+  tn-arabic 0.50 (2), tn-arabizi 0.33 (3). Échecs (aucune preuve dans le top 5) : `tf-c08`,
+  `tf-c11`, `tf-c17`, `tf-c18`, `tf-c19`, `tf-c21` — toutes des affirmations FR, TN ou arabizi
+  dont l'article est en arabe. Score du 1er passage : 4.7 à 36.2 quand il est correct ; 2.7 à
+  12.1 pour les 3 affirmations sans preuve.
+- **Résultats — verdict** : exactitude 0.143, couverture 0.048, précision sélective 0.00
+  (1 verdict émis, faux : `tf-c03`), abstention justifiée 1.00, macro-F1 0.065, 0 citation invalide.
+  Les 6 affirmations de l'article 933 : abstention (preuves non décisives).
+- **Analyse** : la baisse par rapport à v0 (Hit@1 0.83 → 0.61) vient du nouvel article : il est
+  en arabe, et 4 de ses 6 affirmations sont dans une autre langue ou en tunisien, que BM25 ne
+  relie pas. C'est le cas que le retrieval hybride (EXP-D-003) doit corriger : à mesurer sur ce
+  jeu. Le verdict reste limité par le NLI par règles (aucune règle de nombre ni de démenti ne
+  s'applique aux affirmations juridiques de 933). Jeu encore petit (6 articles, 1 seul « vrai »,
+  1 seul article en français) : chiffres indicatifs.
+- **Décision / suite** : v1 devient le jeu de test du Lot D (v0 conservé pour la traçabilité) ;
+  mesurer l'hybride e5-base / bge-m3 sur v1 (notebook, section 7) ; demander au Lot A1 des
+  articles « vrai » et en français ; NLI du Lot C.
+
+### EXP-D-005 — NLI par règles v2 : lecture des nombres
+- **Date** : 2026-10-20
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : corriger les deux défauts **génériques** de lecture des nombres
+  révélés par EXP-D-004 (séparateurs de milliers ; nombres faisant partie d'un nom), sans
+  toucher au 3e défaut (phrase de verdict qui reprend la rumeur), qui demande un vrai NLI.
+- **Données** : développement = jeu fictif v2 (`claims_dev.jsonl`) ; test = Tunifact v0
+  (EXP-D-004), mesuré **une seule fois**, après les corrections.
+- **Méthode / configuration** : `rag_llm/baseline_stance.py`, fonction `_numbers` :
+  « 39 000 », « 39.000 », espace insécable → 39000 (groupe de 3 chiffres exactement, sinon
+  décimal : « 16,4 », « 9.3 ») ; « 13 ألف », « 3 آلاف », « mille », « million(s) », « مليون »
+  → multiplication ; nombre précédé d'une lettre latine ou d'une lettre + tiret ignoré
+  (« Covid-19 », « كوفيد-19 », « G20 », « A320 »), préfixe arabe collé accepté (« و3 »).
+  `rag_llm/retrieval/text.py` : signes arabes ٫ ٬ ٪ convertis. Reste inchangé (EXP-D-002).
+- **Code** : `python -m rag_llm.evaluate_verdict` (dev), puis avec `--corpus
+  data/interim/lot_d/evidence_tunifact_v0.jsonl --claims tests/fixtures/rag_llm/claims_tunifact_v0.jsonl`.
+- **Résultats** :
+
+  | Jeu | Exactitude | Couverture | Précision sélective | Verdicts faux émis | Abst. justifiée |
+  |-----|------------|------------|---------------------|--------------------|-----------------|
+  | dev fictif v2 (avant = après) | 0.70 | 0.65 | 0.92 | 1 | 1.00 |
+  | Tunifact v0, avant (EXP-D-004) | 0.20 | 0.20 | 0.00 | 3 | 1.00 |
+  | Tunifact v0, après | 0.20 | 0.07 | 0.00 | **1** | 1.00 |
+
+  Détail Tunifact : `tf-c01` (698, vrai) faux → *preuves contradictoires* (la preuve donne
+  3 300 médecins, la phrase de verdict 3 000 : désaccord réel entre les deux phrases de
+  l'article) ; `tf-c02` (Covid-19) vrai → *preuves non décisives* ; `tf-c03` reste faussement
+  « vrai » (3e défaut, attendu).
+- **Analyse** : les corrections ne rendent pas le système plus juste (exactitude inchangée),
+  mais **plus prudent** : 2 des 3 verdicts erronés et assurés deviennent des abstentions, ce qui
+  est préférable pour un outil de vérification. Le 3e défaut est hors de portée de règles
+  lexicales : « classé comme fausse l'information … 67 % » contient les mêmes nombres que la
+  rumeur. Les corrections sont génériques (pas de mot ou de nombre propre aux 5 articles) ; elles
+  ont cependant été motivées par ce jeu : il ne doit plus servir à régler les règles.
+- **Décision / suite** : v2 retenue (moins d'erreurs assurées, dev inchangé). Le NLI par règles
+  a atteint sa limite : brancher le NLI multilingue du Lot C ; S5 re-ranking.
+
+### EXP-D-004 — Première évaluation sur données réelles : Tunifact v0
+- **Date** : 2026-10-20
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : mesurer la chaîne retrieval → NLI par règles → verdict sur des
+  articles de fact-checking réels, et vérifier si les conclusions tirées du jeu fictif tiennent.
+- **Données** : Lot A1, branche `lot-a1-data` (commit `19976a4`) : 5 articles Tunifact découpés
+  en phrases (698, 613, 797 en FR ; 890, 937 en AR). Corpus = 25 phrases Tunifact (la phrase
+  `-001` de chaque article, qui reformule la rumeur, est exclue) + 30 phrases TArC (forum
+  tunisien) comme distracteurs = 55 passages. 15 affirmations rédigées par le Lot D
+  (`claims_tunifact_v0.jsonl`) : 5 dans la langue de l'article, 7 traduites (autre langue,
+  tunisien, arabizi), 3 sans preuve dans le corpus. Labels = verdict publié par Tunifact
+  (1 article vrai, 3 faux, 1 trompeur). Limites : 5 articles seulement ; les articles 613, 797
+  et 890 sont des **reformulations** du Lot A1 ; affirmations et traductions écrites par une
+  seule personne ; droits de redistribution Tunifact non confirmés (corpus non versionné).
+- **Méthode / configuration** : identique à EXP-D-002 (BM25 k1 = 1.5, b = 0.75 ; NLI par
+  règles ; gabarit ; seuil A2 = 1.0). Aucun réglage sur ce jeu. Déterministe.
+- **Code** : `python -m rag_llm.build_tunifact_eval` puis
+  `python -m rag_llm.evaluate_retrieval|evaluate_verdict --corpus data/interim/lot_d/evidence_tunifact_v0.jsonl --claims tests/fixtures/rag_llm/claims_tunifact_v0.jsonl`.
+- **Résultats — retrieval (BM25, n = 12 avec preuve)** : Hit@1 0.833, Hit@5 0.833,
+  Recall@5 0.542, MRR 0.833. Par groupe (Hit@1) : ar-arabic 1.00 (4), fr-latin 0.80 (5),
+  tn-arabic 1.00 (1), tn-arabizi 0.50 (2). Échecs : `tf-c08` (FR → article AR) et `tf-c11`
+  (arabizi). Score BM25 du 1er passage : 3.8 à 29.1 quand il est correct ; **2.0 à 9.6** pour les
+  3 affirmations sans preuve.
+- **Résultats — verdict** : exactitude 0.20, couverture 0.20, **précision sélective 0.00**
+  (3 verdicts émis, tous faux), abstention justifiée 1.00, macro-F1 0.10, 0 citation invalide.
+- **Analyse** :
+  1. Le retrieval tient à peu près (Hit@1 0.83) ; les passages « croisés » trouvés par BM25 le
+     sont grâce à des nombres ou des mots français cités dans l'article arabe (937-002 contient le
+     titre français d'une dépêche) — chance, pas compréhension.
+  2. **Le seuil d'abstention BM25 (1.0) ne vaut que pour le jeu fictif** : ici, une affirmation
+     sans preuve (`tf-c13`, bac 2026 annulé) obtient 9.6, plus qu'une bonne preuve (3.8).
+  3. **Le NLI par règles échoue sur des articles réels**, pour trois causes identifiées :
+     - séparateurs de milliers : « 39 000 » devient {39, 000}, « 39.000 » est lu comme 39,0 →
+       la preuve de l'article *vrai* 698 est jugée contradictoire (`tf-c01` → faux) ;
+     - nombres dans les noms : « Covid-19 » donne le nombre 19, commun à l'affirmation et au
+       verdict de Tunifact → « soutient » (`tf-c02` → vrai) ;
+     - une phrase de verdict reprend l'affirmation pour la réfuter (« Tunifact a classé comme
+       fausse l'information … 67 % … 33 % ») : mêmes nombres → « soutient » (`tf-c03` → vrai) ;
+       « fausse », « زائفة », « مضللة » ne sont pas des marqueurs de démenti de la liste.
+  4. Les 3 verdicts émis sont faux avec une incertitude faible : sur données réelles, le système
+     se trompe **avec assurance**, ce qui est le pire cas pour un fact-checker. Les conclusions
+     d'EXP-D-002 (précision sélective 0.92) étaient un artefact du jeu fictif, écrit en même
+     temps que les règles.
+- **Décision / suite** :
+  - ce jeu devient le jeu de **test** du Lot D (ne plus régler de règle en le regardant) ;
+  - NLI : priorité au modèle multilingue du Lot C ; en attendant, corriger les 2 défauts
+    génériques des règles (séparateurs de milliers, nombres collés à des lettres) sur le jeu de dev,
+    puis re-mesurer ici une seule fois ;
+  - seuil d'abstention : ne plus utiliser le score BM25 brut ; re-ranker (S5) ;
+  - demander au Lot A1 davantage d'articles (texte complet + verdict) pour dépasser 5 articles.
+
 ### EXP-B-005 — Lexiques selon l'écriture et verbe de parole précédé de « و » / « ف » collé
 - **Date** : 2026-10-20
 - **Auteur / Lot** : Membre 3 / Lot B
@@ -301,6 +469,73 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   laisse eval_30 à 7 erreurs en mode parseurs (ar-01 corrigé, ar-10 nouveau) et n'est pas retenu.
 - **Décision / suite** : retenu. Mesurer (a) et (b) sur `eval_100` une fois verrouillé ; prédicat
   sans conjonction collée à traiter ; point L7 à porter en réunion avec le Lot A2.
+
+### EXP-D-003 — Retrieval dense multilingue et hybride RRF (S4)
+- **Date** : 2026-10-19
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : un encodeur multilingue relie une affirmation française à la preuve
+  arabe équivalente (et inversement), ce que BM25 ne peut pas faire (EXP-D-001 : Recall@5 ≈ 0.67) ;
+  l'hybride RRF garde la précision lexicale de BM25 et ajoute ces correspondances.
+- **Données** : `tests/fixtures/rag_llm/` v2 (15 passages **fictifs**, 20 affirmations dont 18 avec
+  preuve). Une affirmation = 0.056 de Hit@1 : écarts à confirmer sur le corpus réel.
+- **Méthode / configuration** : `rag_llm/retrieval/dense.py` (embeddings normalisés, cosinus ;
+  préfixes `query:` / `passage:` pour e5) ; `hybrid.py` : RRF (k = 60) sur 20 candidats BM25 +
+  20 candidats denses, passages denses de cosinus < 0.4 écartés avant fusion. 4 modèles :
+  paraphrase-multilingual-MiniLM-L12-v2, multilingual-e5-small, multilingual-e5-base, bge-m3.
+  Verdict : gabarit + NLI par règles (EXP-D-002). Colab, GPU T4. Déterministe.
+- **Code** : commit `ee18993` ; `python -m rag_llm.evaluate_retrieval --method all --model …` ;
+  `notebooks/lot_d_rag/01_m5_dense_retrieval.ipynb`.
+- **Résultats — retrieval (GLOBAL, n = 18)** :
+
+  | Modèle | Méthode | Hit@1 | Hit@5 | Recall@5 | MRR | tn-arabic Hit@1 | tn-arabizi Hit@5 |
+  |--------|---------|-------|-------|----------|-----|-----------------|------------------|
+  | — | BM25 | 0.889 | 0.944 | 0.667 | 0.907 | 0.5 | 0.5 |
+  | MiniLM | dense | 0.722 | 0.722 | 0.639 | 0.722 | 0.0 | 0.0 |
+  | MiniLM | hybride | 0.889 | 0.944 | 0.778 | 0.907 | 0.5 | 0.5 |
+  | e5-small | dense | 0.944 | 0.944 | 0.861 | 0.951 | 1.0 | 0.5 |
+  | e5-small | hybride | 0.944 | 0.944 | 0.861 | 0.951 | 1.0 | 0.5 |
+  | e5-base | dense | 0.944 | 1.000 | 0.917 | 0.956 | 1.0 | 1.0 |
+  | **e5-base** | **hybride** | **0.944** | **1.000** | **0.944** | **0.956** | **1.0** | **1.0** |
+  | bge-m3 | dense | 0.944 | 0.944 | 0.917 | 0.944 | 1.0 | 0.5 |
+  | bge-m3 | hybride | 0.944 | 0.944 | 0.917 | 0.944 | 1.0 | 0.5 |
+
+- **Résultats — score dense du 1er passage (calibration de l'abstention)** :
+
+  | Modèle | Bonne preuve (min – max) | Sans preuve : dev-c16 / dev-c17 |
+  |--------|--------------------------|---------------------------------|
+  | MiniLM | 0.406 – 0.970 | < 0.4 (écartées) / < 0.4 |
+  | e5-small | 0.835 – 0.934 | 0.790 / 0.835 |
+  | e5-base | 0.796 – 0.916 | 0.742 / 0.820 |
+  | bge-m3 | 0.446 – 0.957 | 0.417 / < 0.4 |
+
+  En hybride, le score RRF du 1er passage vaut 0.032–0.033 quand il est trouvé par BM25 **et** par
+  le dense, 0.016 quand il n'est trouvé que par une seule méthode (cas des 2 affirmations sans preuve).
+- **Résultats — verdict de bout en bout** : BM25 et hybride e5-base donnent **exactement** les mêmes
+  métriques (exactitude 0.70, couverture 0.65, précision sélective 0.92, abstention justifiée 1.00,
+  macro-F1 0.52, 0 citation invalide). Seule différence : les 2 affirmations sans preuve sont
+  désormais arrêtées par la règle A3 (preuves non décisives) au lieu de A1 (aucune preuve).
+  Les cellules de seuil (MIN_DENSE_SIMILARITY 0.3 à 0.6) ont tourné avec MiniLM en hybride par
+  erreur de notebook : résultats identiques, non informatifs (cellule corrigée).
+- **Analyse** :
+  1. Hypothèse confirmée : le dense e5 retrouve la preuve dans l'autre langue ; Recall@5 passe de
+     0.67 (BM25) à 0.94 (hybride e5-base). Le tunisien en lettres arabes passe de 0.5 à 1.0 (Hit@1).
+     Avec e5-base, même l'arabizi `dev-c05` retrouve une preuve dans le top 5.
+  2. Le choix de l'encodeur est décisif : MiniLM fait **moins bien** que BM25 et échoue sur tout le
+     tunisien.
+  3. Avec e5, le cosinus ne permet plus de détecter l'absence de preuve : les affirmations sans preuve
+     ont des scores (0.74–0.84) dans la plage des bonnes preuves. Un seuil absolu sur le cosinus
+     n'est pas fiable ; bge-m3 sépare mieux (0.417 vs ≥ 0.446) mais avec une marge très faible.
+  4. Le retrieval s'améliore mais le verdict ne bouge pas : le NLI par règles compare des mots, il
+     ne peut pas exploiter une preuve arabe pour une affirmation française. **Le goulot est
+     désormais le NLI**, plus le retrieval. Sécurité : sans preuve, l'abstention repose maintenant
+     sur le NLI (A3) et plus sur le retrieval (A1/A2) — fragile avec un vrai NLI.
+- **Décision / suite** :
+  - modèle par défaut : `intfloat/multilingual-e5-base` en hybride (meilleur Recall@5, tourne sur
+    CPU) ; bge-m3 à re-tester sur le corpus réel ; `RETRIEVAL_METHOD` reste `bm25` par défaut pour
+    la CI et l'API tant que le Lot E n'a pas validé la dépendance sentence-transformers ;
+  - S5 : re-ranking cross-encoder multilingue, dont le score sert de seuil d'abstention (A2) ;
+    signal complémentaire à tester : accord BM25 / dense (score RRF 0.016 vs 0.032) ;
+  - Lot C : brancher le NLI multilingue pour que le gain de retrieval se traduise dans le verdict.
 
 ### EXP-A2-005 — Biais de sujet : noms de lieux tunisiens rendus neutres
 - **Date** : 2026-10-19
@@ -462,6 +697,73 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Décision / suite** : retenu. Le jeu de 34 phrases ne départage plus les deux modes (6 et 7
   erreurs) : priorité au jeu d'environ 100 phrases, en partie tiré d'articles réels et annoté sans
   voir les sorties, pour mesurer la généralisation.
+
+### EXP-D-002 — Verdict par gabarit, NLI par règles et abstention v1 (S2–S3)
+- **Date** : 2026-10-07
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : obtenir un verdict de bout en bout sans LLM ; vérifier que la politique
+  d'abstention empêche tout verdict inventé quand le corpus ne contient pas de preuve.
+- **Données** : `tests/fixtures/rag_llm/` v2 — 15 passages **fictifs** ; 20 affirmations avec `gold_label`
+  (12 faux, 5 vrai, 1 trompeur, 2 preuves_insuffisantes). Par rapport à v1 : + 3 affirmations vraies
+  (`dev-c18` à `dev-c20`). Une seule annotatrice.
+- **Méthode / configuration** : BM25 (EXP-D-001), top-5 → NLI par règles `rag_llm/baseline_stance.py`
+  (recouvrement de mots ≥ 0.5 sur radicaux de 5 lettres ; nombres hors années : égaux → soutient,
+  différents → contredit ; sinon marqueurs de démenti FR/AR → contredit) → verdict par gabarit
+  `rag_llm/verdict.py` (MIN_RETRIEVAL_SCORE = 1.0, MIN_CONFIDENCE = 0.6, CONFLICT_MARGIN = 0.25,
+  incertitude ≥ 0.1). Déterministe.
+- **Code** : `python -m rag_llm.evaluate_verdict` (`--stance rules`).
+- **Résultats** :
+
+  | Groupe | n | Exactitude | Couverture | Précision sélective | Abstention justifiée |
+  |--------|---|------------|------------|---------------------|----------------------|
+  | Global | 20 | 0.70 | 0.65 | 0.92 | 1.00 |
+  | fr-latin | 11 | 0.82 | 0.82 | 0.89 | 1.00 |
+  | ar-arabic | 4 | 1.00 | 1.00 | 1.00 | — |
+  | tn-arabic | 2 | 0.00 | 0.00 | — | — |
+  | tn-arabizi | 3 | 0.33 | 0.00 | — | 1.00 |
+
+  Macro-F1 (4 labels) 0.52 ; citations invalides 0 ; abstentions : 4 « preuves non décisives »,
+  3 « aucune preuve ». Avec `--stance lot-c` (stub neutre) : couverture 0, exactitude 0.10.
+  Retrieval re-mesuré sur v2 : Hit@1 0.89, Recall@5 0.67, MRR 0.91.
+- **Analyse** : quand le système tranche, il a presque toujours raison (12/13) ; la seule erreur est
+  `dev-c13` (`trompeur` attendu, `faux` prédit), label que le gabarit ne sait pas produire. Les
+  abstentions viennent du tunisien et de l'arabizi (vocabulaire différent de la preuve → recouvrement
+  < 0.5) et de `dev-c08` (« bac » ≠ « baccalauréat »). Aucune affirmation sans preuve n'a reçu de
+  verdict. Les règles ont été écrites en voyant le jeu de dev : résultats **optimistes**, à refaire sur
+  des données réelles et un jeu de test gelé.
+- **Décision / suite** : retenu comme verdict de la démo Bronze. S4–S5 : retrieval dense/hybride
+  (et recalibrer MIN_RETRIEVAL_SCORE) ; S6 : LLM avec prompt contraint, comparé à ce gabarit ;
+  remplacer le NLI par règles par le modèle du Lot C dès qu'il est disponible.
+
+### EXP-D-001 — Retrieval BM25, baseline S1
+- **Date** : 2026-10-07
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : disposer d'une baseline lexicale mesurée avant le retrieval dense ;
+  vérifier où BM25 échoue (croisement FR ↔ AR, tunisien, arabizi).
+- **Données** : `tests/fixtures/rag_llm/` — 15 passages **fictifs** (8 FR, 7 AR) et 17 affirmations
+  (9 FR dont 1 sans preuve, 3 AR, 2 TN lettres arabes, 3 arabizi dont 1 sans preuve), preuves attendues
+  annotées par une seule personne. Jeu de développement, pas un jeu de test.
+- **Méthode / configuration** : BM25 Okapi en Python pur, k1 = 1.5, b = 0.75, IDF Lucene ;
+  normalisation de recherche (accents, harakat, hamzas, ة → ه, ى → ي, article ال retiré, mots vides
+  FR/AR) ; passages de score nul exclus. Déterministe.
+- **Code** : `rag_llm/retrieval/{text,bm25,hybrid}.py`, `python -m rag_llm.evaluate_retrieval`.
+- **Résultats** (top-10) :
+
+  | Groupe | n | Hit@1 | Hit@5 | Recall@5 | MRR |
+  |--------|---|-------|-------|----------|-----|
+  | Global | 15 | 0.87 | 0.93 | 0.60 | 0.89 |
+  | fr-latin | 8 | 1.00 | 1.00 | 0.63 | 1.00 |
+  | ar-arabic | 3 | 1.00 | 1.00 | 0.67 | 1.00 |
+  | tn-arabic | 2 | 0.50 | 1.00 | 0.50 | 0.67 |
+  | tn-arabizi | 2 | 0.50 | 0.50 | 0.50 | 0.50 |
+
+  Score BM25 du 1er passage : 1.07 à 11.7 quand il est correct ; 0.0 pour les 2 affirmations sans preuve.
+- **Analyse** : Recall@5 plafonne vers 0.6 car BM25 ne relie jamais une affirmation française à la
+  preuve arabe équivalente (et inversement) : aucun mot commun. L'arabizi n'aboutit que s'il partage un
+  chiffre avec la preuve (« 37 »). Le tunisien en lettres arabes passe partiellement grâce aux mots
+  communs avec l'arabe standard (« زيت », « الماء »). Jeu minuscule et fictif : chiffres optimistes.
+- **Décision / suite** : baseline retenue. S4 : retrieval dense multilingue (attendu : gain sur le
+  croisement FR ↔ AR) ; translittération arabizi du Lot A2 ; refaire l'évaluation sur le corpus réel A1.
 
 ### EXP-A2-003 — Arabizi sans chiffre : modèle à n-grammes de caractères
 - **Date** : 2026-10-07
