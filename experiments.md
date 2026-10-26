@@ -32,8 +32,40 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-003 | 2026-10-15 | B | Extraction d'affirmations : lexique verbal du mode règles, sujet verbe-sujet-objet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.86 (règles) ; 0.77 (parseurs) | retenu ; suite : jeu d'environ 100 phrases |
 | EXP-B-004 | 2026-10-15 | B | Extraction d'affirmations : source du discours rapporté, complément du participe dans le sujet | règles ; règles + spaCy FR / Stanza AR | triplet SPO exact | SPO 0.91 (règles) ; 0.77 (parseurs) | retenu ; jeu de dev saturé |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
+| EXP-C-002 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | baseline retenue et branchée ; chiffres officiels sur v4 |
+| EXP-C-003 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 
 ## Entrées
+
+### EXP-C-003 — NLI (Model 2), palier Bronze : position par lexique et règles
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : composant classique exigé pour la revue Bronze (« position par lexique ») : des indices lexicaux simples (recouvrement, nombres, marqueurs de démenti, négation) suffisent-ils à dépasser nettement la classe majoritaire ?
+- **Données** : mêmes parties qu'EXP-C-002 (`data/splits/nli_v3_by_article_seed42.json`) : train 174, val 33, test 56 (25 fr, 31 ar, 0 tunisien ; 30 paires des articles du test du Lot D).
+- **Méthode / configuration** : `models/nli/bronze.py`. Texte normalisé par le Lot A2. Règles dans l'ordre : R1 recouvrement des mots pleins (5 premières lettres) < 0.35 → neutral ; R2 nombres de l'affirmation absents de la preuve qui en cite → refutes ; R3 marqueur de démenti dans la preuve seulement (« faux », « démenti », « زائف », « مضلل », « mouch s7i7 »…) → refutes ; R4 négation d'un seul côté → refutes ; R5 recouvrement ≥ 0.4 ou nombres identiques → supports ; R6 sinon neutral. Seuils choisis sur train + val (grille 7 × 6, macro-F1 0.632), test évalué une seule fois. Baseline triviale : classe majoritaire du train (« supports »). Ablation (scikit-learn, régression logistique `class_weight=balanced`, C choisi sur val) : TF-IDF de n-grammes de caractères (2–5, `char_wb`) sur « affirmation || preuve », seul puis avec les 5 indices lexicaux. Déterministe.
+- **Code** : `python -m models.nli.bronze_eval --version v3 --tune` puis `python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-003`.
+- **Résultats (test, n = 56)** :
+  - classe majoritaire : macro-F1 0.194, accuracy 0.411 ;
+  - **règles par lexique : macro-F1 0.471** (IC 95 % [0.333 ; 0.591]), accuracy 0.464 ; supports F1 0.50, refutes F1 0.35, neutral F1 0.56 ;
+  - par langue : fr 0.504 (n = 25, majorité 0.190) ; ar 0.400 (n = 31, majorité 0.197) ; articles du test du Lot D 0.475 (n = 30) ;
+  - ablation : TF-IDF seul 0.405 (val 0.248) ; TF-IDF + lexique 0.534 (val 0.571) ;
+  - prétraitement (train + val, seuils re-choisis) : texte brut 0.634, normalisation A2 0.632, A2 + accents retirés 0.633 : écart négligeable.
+- **Analyse** : 30 erreurs sur 56 (`data/interim/lot_c/nli/erreurs_bronze_v3_test.csv`, privé) : paraphrase non reconnue (recouvrement faible) 8, démenti implicite 6, négation mal interprétée 6, nombres mal comparés 5, marqueur de démenti trompeur 3, recouvrement trompeur 2. Exemples : « 7 000 personnes » lu comme 7 et 000 (séparateur de milliers) → conflit de nombres à tort ; « غير النظامي » (irrégulier) pris pour une négation → refutes à tort ; « démenti » accentué non reconnu par le lexique écrit sans accent (P290) ; « و » collé cache la négation (« وغير »). Le TF-IDF seul apprend peu sur 174 paires ; les indices lexicaux apportent l'essentiel. Le prétraitement ne change presque rien ; les seuils de recouvrement et les règles R3 / R4 pèsent le plus. La combinaison TF-IDF + lexique fait mieux sur le test (0.534), mais le composant Bronze a été fixé avant la mesure (règles, sans données d'entraînement à livrer) : il n'est pas changé après coup.
+- **Décision / suite** : règles retenues comme composant Bronze de la démo (`NLI_BACKEND=bronze`, défaut). Corrections identifiées (séparateur de milliers, accents du lexique, « غير » de composition, « و » collé) : à faire sur train + val puis mesurer une seule fois sur la v4 ; pas de nouvelle mesure du test v3.
+
+### EXP-C-002 — NLI (Model 2) : baseline sans entraînement
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : remplacer le stub NLI (toujours « neutre ») par un modèle multilingue déjà entraîné sur XNLI, utilisé tel quel, et mesurer le seuil que le Model 2 entraîné devra dépasser.
+- **Données** : corpus NLI du Lot A1, `nli_corpus_300_consolide_v3_prive.jsonl` (privé, non versionné). 37 paires en attente de validation (« Brouillon non valide ») mises de côté → 263 paires. Découpage par groupe d'articles (graine 42) : train 174, val 33, test 56. Le test contient les 30 paires des articles du jeu de test du Lot D (Tunifact 613, 698, 797, 890, 933, 937). Aucun texte partagé entre les parties. Identifiants : `data/splits/nli_v3_by_article_seed42.json`. Langues du test : 25 fr, 31 ar, 0 tunisien.
+- **Méthode / configuration** : `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7`, sans entraînement. Prémisse = preuve, hypothèse = affirmation ; entailment → supports, contradiction → refutes. Troncature de la preuve à 512 tokens. CPU, 191 s pour 56 paires. Déterministe.
+- **Code** : `python -m models.nli.data --version v3 --input …` puis `python -m models.nli.evaluate --version v3 --split test --exp-id EXP-C-002`.
+- **Résultats (test, n = 56)** : accuracy 0.804, **macro-F1 0.798** (IC 95 % bootstrap [0.669 ; 0.891]).
+  - supports : P 0.95, R 0.83, F1 0.88 ; refutes : P 0.93, R 0.68, F1 0.79 ; neutral : P 0.59, R 0.93, F1 0.72.
+  - Confusion (vrai → prédit) : supports → neutral 4 ; refutes → neutral 5, refutes → supports 1 ; neutral → refutes 1.
+  - Par langue : fr 0.779 (n = 25), ar 0.776 (n = 31). Articles du test du Lot D : 0.767 (n = 30).
+- **Analyse** : le modèle tranche rarement à tort (précision 0.93–0.95 sur supports / refutes) ; ses erreurs vont presque toutes vers « neutral », ce qui mène le verdict du Lot D à s'abstenir plutôt qu'à affirmer une erreur. Pas d'écart entre français et arabe. Limites : petit test (IC large), corpus v3 encore en correction, aucune paire en tunisien ou en arabizi.
+- **Décision / suite** : baseline retenue et branchée dans `models/nli/stance.py` (utilisable par le Lot D). Suite : affiner ce même modèle sur le train (plutôt qu'entraîner XLM-R depuis zéro sur 174 paires), 3 graines, comparaison bootstrap à cette baseline ; mesures officielles une seule fois sur la v4 du corpus ; demander au Lot A1 des paires en tunisien.
 
 ### EXP-B-005 — Lexiques selon l'écriture et verbe de parole précédé de « و » / « ف » collé
 - **Date** : 2026-10-20
