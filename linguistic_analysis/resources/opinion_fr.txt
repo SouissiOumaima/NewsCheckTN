@@ -1,0 +1,106 @@
+# Lexique fait / opinion — français
+# Une entrée par ligne, '#' pour les commentaires. Comparaison en minuscules.
+# [verbes]        : verbes d'opinion, comptés seulement à la 1re personne (je pense, nous estimons)
+# [expressions]   : marqueurs d'opinion comptés quel que soit le contexte
+# [evaluatifs]    : adjectifs / noms évaluatifs (renforcés en position d'attribut : « c'est honteux »)
+# [intensifieurs] : intensifieurs et superlatifs (comptés seulement sans donnée chiffrée)
+# [questions]     : marqueurs interrogatifs en début de phrase
+# [souhaits]      : souhait, espoir, injonction
+# [dates]         : noms de mois (signal factuel)
+
+[verbes]
+penser
+pense
+pensons
+croire
+crois
+croyons
+estimer
+estime
+estimons
+trouver
+trouve
+trouvons
+considérer
+considère
+considérons
+juger
+juge
+jugeons
+
+[expressions]
+à mon avis
+selon moi
+d'après moi
+pour moi
+à mes yeux
+heureusement
+malheureusement
+hélas
+franchement
+il est clair que
+il est évident que
+
+[evaluatifs]
+scandaleux
+scandaleuse
+honteux
+honteuse
+inacceptable
+inadmissible
+catastrophique
+catastrophe
+magnifique
+excellent
+excellente
+nul
+nulle
+terrible
+incroyable
+ridicule
+lamentable
+désastreux
+désastreuse
+honte
+scandale
+
+[intensifieurs]
+très
+trop
+extrêmement
+totalement
+complètement
+absolument
+le plus
+la plus
+les plus
+pire
+meilleur
+meilleure
+jamais
+
+[questions]
+est-ce que
+est-ce qu'
+
+[souhaits]
+pourvu que
+j'espère
+espérons
+il faut que
+souhaitons
+je souhaite
+
+[dates]
+janvier
+février
+mars
+avril
+mai
+juin
+juillet
+août
+septembre
+octobre
+novembre
+décembre

@@ -1,0 +1,36 @@
+{
+  "_description": "Marqueurs de modalité (arabe standard). label -> {marqueur: poids}. Marqueurs repliés comme le texte du Lot A2 avant comparaison. 'قد' + verbe à l'inaccompli est traité dans le code (incertitude 0.4). « إن » est absent : il sert aussi de complémenteur (« قال إن… »).",
+  "rapporté": {
+    "حسب": 0.3,
+    "بحسب": 0.3,
+    "وفق": 0.3,
+    "وفقا ل": 0.3,
+    "نقلا عن": 0.3,
+    "حسب ما": 0.3,
+    "يقال": 0.5,
+    "تشير تقارير": 0.4
+  },
+  "hypothétique": {
+    "إذا": 0.6,
+    "لو": 0.6,
+    "في حال": 0.6
+  },
+  "incertitude": {
+    "ربما": 0.5,
+    "يبدو": 0.4,
+    "يبدو أن": 0.4,
+    "من المحتمل": 0.4,
+    "من الممكن": 0.4,
+    "يحتمل": 0.4,
+    "على الأرجح": 0.3
+  },
+  "futur": {
+    "سوف": 0.2
+  },
+  "certitude_niée": {
+    "غير مؤكد": 0.3,
+    "غير مؤكدة": 0.3,
+    "لم يتأكد": 0.3,
+    "لم يتم تأكيد": 0.3
+  }
+}

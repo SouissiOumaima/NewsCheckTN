@@ -1,0 +1,54 @@
+{
+  "_description": "Marqueurs de modalité (français). label -> {marqueur: poids}. certitude = 1 - max(poids). Les groupes 'incertitude' et 'futur' baissent la certitude sans changer le label ; 'certitude_niée' applique une baisse supplémentaire.",
+  "rapporté": {
+    "selon": 0.3,
+    "d'après": 0.3,
+    "de source": 0.3,
+    "on dit que": 0.5,
+    "il paraît que": 0.5,
+    "dit-on": 0.5
+  },
+  "conditionnel": {
+    "aurait": 0.5,
+    "auraient": 0.5,
+    "serait": 0.5,
+    "seraient": 0.5,
+    "pourrait": 0.5,
+    "pourraient": 0.5,
+    "devrait": 0.4,
+    "devraient": 0.4,
+    "faudrait": 0.4
+  },
+  "hypothétique": {
+    "au cas où": 0.6,
+    "en cas de": 0.4,
+    "à condition que": 0.6
+  },
+  "incertitude": {
+    "peut-être": 0.5,
+    "probablement": 0.4,
+    "apparemment": 0.4,
+    "sans doute": 0.3,
+    "vraisemblablement": 0.4,
+    "il semble que": 0.4,
+    "semble": 0.4,
+    "semblent": 0.4,
+    "paraît": 0.4,
+    "suppose": 0.5,
+    "supposé": 0.5,
+    "présumé": 0.5,
+    "présumée": 0.5
+  },
+  "futur": {
+    "va": 0.2,
+    "vont": 0.2
+  },
+  "certitude_niée": {
+    "il n'est pas certain que": 0.3,
+    "il n'est pas sûr que": 0.3,
+    "rien ne prouve que": 0.3,
+    "pas encore confirmé": 0.3,
+    "non confirmé": 0.3,
+    "non confirmée": 0.3
+  }
+}

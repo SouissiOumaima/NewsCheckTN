@@ -1,54 +1,81 @@
-"""Lot B — Segmentation et extraction d'affirmations candidates (SPO, modalité)."""
+"""Lot B — Segmentation et extraction d'affirmations candidates (SPO, modalité).
+
+Enchaînement : segmentation → factualité → SPO → modalité → coréférence.
+`extract_claims` (contrat partagé) projette la sortie détaillée vers `common.schemas.Claim`,
+sans exclure les opinions : l'information `is_opinion` reste dans la sortie détaillée, le
+filtrage éventuel relevant d'une décision d'équipe.
+"""
 
 from __future__ import annotations
 
-import re
+from common.schemas import Claim, Document, Lang
+from linguistic_analysis import coreference, factuality, modality, spo
+from linguistic_analysis.preprocessing import analyze, split_sentences
+from linguistic_analysis.types import DEFAULT_MODALITY, ExtractedClaim
 
-from common.schemas import Claim, Document
+__all__ = ["detect_modality", "extract_claims", "extract_claims_detailed", "split_sentences"]
 
-_SENT_SPLIT = re.compile(r"(?<=[.!?؟])\s+")
-_REPORTED = re.compile(r"\b(selon|d'après|aurait|auraient)\b|حسب|وفق", re.IGNORECASE)
 MIN_TOKENS = 4
 
 
-def split_sentences(text: str) -> list[tuple[str, tuple[int, int]]]:
-    """Découpe en phrases avec leurs positions (début, fin) dans le texte."""
-    sentences, start = [], 0
-    for part in _SENT_SPLIT.split(text):
-        idx = text.find(part, start)
-        if part.strip():
-            sentences.append((part.strip(), (idx, idx + len(part))))
-        start = idx + len(part)
-    return sentences
-
-
 def detect_modality(sentence: str) -> str:
-    # TODO(Lot B): règles + traits morphologiques (mode, temps) via spaCy/Stanza.
-    return "rapporté" if _REPORTED.search(sentence) else "assertif"
+    """Label de modalité d'une phrase isolée (voir `modality.detect_modality` pour le détail)."""
+    doc = Document(raw_text=sentence, text=sentence, lang=Lang.UNKNOWN, script="mixed")
+    analyzed = analyze(doc)
+    return modality.detect_modality(analyzed[0])[0] if analyzed else DEFAULT_MODALITY
 
 
-def extract_spo(sentence: str) -> tuple[str | None, str | None, str | None]:
-    # TODO(Lot B): extraction sujet-prédicat-objet sur l'arbre de dépendances.
-    return None, None, None
+def _resolved_source(source: str | None, log: list[str]) -> str | None:
+    """Source pronominale remplacée par son antécédent (« Il » → « Le ministre »)."""
+    for entry in log:
+        pronoun, _, antecedent = entry.partition(" → ")
+        if source is not None and source == pronoun:
+            return antecedent
+    return source
 
 
-def extract_claims(doc: Document) -> list[Claim]:
-    """Point d'entrée du Lot B : phrases candidates à la vérification."""
-    # TODO(Lot B): coréférence pour rendre chaque affirmation autonome.
+def extract_claims_detailed(doc: Document) -> list[ExtractedClaim]:
+    """Sortie détaillée du Lot B (champs internes inclus), opinions comprises."""
+    sentences = analyze(doc)
+    # Coréférence sur toutes les phrases : un antécédent peut se trouver dans une phrase courte.
+    resolutions = coreference.resolve_with_log(sentences)
+
     claims = []
-    for sentence, span in split_sentences(doc.text):
-        if len(sentence.split()) < MIN_TOKENS:
+    for sentence, resolution in zip(sentences, resolutions, strict=True):
+        if len(sentence.text.split()) < MIN_TOKENS:
             continue
-        s, p, o = extract_spo(sentence)
+        is_opinion, opinion_conf, opinion_triggers = factuality.classify_factuality(sentence)
+        triple = spo.extract_spo(sentence) or spo.SPO()
+        source = _resolved_source(triple.source, resolution.log)
+        label, certainty, modality_triggers = modality.detect_modality(
+            sentence,
+            factual=(is_opinion, opinion_conf, opinion_triggers),
+            reported=triple.reported,
+        )
         claims.append(
-            Claim(
-                text=sentence,
-                lang=doc.lang,
-                span=span,
-                subject=s,
-                predicate=p,
-                obj=o,
-                modality=detect_modality(sentence),
+            ExtractedClaim(
+                text=sentence.text,
+                lang=doc.lang,  # TODO(Lot B): sentence.lang une fois le point L1 tranché
+                span=(sentence.start, sentence.end),
+                resolved_text=resolution.resolved_text,
+                subject=triple.subject,
+                predicate=triple.predicate,
+                obj=triple.obj,
+                source=source,
+                time=triple.time,
+                location=triple.location,
+                modality=label,
+                certainty=certainty,
+                is_opinion=is_opinion,
+                confidence=max(triple.confidence, opinion_conf),
+                parser=sentence.parser,
+                triggers=opinion_triggers + modality_triggers,
+                resolution_log=resolution.log,
             )
         )
     return claims
+
+
+def extract_claims(doc: Document) -> list[Claim]:
+    """Point d'entrée du Lot B (contrat partagé) : affirmations candidates à la vérification."""
+    return [c.to_claim() for c in extract_claims_detailed(doc)]

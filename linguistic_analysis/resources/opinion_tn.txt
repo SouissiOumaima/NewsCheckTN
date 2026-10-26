@@ -1,0 +1,83 @@
+# Lexique fait / opinion — dialecte tunisien (lettres arabes ET arabizi)
+# Une entrée par ligne, '#' pour les commentaires. Comparaison repliée (minuscules, arabe normalisé).
+# Les verbes listés sont déjà à la 1re personne (préfixe n-) : ils sont comptés comme expressions.
+# Sections : voir opinion_fr.txt.
+
+[expressions]
+nchouf
+nchoufou
+n7ess
+n7essou
+nadhen
+ndhon
+fi ra2yi
+fi rayi
+fi ra2y
+ya7sra
+ye7sra
+للأسف
+نشوف
+نشوفو
+نحس
+نحسو
+نظن
+في رايي
+في رأيي
+يا حسرة
+
+[evaluatifs]
+khayeb
+khayba
+mezyen
+mezyena
+behi
+behia
+7chouma
+fadhi7a
+kartha
+خايب
+خايبة
+مزيان
+مزيانة
+باهي
+باهية
+حشومة
+فضيحة
+كارثة
+
+[intensifieurs]
+barcha
+barsha
+yaser
+yesser
+برشا
+ياسر
+
+[questions]
+3lech
+3leh
+علاش
+
+[souhaits]
+ya rit
+ya rabbi
+nchallah
+inchallah
+inshallah
+يا ريت
+يا ربي
+نشالله
+ان شاء الله
+
+[dates]
+janvi
+fivri
+avril
+mai
+juin
+juillet
+out
+septembre
+octobre
+novembre
+decembre

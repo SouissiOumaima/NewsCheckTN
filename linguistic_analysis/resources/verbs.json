@@ -1,0 +1,79 @@
+{
+  "_description": "Lexique verbal du mode règles (sans parseur). fr_er : lemmes en -er dont les formes conjuguées à la 3e personne sont générées (présent, imparfait, passé simple, futur, conditionnel, participes). fr_forms : formes françaises irrégulières, auxiliaires et modaux (fr_modals : suivis d'un infinitif, regroupés avec lui dans le prédicat). ar_past : verbes de l'arabe standard au passé, 3e personne du masculin singulier, dont sont générés le passé (ت، وا، ا), le présent (ي، ت، ن + radical, sans le ا initial), le futur (س) ; ar_intransitive : verbes sans objet direct (avec le verbe en tête, le sujet s'étend jusqu'à une préposition, un nombre ou un complément de temps / lieu), formes générées comme ar_past ; ar_forms : formes irrégulières (verbes à hamza initiale, verbes creux) ; les conjonctions و / ف collées sont retirées à la recherche. tn_forms : formes tunisiennes (lettres arabes et arabizi) listées telles quelles. Formes comparées repliées (minuscules, arabe normalisé).",
+  "fr_er": [
+    "augmenter", "baisser", "progresser", "reculer", "grimper", "chuter", "diminuer", "doubler",
+    "tripler", "stagner", "dépasser", "enregistrer", "annoncer", "lancer", "signer", "inaugurer",
+    "visiter", "rencontrer", "créer", "recruter", "licencier", "importer", "exporter",
+    "financer", "approuver", "adopter", "voter", "rejeter", "refuser", "accepter", "confirmer",
+    "déclarer", "affirmer", "indiquer", "préciser", "expliquer", "souligner",
+    "assurer", "estimer", "révéler", "signaler", "publier", "fermer",
+    "arrêter", "libérer", "condamner", "accuser", "nommer", "limoger", "démissionner", "toucher",
+    "frapper", "endommager", "coûter", "dépenser", "économiser", "allouer",
+    "consacrer", "relever", "abaisser", "fixer", "porter", "passer", "rester", "demeurer",
+    "dénoncer", "réclamer", "demander", "organiser", "participer", "manifester",
+    "protester", "décider", "annuler", "reporter", "autoriser",
+    "contrôler", "arriver", "entrer", "quitter", "tuer", "blesser", "causer",
+    "provoquer", "entraîner", "représenter", "concerner", "employer", "récolter",
+    "distribuer", "livrer", "acheter", "louer", "gagner"
+  ],
+  "fr_forms": [
+    "atteint", "atteignent", "atteignait", "atteignaient", "atteindra", "atteindrait",
+    "a", "ont", "avait", "avaient", "aura", "auront", "aurait", "auraient", "eut", "eurent",
+    "est", "sont", "était", "étaient", "sera", "seront", "serait", "seraient", "fut", "furent",
+    "été", "fait", "font", "faisait", "fera", "ferait", "dit", "disent", "dira", "dirait",
+    "prend", "prennent", "pris", "met", "mettent", "mis", "produit", "produisent", "détruit",
+    "construit", "construisent", "réduit", "réduisent", "croît", "croissent", "décroît",
+    "vend", "vendent", "vendu", "perd", "perdent", "perdu", "obtient", "obtiennent", "obtenu",
+    "devient", "deviennent", "devenu", "revient", "reviennent", "vient", "viennent",
+    "reçoit", "reçoivent", "reçu", "ouvre", "ouvrent", "ouvert", "offre", "offrent", "offert",
+    "investit", "investissent", "finit", "finissent", "fini", "choisit", "choisissent",
+    "démissionne", "relève", "relèvent", "abaisse", "lève", "lèvent", "achète", "achètent",
+    "commença", "commence", "commencent", "lança", "annonça", "avança", "plaça",
+    "changea", "mangea", "engagea", "dirigea",
+    "suspend", "suspendent", "suspendu", "interdit", "interdisent", "fournit", "fournissent",
+    "saisit", "saisissent", "sort", "sortent", "dément", "démentent", "démenti"
+  ],
+  "fr_modals": [
+    "peut", "peuvent", "pourra", "pourront", "pourrait", "pourraient", "pouvait", "pouvaient",
+    "doit", "doivent", "devra", "devront", "devrait", "devraient", "devait", "devaient",
+    "va", "vont", "allait", "allaient", "veut", "veulent", "voudrait", "voudraient"
+  ],
+  "ar_past": [
+    "ارتفع", "انخفض", "تراجع", "تقلص", "تضاعف", "زاد", "نقص", "بلغ", "تجاوز", "سجل", "حقق",
+    "وصل", "استقر", "تحسن", "تدهور", "هبط", "صعد",
+    "اعلن", "اكد", "صرح", "اوضح", "اشار", "افاد", "كشف", "نفي", "ذكر", "اضاف", "قرر",
+    "اعتبر", "شدد", "دعا", "طالب", "حذر", "نشر",
+    "افتتح", "دشن", "زار", "استقبل", "التقي", "وقع", "اطلق", "انطلق", "نظم", "شارك",
+    "انشا", "بني", "شيد", "انجز", "مول", "خصص", "رصد", "استثمر", "صادق", "اقر", "رفض",
+    "الغي", "علق", "منع", "سمح", "اغلق", "فتح", "اوقف", "اعتقل", "حجز", "ضبط", "ادان",
+    "اتهم", "اقال", "استقال", "انتخب", "فاز", "خسر", "ربح", "تسبب", "ادي",
+    "اصاب", "قتل", "توفي", "اصيب", "تضرر", "شهد", "عرف", "استورد", "انتج", "وزع",
+    "باع", "اشتري", "وفر", "انتدب", "سرح", "اضرب", "احتج", "تظاهر"
+  ],
+  "ar_intransitive": [
+    "ارتفع", "انخفض", "تراجع", "تقلص", "تضاعف", "استقر", "تحسن", "تدهور", "هبط", "صعد", "نقص",
+    "بلغ", "وصل", "توفي", "انطلق", "تضرر", "اصيب", "تظاهر", "احتج", "اضرب", "استقال", "فاز",
+    "طلع"
+  ],
+  "ar_forms": [
+    "يوكد", "توكد", "يوكدون", "نوكد", "سيوكد", "يشير", "تشير", "يشيرون", "يضيف", "تضيف",
+    "يقول", "تقول", "يقولون", "يكشف", "تكشف", "يعتبر", "تعتبر", "يبني", "تبني", "يشتري", "تشتري",
+    "يبيع", "تبيع", "يزيد", "تزيد", "سيزيد", "ستزيد", "يصل", "تصل", "سيصل", "ستصل"
+  ],
+  "tn_forms": [
+    "tla3", "tal3et", "tal3ou", "tl3ou", "yetla3", "tetla3", "yetel3ou",
+    "hbat", "hbatet", "hbatou", "hbtou", "yahbet", "tahbet", "yahbtou",
+    "zed", "zedet", "zedou", "zéd", "yzid", "tzid", "yzidou",
+    "n9es", "n9set", "n9sou", "yon9os", "tan9es", "yen9sou",
+    "wsel", "wselet", "wslet", "wselou", "youssel", "toussel",
+    "9arrer", "9arret", "9arrou", "sajel", "sajlet", "sajlou",
+    "7all", "7allet", "7allou", "sakker", "sakret", "sakrou", "bna", "bnet", "bnaw",
+    "dfa3", "dfa3et", "dfa3ou", "chra", "chret", "chraw", "ba3", "ba3et", "ba3ou",
+    "khdem", "khedmet", "khedmou", "wa99ef", "wa99fet", "wa99fou", "chadd", "chaddet", "chaddou",
+    "طلعو", "يطلع", "تطلع", "هبطو", "يهبط", "تهبط", "زادت", "زادو", "نقصت", "نقصو",
+    "وصلت", "وصلو", "قرر", "قررت", "قررو", "سجلت", "سجلو", "حل", "حلت", "حلو",
+    "سكر", "سكرت", "سكرو", "بنا", "بنات", "بناو", "دفع", "دفعت", "دفعو",
+    "شرا", "شرات", "شراو", "باع", "باعت", "باعو", "خدم", "خدمت", "خدمو",
+    "وقف", "وقفت", "وقفو", "شد", "شدت", "شدو"
+  ]
+}
