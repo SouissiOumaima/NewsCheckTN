@@ -22,15 +22,32 @@ def main() -> None:
     args = parser.parse_args()
     try:
         import torch
+
         gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
     except ImportError:
         torch, gpu = None, None
     report = {
-        "python": platform.python_version(), "platform": platform.platform(), "gpu": gpu,
-        "packages": {name: version(name) for name in ("torch", "transformers", "peft", "accelerate", "datasets", "sentence-transformers", "scikit-learn", "numpy")},
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "gpu": gpu,
+        "packages": {
+            name: version(name)
+            for name in (
+                "torch",
+                "transformers",
+                "peft",
+                "accelerate",
+                "datasets",
+                "sentence-transformers",
+                "scikit-learn",
+                "numpy",
+            )
+        },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
