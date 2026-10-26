@@ -25,6 +25,12 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
+| EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
+| EXP-C-007 | 2026-10-24 | C | Ablation raw vs normalisé | XLM-R + LoRA, seed42, test gelé | macro-F1 ; bootstrap | raw 0,7108 vs normalisé 0,6671 ; p=0,188 | raw retenu ; API alignée sur raw |
+| EXP-C-006 | 2026-10-24 | C | Baseline neuronale | MiniLM figé + LR, 3 runs | macro-F1 | 0,6350 ± 0,0000 | baseline de comparaison conservée |
+| EXP-C-005 | 2026-10-24 | C | Bootstrap apparié | TF-IDF vs XLM-R seed42, 1 000 réplications | Δ macro-F1 ; IC 95 % ; p | +0,0673 ; [-0,0468 ; 0,1860] ; p=0,254 | gain non concluant statistiquement |
+| EXP-C-003 | 2026-10-23 | C | Évaluation détaillée XLM-R + LoRA | seed 42, test gelé 120 | macro-F1 | 0.7108 ; FR 0.9148 / AR 0.6989 / TN 0.6445 | analyse d'erreurs à compléter |
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
 | EXP-D-006 | 2026-10-23 | D | Jeu réel Tunifact v1 (6 articles) | BM25 + NLI par règles + gabarit, sans réglage | Hit@1 / Recall@5 ; exactitude verdict | 0.61 / 0.41 ; verdict 0.14, 1 verdict émis (faux) | nouvelle référence de test ; dense à mesurer (Colab) |
 | EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
@@ -50,6 +56,37 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
 
 ## Entrées
+
+### EXP-C-009 — NLI (Model 2), palier Bronze : position par lexique et règles
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : composant classique exigé pour la revue Bronze (« position par lexique ») : des indices lexicaux simples (recouvrement, nombres, marqueurs de démenti, négation) suffisent-ils à dépasser nettement la classe majoritaire ?
+- **Données** : mêmes parties qu'EXP-C-008 (`data/splits/nli_v3_by_article_seed42.json`) : train 174, val 33, test 56 (25 fr, 31 ar, 0 tunisien ; 30 paires des articles du test du Lot D).
+- **Test gelé** : SHA-256 `59582eb759df4cd9e15f7a17d1df7e85dfae411717a111d52d536fc1c6c3552c` (fichier versionné dans git), gelé le 26/10/2026 au commit 967de8e, mesuré une seule fois.
+- **Méthode / configuration** : `models/nli/bronze.py`. Texte normalisé par le Lot A2. Règles dans l'ordre : R1 recouvrement des mots pleins (5 premières lettres) < 0.35 → neutral ; R2 nombres de l'affirmation absents de la preuve qui en cite → refutes ; R3 marqueur de démenti dans la preuve seulement (« faux », « démenti », « زائف », « مضلل », « mouch s7i7 »…) → refutes ; R4 négation d'un seul côté → refutes ; R5 recouvrement ≥ 0.4 ou nombres identiques → supports ; R6 sinon neutral. Seuils choisis sur train + val (grille 7 × 6, macro-F1 0.632), test évalué une seule fois. Baseline triviale : classe majoritaire du train (« supports »). Ablation (scikit-learn, régression logistique `class_weight=balanced`, C choisi sur val) : TF-IDF de n-grammes de caractères (2–5, `char_wb`) sur « affirmation || preuve », seul puis avec les 5 indices lexicaux. Déterministe.
+- **Code** : `python -m models.nli.bronze_eval --version v3 --tune` puis `python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-009`.
+- **Résultats (test, n = 56)** :
+  - classe majoritaire : macro-F1 0.194, accuracy 0.411 ;
+  - **règles par lexique : macro-F1 0.471** (IC 95 % [0.333 ; 0.591]), accuracy 0.464 ; supports F1 0.50, refutes F1 0.35, neutral F1 0.56 ;
+  - par langue : fr 0.504 (n = 25, majorité 0.190) ; ar 0.400 (n = 31, majorité 0.197) ; articles du test du Lot D 0.475 (n = 30) ;
+  - ablation : TF-IDF seul 0.405 (val 0.248) ; TF-IDF + lexique 0.534 (val 0.571) ;
+  - prétraitement (train + val, seuils re-choisis) : texte brut 0.634, normalisation A2 0.632, A2 + accents retirés 0.633 : écart négligeable.
+- **Analyse** : 30 erreurs sur 56 (`data/interim/lot_c/nli/erreurs_bronze_v3_test.csv`, privé) : paraphrase non reconnue (recouvrement faible) 8, démenti implicite 6, négation mal interprétée 6, nombres mal comparés 5, marqueur de démenti trompeur 3, recouvrement trompeur 2. Exemples : « 7 000 personnes » lu comme 7 et 000 (séparateur de milliers) → conflit de nombres à tort ; « غير النظامي » (irrégulier) pris pour une négation → refutes à tort ; « démenti » accentué non reconnu par le lexique écrit sans accent (P290) ; « و » collé cache la négation (« وغير »). Le TF-IDF seul apprend peu sur 174 paires ; les indices lexicaux apportent l'essentiel. Le prétraitement ne change presque rien ; les seuils de recouvrement et les règles R3 / R4 pèsent le plus. La combinaison TF-IDF + lexique fait mieux sur le test (0.534), mais le composant Bronze a été fixé avant la mesure (règles, sans données d'entraînement à livrer) : il n'est pas changé après coup.
+- **Décision / suite** : règles retenues comme composant Bronze de la démo (`NLI_BACKEND=bronze`, défaut). Corrections identifiées (séparateur de milliers, accents du lexique, « غير » de composition, « و » collé) : à faire sur train + val puis mesurer une seule fois sur la v4 ; pas de nouvelle mesure du test v3.
+
+### EXP-C-008 — NLI (Model 2) : baseline sans entraînement
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : remplacer le stub NLI (toujours « neutre ») par un modèle multilingue déjà entraîné sur XNLI, utilisé tel quel, et mesurer le seuil que le Model 2 entraîné devra dépasser.
+- **Données** : corpus NLI du Lot A1, `nli_corpus_300_consolide_v3_prive.jsonl` (privé, non versionné). 37 paires en attente de validation (« Brouillon non valide ») mises de côté → 263 paires. Découpage par groupe d'articles (graine 42) : train 174, val 33, test 56. Le test contient les 30 paires des articles du jeu de test du Lot D (Tunifact 613, 698, 797, 890, 933, 937). Aucun texte partagé entre les parties. Identifiants : `data/splits/nli_v3_by_article_seed42.json`. Langues du test : 25 fr, 31 ar, 0 tunisien.
+- **Méthode / configuration** : `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7`, sans entraînement. Prémisse = preuve, hypothèse = affirmation ; entailment → supports, contradiction → refutes. Troncature de la preuve à 512 tokens. CPU, 191 s pour 56 paires. Déterministe.
+- **Code** : `python -m models.nli.data --version v3 --input …` puis `python -m models.nli.evaluate --version v3 --split test --exp-id EXP-C-008`.
+- **Résultats (test, n = 56)** : accuracy 0.804, **macro-F1 0.798** (IC 95 % bootstrap [0.669 ; 0.891]).
+  - supports : P 0.95, R 0.83, F1 0.88 ; refutes : P 0.93, R 0.68, F1 0.79 ; neutral : P 0.59, R 0.93, F1 0.72.
+  - Confusion (vrai → prédit) : supports → neutral 4 ; refutes → neutral 5, refutes → supports 1 ; neutral → refutes 1.
+  - Par langue : fr 0.779 (n = 25), ar 0.776 (n = 31). Articles du test du Lot D : 0.767 (n = 30).
+- **Analyse** : le modèle tranche rarement à tort (précision 0.93–0.95 sur supports / refutes) ; ses erreurs vont presque toutes vers « neutral », ce qui mène le verdict du Lot D à s'abstenir plutôt qu'à affirmer une erreur. Pas d'écart entre français et arabe. Limites : petit test (IC large), corpus v3 encore en correction, aucune paire en tunisien ou en arabizi.
+- **Décision / suite** : baseline retenue et branchée dans `models/nli/stance.py` (utilisable par le Lot D). Suite : affiner ce même modèle sur le train (plutôt qu'entraîner XLM-R depuis zéro sur 174 paires), 3 graines, comparaison bootstrap à cette baseline ; mesures officielles une seule fois sur la v4 du corpus ; demander au Lot A1 des paires en tunisien.
 
 ### EXP-A2-010 — Perplexité : repérer les textes bruités
 - **Date** : 2026-10-26
@@ -262,6 +299,59 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Décision / suite** : nouveau modèle retenu, régénérable à l'identique. Suite : test de
   régénération (sauté sans corpus ni scikit-learn), exception dans `CONTRIBUTING.md`,
   `linguist-generated` dans `.gitattributes`.
+### EXP-C-007 — Ablation texte brut contre texte normalisé et alignement API
+- **Date** : 2026-10-24
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : vérifier l'effet de la normalisation A2 sur Model 1 et éviter que le modèle déployé reçoive une représentation différente de celle du test.
+- **Données** : `claim_detection_600.jsonl`, test gelé de 120 phrases ; XLM-R seed42.
+- **Méthode / configuration** : même architecture et split ; entraînement/évaluation `--text-mode raw`, puis `--text-mode normalized`. Bootstrap apparié à 1 000 réplications.
+- **Code** : `models/encoders/train_xlmr_claim_detection.py`, `models/encoders/evaluate_claim_detection.py`, `pipeline.py`, `api/main.py`.
+- **Résultats** : raw = 0,7108 ; normalisé = 0,6671 ; différence normalisé − raw = −0,0436 ; IC 95 % [-0,1184 ; 0,0202], p = 0,188. FR reste à 0,9148 ; AR 0,6989 → 0,6527 ; TN 0,6445 → 0,5791. Tests manuels API : `/extract` arabe et tunisien, puis `/check`, tous HTTP 200.
+- **Analyse** : la baisse observée après normalisation n'est pas statistiquement significative, mais le raw est supérieur sur ce test. Le pipeline extrait toujours les claims normalisés pour les lots aval ; il classe désormais leurs phrases brutes correspondantes avec fallback normalisé si les segmentations divergent.
+- **Décision / suite** : raw retenu pour Model 1 et inférence API alignée. Ne pas sélectionner un checkpoint sur le test ; seed42 reste le checkpoint de référence.
+
+### EXP-C-006 — Baseline neuronale MiniLM figée
+- **Date** : 2026-10-24
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : ajouter la baseline neuronale exigée et mesurer ce qu'apporte un encodeur multilingue sans fine-tuning.
+- **Données** : mêmes 480 entraînement / 120 test gelé que les autres systèmes.
+- **Méthode / configuration** : `paraphrase-multilingual-MiniLM-L12-v2` utilisé comme embeddings figés, puis régression logistique multiclasses ; seeds 42, 123 et 2026.
+- **Code** : `models/baselines/claim_detection_embedding_logreg.py`.
+- **Résultats** : macro-F1 = 0,6350 ± 0,0000 ; FR 0,8228, AR 0,8002, TN 0,4886.
+- **Analyse** : MiniLM aide FR/AR, mais échoue nettement sur le tunisien et reste sous TF-IDF globalement.
+- **Décision / suite** : baseline conservée pour comparaison ; XLM-R + LoRA reste le modèle avancé.
+
+### EXP-C-005 — Bootstrap apparié TF-IDF contre XLM-R
+- **Date** : 2026-10-24
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : déterminer si l'écart seed42 XLM-R contre baseline classique est compatible avec le hasard d'échantillonnage du test.
+- **Données** : les mêmes 120 prédictions de TF-IDF et XLM-R seed42, appariées par identifiant.
+- **Méthode / configuration** : 1 000 rééchantillonnages avec remise ; macro-F1 ; p-value bilatérale.
+- **Code** : `models/evaluation/bootstrap_paired_macro_f1.py`.
+- **Résultats** : TF-IDF 0,6435 ; XLM-R 0,7108 ; Δ = +0,0673 ; IC 95 % [-0,0468 ; 0,1860] ; p = 0,254.
+- **Analyse** : l'IC contient zéro ; le test de 120 phrases ne permet pas de conclure à une amélioration statistiquement significative.
+- **Décision / suite** : rapporter l'amélioration observée avec son incertitude ; augmenter le test pour une conclusion plus forte.
+
+### EXP-C-003 — Évaluation par langue du checkpoint Model 1 déployé
+- **Date** : 2026-10-23
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : mesurer le checkpoint de référence (`seed42`) sur le test gelé et vérifier
+  si les performances varient selon la langue.
+- **Données** : 120 exemples de test de `claim_detection_600.jsonl` ; métadonnées de langue revues,
+  soit 26 FR, 30 AR et 64 TN dans le test.
+- **Méthode / configuration** : checkpoint XLM-R + LoRA `claim_detection_xlmr_lora_seed42` ; même
+  protocole qu'EXP-C-002. Évaluation par `models/encoders/evaluate_claim_detection.py` sur Colab GPU.
+- **Code** : fichiers `models/encoders/evaluate_claim_detection.py` et
+  `data/prepare_claim_detection_dataset.py`.
+- **Résultats** : exactitude 0.7917 ; macro-F1 globale **0.7108**. Macro-F1 par langue : FR =
+  **0.9148** (n=26), AR = **0.6989** (n=30), TN = **0.6445** (n=64). F1 par classe : AFFIRMATION
+  0.8824, OPINION 0.5000, AUTRE 0.7500. Aucun exemple `unk`.
+- **Analyse** : la classe OPINION est la plus difficile (rappel 0.4211), donc le modèle la confond
+  encore fréquemment avec les deux autres classes. Le score TN, plus faible et porté par le plus grand
+  groupe, demande une revue ciblée des erreurs arabizi/mixed. Les sous-groupes FR et AR restent petits.
+- **Décision / suite** : retenir seed42 pour l'intégration (choix fixé avant cette évaluation) ; analyser
+  les erreurs exportées avant toute modification de modèle. L'analyse de 30 erreurs est documentée
+  dans `docs/lot-c_error_analysis_results.md` : 25 erreurs seed42 et 5 erreurs distinctes seed2026.
 
 ### EXP-B-006 — Tunisien en lettres arabes identifié par le Lot A2 : liste d'erreurs attendues
 - **Date** : 2026-10-26
@@ -975,3 +1065,48 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Résultats** : 22 tests passent ; le pipeline s'abstient (attendu, NLI non implémentée).
 - **Analyse** : —
 - **Décision / suite** : chaque lot remplace son stub.
+
+### EXP-C-001 — Baseline TF-IDF + régression logistique pour la détection d'affirmations
+- **Date** : 2026-10-21
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : établir une baseline reproductible de check-worthiness binaire :
+  `AFFIRMATION` contre `OPINION` ou `AUTRE`. Les n-grammes de caractères doivent donner un point de
+  comparaison qui tolère partiellement les écritures arabes, arabizi et françaises, sans modèle pré-entraîné.
+- **Données** : 60 extraits revus par Lot A1, lus dans
+  `data/annotations/normalized/tarc_review_30.jsonl` (18 affirmations, 7 opinions, 5 autres ; 25 TN,
+  5 FR) et `data/annotations/normalized/tunifact_review_30.jsonl` (30 affirmations ; 15 AR, 15 FR).
+  Les 60 phrases sans labels, les annotations privées et les extraits sans annotation ne sont pas utilisés.
+  Le corpus est très déséquilibré (48 positifs / 12 négatifs) et trop petit pour une conclusion générale.
+- **Méthode / configuration** : split stratifié 80/20, graine 42, avec les 12 IDs de test figés dans
+  `data/splits/claim_detection_pilot_seed42.json` avant toute itération. TF-IDF de caractères
+  `char_wb`, n-grammes 3-5, puis `LogisticRegression(max_iter=1000, class_weight="balanced")`.
+  Code : `models/baselines/claim_detection_tfidf.py`.
+- **Résultats** : 48 entraînement / 12 test ; macro-F1 = **0.4286**. Macro-F1 par langue dans le
+  test : AR 0.5000, FR 0.5000, TN 0.2000. Rapport brut :
+  `evaluation/results/claim_detection_tfidf_seed42.json`.
+- **Analyse** : résultat de référence uniquement, non publiable : le test comprend très peu de négatifs
+  et les sources/langues sont confondues avec les labels (Tunifact est entièrement positif). Les scores
+  par langue reposent sur des sous-groupes minuscules et ne permettent aucune comparaison fiable.
+- **Décision / suite** : baseline conservée; ne pas régler ses hyperparamètres sur ce test. Quand Lot A1/B
+  livre des annotations supplémentaires, conserver ce test ou définir un nouveau split documenté, ajouter
+  trois graines et comparer à XLM-R. Le NLI attend le fichier de paires `claim/evidence/label`.
+
+### EXP-C-002 — XLM-RoBERTa + LoRA pour la détection d'affirmations
+- **Date** : 2026-10-23
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : comparer un encodeur multilingue fine-tuné à la baseline classique sur les
+  trois classes `AFFIRMATION`, `OPINION`, `AUTRE`.
+- **Données** : `data/processed/claim_detection_600.jsonl`, 600 phrases originales annotées. Test fixé :
+  120 IDs dans `data/splits/claim_detection_multiclass_600_seed42.json`. Pour chaque seed, les 480 autres
+  phrases sont séparées en 408 entraînement et 72 validation, sans toucher au test.
+- **Méthode / configuration** : `FacebookAI/xlm-roberta-base`, LoRA (r=8, alpha=16, dropout=0.1,
+  modules query/value), 8 époques, learning rate 2e-4, batch size 8, meilleure époque sélectionnée sur
+  macro-F1 validation. Exécution GPU Colab. Code : `models/encoders/train_xlmr_claim_detection.py`.
+- **Résultats** : macro-F1 test : seed 42 = 0.7108 ; seed 123 = 0.7715 ; seed 2026 = 0.7250 ;
+  moyenne ± écart-type = **0.7357 ± 0.0317**. Baseline TF-IDF = 0.6435.
+- **Analyse** : XLM-R améliore la baseline de 0.0922 point de macro-F1 sur ce test. L'écart-type de 0.0317
+  signale une variance non négligeable, attendue avec 600 exemples et 120 exemples de test. Les résultats
+  par langue du checkpoint retenu sont documentés dans EXP-C-003.
+- **Décision / suite** : XLM-R + LoRA est retenu comme modèle avancé du Model 1. Conserver les trois
+  checkpoints et le split; compléter l'analyse d'erreurs, les résultats par langue et le bootstrap apparié
+  contre la baseline avant le rapport final.

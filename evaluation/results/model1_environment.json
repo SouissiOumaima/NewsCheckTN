@@ -1,0 +1,15 @@
+{
+  "python": "3.13.16",
+  "platform": "Linux-6.6.122+-x86_64-with-glibc2.39",
+  "gpu": "Tesla T4",
+  "packages": {
+    "torch": "2.11.0+cu130",
+    "transformers": "5.20.2",
+    "peft": "0.21.2",
+    "accelerate": "1.15.0",
+    "datasets": "4.8.5",
+    "sentence-transformers": "5.7.0",
+    "scikit-learn": "1.6.1",
+    "numpy": "2.1.3"
+  }
+}
