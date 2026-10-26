@@ -32,9 +32,7 @@ RESULTS_DIR = ROOT / "evaluation" / "results"
 HEAVY_RESULT_KEYS = {"items", "per_claim", "bootstrap", "errors"}
 
 app = FastAPI(title="NewsCheck TN API", version="0.2.0")
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 class TextIn(BaseModel):
@@ -138,7 +136,9 @@ def _stance_function(nli: str):
     try:
         from rag_llm.baseline_stance import predict_stances as rules
     except ImportError:
-        raise HTTPException(501, "Le NLI par règles du Lot D n'est pas encore disponible.") from None
+        raise HTTPException(
+            501, "Le NLI par règles du Lot D n'est pas encore disponible."
+        ) from None
     return rules
 
 
@@ -153,7 +153,12 @@ def verdict_detail_route(body: VerdictDetailIn) -> dict:
         "corpus_size": len(load_evidence_corpus()),
         "nli": body.nli,
         "evidences": [
-            {**asdict(item.evidence), "rank": rank, "stance": item.stance.value, "confidence": item.confidence}
+            {
+                **asdict(item.evidence),
+                "rank": rank,
+                "stance": item.stance.value,
+                "confidence": item.confidence,
+            }
             for rank, item in enumerate(stances, start=1)
         ],
         "verdict": asdict(verdict),
@@ -164,7 +169,11 @@ def verdict_detail_route(body: VerdictDetailIn) -> dict:
 def corpus_stats_route() -> dict:
     """Résumé du corpus chargé, pour la page Lot A1."""
     corpus = load_evidence_corpus()
-    return {"size": len(corpus), "by_source": dict(Counter(item.source for item in corpus).most_common()), "sample": [asdict(item) for item in corpus[:5]]}
+    return {
+        "size": len(corpus),
+        "by_source": dict(Counter(item.source for item in corpus).most_common()),
+        "sample": [asdict(item) for item in corpus[:5]],
+    }
 
 
 @app.get("/results")
@@ -178,7 +187,12 @@ def results_route() -> dict:
             results.append({"file": path.name, "error": "fichier JSON illisible"})
             continue
         if isinstance(data, dict):
-            results.append({"file": path.name, **{key: value for key, value in data.items() if key not in HEAVY_RESULT_KEYS}})
+            results.append(
+                {
+                    "file": path.name,
+                    **{key: value for key, value in data.items() if key not in HEAVY_RESULT_KEYS},
+                }
+            )
     return {"results": results}
 
 
