@@ -8,6 +8,7 @@ Plateforme web  : http://localhost:8000/app/   (pages de frontend/, servies par 
 from __future__ import annotations
 
 import json
+import time
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
@@ -23,7 +24,8 @@ from common.schemas import Claim, Evidence, Lang
 from data.loaders import load_evidence_corpus
 from linguistic_analysis.claim_extraction import extract_claims
 from models.claim_detector import filter_checkworthy
-from models.nli.stance import predict_stance, predict_stances
+from models.nli import bronze
+from models.nli.stance import backend_info, predict_stance, predict_stances
 from normalization.normalize import normalize
 from rag_llm.retrieval.hybrid import retrieve
 from rag_llm.verdict import generate_verdict
@@ -88,6 +90,20 @@ def nli_route(body: NLIIn) -> dict:
     claim = Claim(text=body.claim, lang=body.lang)
     ev = Evidence(doc_id="user-input", text=body.evidence, source="user")
     return asdict(predict_stance(claim, ev))
+
+
+@app.post("/nli/detail")  # Lot C : position + règle appliquée (mode debug de la démo)
+def nli_detail_route(body: NLIIn) -> dict:
+    start = time.perf_counter()
+    result = nli_route(body)
+    info = backend_info()
+    detail = {**result, "backend": info, "rule": None, "signals": None}
+    if info["backend"] == "bronze":
+        signals = bronze.signals(body.claim, body.evidence)
+        detail["rule"] = bronze.decide(signals)[2]
+        detail["signals"] = asdict(signals)
+    detail["latency_ms"] = round((time.perf_counter() - start) * 1000, 1)
+    return detail
 
 
 @app.post("/verdict")  # Lot D

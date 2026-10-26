@@ -6,41 +6,157 @@
   <title>Modèles et NLI · NewsCheck TN</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .rules { display: grid; gap: 8px; }
+    .rule { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface-2); font-size: 0.92rem; }
+    .rule .id { font-family: var(--font-mono); font-weight: 700; color: var(--muted); }
+    .rule.fired { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 4px var(--accent-soft); }
+    .rule.fired .id { color: var(--accent); }
+    .rule.skipped { opacity: 0.5; }
+    .big { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+  </style>
 </head>
 <body>
   <main class="page">
     <div class="page-head">
       <div class="eyebrow">Lot C · modèles</div>
       <h1>Modèles et NLI</h1>
-      <p class="lede">Le Lot C entraîne les modèles du projet : détection des affirmations vérifiables et NLI, qui dit si un passage soutient, contredit ou ne tranche pas une affirmation.</p>
+      <p class="lede">Le Lot C décide si une phrase est une affirmation vérifiable (Model 1), puis si un passage de preuve la soutient, la contredit ou ne tranche pas (Model 2). Au palier Bronze, le Model 2 est un ensemble de règles par lexique : cette page montre quelle règle décide, et pourquoi.</p>
     </div>
-    <p class="notice todo"><strong>Page de départ, à compléter par le Lot C.</strong> Elle appelle déjà la route <code>/nli</code> de l'API. Le responsable du lot peut l'enrichir librement (exemples, explications, résultats), en gardant la base commune : <code>assets/style.css</code> et <code>assets/app.js</code>.</p>
+
     <form class="card" id="form">
+      <h2 style="margin:0">Position d'une preuve (Model 2, palier Bronze)</h2>
       <label class="field">Affirmation<textarea id="claim" dir="auto" style="min-height:60px" required></textarea></label>
-      <label class="field">Passage de preuve<textarea id="ev" dir="auto" style="min-height:80px" required></textarea></label>
-      <div class="examples">Exemple :
-        <button type="button" class="chip" id="ex">chômage 25 % contre 16 %</button>
+      <label class="field">Passage de preuve<textarea id="ev" dir="auto" style="min-height:90px" required></textarea></label>
+      <div class="examples">Exemples :
+        <button type="button" class="chip" data-ex="0">nombres (FR)</button>
+        <button type="button" class="chip" data-ex="1">démenti (FR)</button>
+        <button type="button" class="chip" data-ex="2">négation (AR)</button>
+        <button type="button" class="chip" data-ex="3">limite : « لم يتغير » (AR)</button>
+        <button type="button" class="chip" data-ex="4">hors sujet</button>
       </div>
-      <div class="row"><button class="btn" type="submit">Comparer</button></div>
+      <div class="row"><button class="btn" type="submit" id="go">Analyser</button><span class="empty" id="lat"></span></div>
     </form>
     <div class="error" id="err" hidden></div>
-    <section class="card" id="res" hidden><h2>Position du passage</h2><div id="out"></div></section>
+    <div id="notice"></div>
+
+    <section class="grid-2" id="res" hidden>
+      <div class="card">
+        <h2>Décision</h2>
+        <div id="decision"></div>
+        <dl class="kv" id="signals"></dl>
+      </div>
+      <div class="card">
+        <h2>Chemin des règles</h2>
+        <p class="sub" style="margin:0">Les règles sont testées dans l'ordre ; la première qui s'applique décide.</p>
+        <div class="rules" id="rules"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Résultats sur le test fixé (Model 2, EXP-C-003)</h2>
+      <div id="results"><p class="empty">Chargement…</p></div>
+    </section>
+
+    <form class="card" id="form1">
+      <h2 style="margin:0">Détection d'affirmations (Model 1)</h2>
+      <p class="sub" style="margin:0">Section d'Achref. Colle un texte : la route <code>/extract</code> renvoie les affirmations gardées et leur score de vérifiabilité.</p>
+      <label class="field">Texte<textarea id="text1" dir="auto" style="min-height:70px" required></textarea></label>
+      <div class="row"><button class="btn ghost" type="submit">Extraire</button></div>
+      <div class="stack" id="out1"></div>
+    </form>
   </main>
+
   <script src="assets/app.js"></script>
   <script>
     NC.init("c");
-    document.getElementById("ex").addEventListener("click", () => {
-      document.getElementById("claim").value = "Le chômage en Tunisie a atteint 25 % en 2025.";
-      document.getElementById("ev").value = "Selon l'INS, le taux de chômage s'est établi à 16 % au deuxième trimestre 2025.";
-    });
+    const EXAMPLES = [
+      ["Le taux de chômage en Tunisie est de 25 %.", "Selon l'INS, le taux de chômage en Tunisie est de 16 %."],
+      ["Le ministère a confirmé la hausse du prix du pain.", "Le ministère a démenti la hausse du prix du pain, une rumeur infondée."],
+      ["الصورة المتداولة مفبركة.", "أكد البحث العكسي أن الصورة المتداولة غير مفبركة."],
+      ["سعر الخبز المدعم 190 مليما.", "سعر الخبز المدعم لم يتغير ويبقى 190 مليما."],
+      ["Le couscous est un plat tunisien.", "La bourse de Tunis a progressé de 2 % cette semaine."],
+    ];
+    const RULES = [
+      ["R1", "Recouvrement des mots faible", "neutre"],
+      ["R2", "Nombres en conflit", "contredit"],
+      ["R3", "Marqueur de démenti dans la preuve", "contredit"],
+      ["R4", "Négation d'un seul côté", "contredit"],
+      ["R5", "Recouvrement élevé ou mêmes nombres", "soutient"],
+      ["R6", "Recouvrement moyen", "neutre"],
+    ];
+    const yesNo = (b) => (b ? "oui" : "non");
+    document.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => {
+      const [c, e] = EXAMPLES[+b.dataset.ex];
+      document.getElementById("claim").value = c; document.getElementById("ev").value = e;
+    }));
+
     document.getElementById("form").addEventListener("submit", async (e) => {
-      e.preventDefault(); const err = document.getElementById("err"); err.hidden = true;
+      e.preventDefault();
+      const err = document.getElementById("err"), go = document.getElementById("go");
+      err.hidden = true; go.disabled = true;
       try {
-        const r = await NC.api("/nli", { claim: document.getElementById("claim").value, evidence: document.getElementById("ev").value });
-        document.getElementById("out").innerHTML = `<p>${NC.stanceChip(r.stance, r.confidence)}</p>` +
-          (r.stance === "neutral" && !r.confidence ? `<p class="notice">Réponse « neutre » avec une confiance nulle : c'est le module provisoire, le modèle NLI n'est pas encore branché.</p>` : "");
+        const d = await NC.api("/nli/detail", {
+          claim: document.getElementById("claim").value, evidence: document.getElementById("ev").value,
+        });
+        document.getElementById("lat").textContent = `Traitement : ${NC.fmt(d.latency_ms, 1)} ms · moteur : ${d.backend.backend}`;
+        document.getElementById("decision").innerHTML =
+          `<p>${NC.stanceChip(d.stance, d.confidence)}</p>` + (d.rule ? `<p class="sub">Règle appliquée : <b>${NC.esc(d.rule)}</b></p>` : "");
+        const s = d.signals;
+        document.getElementById("signals").innerHTML = s ? `
+          <dt>recouvrement</dt><dd>${NC.fmt(s.overlap * 100, 0)} % des mots pleins de l'affirmation</dd>
+          <dt>nombres en conflit</dt><dd>${yesNo(s.number_conflict)}</dd>
+          <dt>mêmes nombres</dt><dd>${yesNo(s.numbers_match)}</dd>
+          <dt>démenti</dt><dd>${yesNo(s.refute_cue)}</dd>
+          <dt>négation</dt><dd>${s.negation_mismatch ? "d'un seul côté" : "non"}</dd>` : "";
+        const fired = d.rule ? d.rule.slice(0, 2) : null;
+        let passed = false;
+        document.getElementById("rules").innerHTML = RULES.map(([id, name, out]) => {
+          const cls = id === fired ? "fired" : (passed ? "skipped" : "");
+          if (id === fired) passed = true;
+          return `<div class="rule ${cls}"><span class="id">${id}</span><span>${NC.esc(name)}</span><span class="tag">→ ${out}</span></div>`;
+        }).join("");
+        document.getElementById("notice").innerHTML = d.backend.backend !== "bronze"
+          ? `<p class="notice">Moteur actif : « ${NC.esc(d.backend.backend)} ». Le détail des règles ne s'affiche qu'avec le moteur Bronze (NLI_BACKEND=bronze, réglage par défaut).</p>` : "";
         document.getElementById("res").hidden = false;
       } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+      finally { go.disabled = false; }
+    });
+
+    (async () => {
+      const box = document.getElementById("results");
+      try {
+        const { results } = await NC.api("/results");
+        const r = results.filter((x) => x.lot === "C" && x.task === "nli" && String(x.model).includes("regles")).at(-1);
+        if (!r) {
+          box.innerHTML = `<p class="notice">Aucun fichier de résultats du NLI Bronze sur cette machine. Lancer : <code>python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-003</code> (données du Lot A1 nécessaires).</p>`;
+          return;
+        }
+        const m = r.metrics;
+        const langs = Object.entries(m.by_lang || {}).map(([g, v]) =>
+          `<tr><td>${NC.esc(g)}</td><td class="n">${v.n}</td><td class="n">${NC.fmt(v.rules, 3)}</td><td class="n">${NC.fmt(v.majority, 3)}</td></tr>`).join("");
+        const abl = Object.entries(m.ablation || {}).map(([k, v]) => `<span class="tag">${NC.esc(k)} ${NC.fmt(v.macro_f1, 3)}</span>`).join(" ");
+        box.innerHTML = `
+          <div class="kpis">
+            <div class="kpi"><div class="k">Règles par lexique</div><div class="v">${NC.fmt(m.macro_f1, 3)}</div></div>
+            <div class="kpi"><div class="k">Classe majoritaire</div><div class="v">${NC.fmt(m.majority_macro_f1, 3)}</div></div>
+            <div class="kpi"><div class="k">Paires de test</div><div class="v">${m.n}</div></div>
+          </div>
+          <div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>Langue</th><th class="n">n</th><th class="n">Règles</th><th class="n">Majorité</th></tr></thead><tbody>${langs}</tbody></table></div>
+          <p class="sub" style="margin-top:10px">macro-F1 · ${NC.esc(r.exp_id || "")} · corpus ${NC.esc(r.corpus_version || "")} · ablation : ${abl || "—"}</p>`;
+      } catch (ex) { box.innerHTML = `<p class="error">${NC.esc(ex.message)}</p>`; }
+    })();
+
+    document.getElementById("form1").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const out = document.getElementById("out1");
+      try {
+        const { claims } = await NC.api("/extract", { text: document.getElementById("text1").value });
+        out.innerHTML = claims.length ? claims.map((c) => `
+          <div class="ev"><div class="h"><span class="tag">${NC.esc(c.lang)}</span>${c.modality ? `<span class="tag">${NC.esc(c.modality)}</span>` : ""}
+          <span>vérifiabilité ${NC.fmt(c.checkworthiness)}</span></div><div class="tx">${NC.text(c.text)}</div></div>`).join("")
+          : `<p class="empty">Aucune affirmation vérifiable gardée.</p>`;
+      } catch (ex) { out.innerHTML = `<p class="error">${NC.esc(ex.message)}</p>`; }
     });
   </script>
 </body>

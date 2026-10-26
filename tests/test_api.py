@@ -73,3 +73,23 @@ def test_pages_web_servies_par_l_api():
     r = client.get("/app/")
     assert r.status_code == 200 and "NewsCheck" in r.text
     assert client.get("/app/assets/app.js").status_code == 200
+
+
+def test_nli_detail_montre_la_regle_bronze(monkeypatch):
+    from models.nli import stance
+
+    monkeypatch.setenv("NLI_BACKEND", "bronze")
+    stance.set_classifier(None)
+    r = client.post(
+        "/nli/detail",
+        json={
+            "claim": "Le taux de chômage est de 25 %.",
+            "evidence": "Le taux de chômage est de 15 %.",
+        },
+    )
+    stance.set_classifier(None)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["stance"] == "refutes" and body["rule"].startswith("R2")
+    assert body["backend"]["backend"] == "bronze" and body["signals"]["number_conflict"] is True
+    assert body["latency_ms"] >= 0
