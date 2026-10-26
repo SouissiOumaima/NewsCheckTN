@@ -27,7 +27,10 @@ Documentation interactive : http://localhost:8000/docs
 | GET  | `/app/` | E | — | pages de la plateforme (`frontend/`) |
 
 Le corpus de preuves est lu dans `data/processed/evidence_corpus.jsonl`, ou dans le fichier indiqué par
-la variable d'environnement `EVIDENCE_CORPUS` (voir `frontend/README.md`).
+la variable d'environnement `EVIDENCE_CORPUS` (voir `frontend/README.md`). Un corpus **demandé** introuvable
+ou invalide (dossier, JSON invalide, `doc_id` manquant ou en double) renvoie **503** avec un message clair
+(fichier et numéro de ligne) ; sans corpus configuré, l'API utilise un échantillon de 2 passages et
+`GET /corpus/stats` le signale (`origin`, `warning`).
 
 ## Conventions
 - L'API ne contient **aucune logique métier** : elle appelle les points d'entrée des lots.

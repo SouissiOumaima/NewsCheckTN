@@ -37,6 +37,11 @@ bash :
 EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl uvicorn api.main:app --reload
 ```
 
+Si le chemin de `EVIDENCE_CORPUS` est faux ou si le fichier est invalide, l'API répond par une erreur
+claire (code 503, avec le fichier et le numéro de ligne) au lieu de retomber en silence sur l'échantillon.
+Le fichier `data/processed/evidence_corpus*.jsonl` est ignoré par Git, pour ne jamais versionner par
+erreur un corpus dont les droits ne sont pas confirmés.
+
 ## Pages
 
 | Page | Fichier | Responsable | Route(s) API |

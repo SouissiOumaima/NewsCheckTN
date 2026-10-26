@@ -73,3 +73,18 @@ def test_pages_web_servies_par_l_api():
     r = client.get("/app/")
     assert r.status_code == 200 and "NewsCheck" in r.text
     assert client.get("/app/assets/app.js").status_code == 200
+
+
+def test_corpus_invalide_donne_une_erreur_claire_et_pas_500(tmp_path, monkeypatch):
+    monkeypatch.setenv("EVIDENCE_CORPUS", str(tmp_path / "absent.jsonl"))
+    for r in (client.get("/corpus/stats"), client.post("/verdict/detail", json={"claim": TEXT})):
+        assert r.status_code == 503
+        assert "introuvable" in r.json()["detail"]
+
+
+def test_corpus_stats_indique_l_origine(tmp_path, monkeypatch):
+    path = tmp_path / "corpus.jsonl"
+    path.write_text('{"doc_id": "x-1", "text": "passage", "source": "s"}\n', encoding="utf-8")
+    monkeypatch.setenv("EVIDENCE_CORPUS", str(path))
+    data = client.get("/corpus/stats").json()
+    assert data["size"] == 1 and data["origin"] == "EVIDENCE_CORPUS" and "warning" not in data
