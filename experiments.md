@@ -51,6 +51,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
 | EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
+| EXP-B-007 | 2026-10-27 | B | Baselines triviales sur eval_30 (palier Bronze) | détection « toute phrase = affirmation » ; modalité « classe majoritaire » ; SPO par position (prédicat = premier mot du lexique verbal du mode règles, sujet = premier mot de 3 lettres ou plus, objet = mot suivant le prédicat) ; bootstrap graine 20261015, 1000 tirages | exactitude de détection ; exactitude de modalité ; SPO exact | détection 0.647 vs 1.000 ; modalité 0.412 vs 1.000 ; triplet exact 0.000 vs 0.909 (règles) et 0.864 (parseurs) | baselines retenues pour la revue Bronze ; scores sur jeu de mise au point (optimistes) ; suite : eval_100 |
 | EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
 | EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
 | EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
@@ -59,6 +60,37 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 
 ## Entrées
+
+### EXP-B-007 — Baselines triviales sur eval_30 (palier Bronze)
+- **Date** : 2026-10-27
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : situer les scores d'eval_30 par rapport à des baselines triviales
+  (exigées par la revue Bronze). Hypothèse : le système dépasse nettement ces baselines.
+- **Données** : `tests/fixtures/linguistic_analysis/eval_30.jsonl`, 34 phrases, 22 affirmations ;
+  répartition des modalités du gold : assertif 14, rapporté 7, opinion 5, interrogatif 4, souhait 2,
+  conditionnel 1, hypothétique 1.
+- **Méthode / configuration** : trois baselines triviales : détection « toute phrase = affirmation » ;
+  modalité « classe majoritaire » ; SPO par position (prédicat = premier mot du lexique verbal du mode
+  règles, sujet = premier mot de 3 lettres ou plus, objet = mot suivant le prédicat). Mesure SPO
+  identique à `evaluate.py` (elle redonne 0.909 et 0.864) ; écart et IC 95 % par bootstrap apparié
+  (graine 20261015, 1000 tirages) ; déterministe.
+- **Code** : commit `365209c`, `linguistic_analysis/baselines_bronze.py` ; commande :
+  `python -X utf8 -m linguistic_analysis.baselines_bronze` (option `--rules-only` pour éviter spaCy
+  et Stanza).
+- **Résultats** (N = 34 phrases, N = 22 affirmations pour le SPO) :
+  - détection : exactitude 0.647 (système 1.000, écart +0.353 [0.176 ; 0.500]), précision 0.647,
+    rappel 1.000 (système 1.000), macro-F1 0.393 ;
+  - modalité : exactitude 0.412 (système 1.000, écart +0.588 [0.412 ; 0.765]) ;
+  - SPO : triplet exact 0.000 (règles 0.909, parseurs 0.864), sujet 0.227, prédicat 0.364, objet 0.000.
+- **Analyse** : en détection, le système ne gagne que sur la précision (la baseline a un rappel de 1.0
+  par construction) ; le macro-F1 de modalité (0.083) n'est pas interprétable (conditionnel et
+  hypothétique : 1 phrase chacun) ; la baseline SPO réutilise le lexique verbal du mode règles, donc
+  elle est un peu favorable, et son triplet exact à 0.000 la rend peu informative : citer aussi les
+  scores sujet et prédicat. Limites : eval_30 a servi à mettre au point les règles (scores
+  optimistes), un seul annotateur, aucune seconde annotation, effectifs petits (une phrase pèse
+  environ 0.03 en détection et 0.045 en SPO).
+- **Décision / suite** : baselines retenues pour la revue Bronze ; mesurer sur `eval_100` (double
+  annotation, test fixé) ; ajouter un test unitaire pour `baselines_bronze.py`.
 
 ### EXP-C-009 — NLI (Model 2), palier Bronze : position par lexique et règles
 - **Date** : 2026-10-26
