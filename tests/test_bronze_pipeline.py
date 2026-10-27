@@ -2,9 +2,12 @@
 
 from bronze.pipeline import check_text
 from common.schemas import Label
+from models.nli.stance import set_classifier
 
 
-def test_bronze_pipeline_verifies_a_french_fact_with_the_rules_only():
+def test_bronze_pipeline_verifies_a_french_fact_with_the_rules_only(monkeypatch):
+    monkeypatch.setenv("NLI_BACKEND", "bronze")
+    set_classifier(None)
     verdicts = check_text("Tunis est la capitale de la Tunisie.")
     assert len(verdicts) == 1
     assert verdicts[0].label == Label.TRUE

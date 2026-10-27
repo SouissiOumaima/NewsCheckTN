@@ -20,8 +20,7 @@ _SAMPLE = [
     Evidence(
         doc_id="sample-001",
         text=(
-            "Selon l'INS, le taux de chômage en Tunisie était de 16,4 % "
-            "au deuxième trimestre 2023."
+            "Selon l'INS, le taux de chômage en Tunisie était de 16,4 % au deuxième trimestre 2023."
         ),
         source="INS (échantillon)",
     ),

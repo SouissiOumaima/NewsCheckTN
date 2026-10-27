@@ -70,7 +70,7 @@ métriques. Cette étape ne peut pas être remplacée par des données inventée
 | Score seed42 par langue | FR 0,9148 ; AR 0,6989 ; TN 0,6445 | EXP-C-003 |
 | Comparaison statistique | TF-IDF 0,6435 ; XLM-R seed42 0,7108 ; p = 0,254 | EXP-C-005 |
 | Ablation raw / normalisé | raw 0,7108 ; normalisé 0,6671 ; p = 0,188 | EXP-C-007 |
-| Analyse d'erreurs | 30 erreurs cross-seed catégorisées | EXP-C-008 |
+| Analyse d'erreurs | 30 erreurs cross-seed catégorisées | EXP-C-010 |
 
 ### Analyse des 30 erreurs Model 1
 
