@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preuves et verdict · NewsCheck TN</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Lot D · recherche de preuves et verdict</div>
+      <h1>Preuves et verdict</h1>
+      <p class="lede">Pour une affirmation, le Lot D cherche les passages qui en parlent dans le corpus de preuves (BM25, ou recherche hybride), récupère la position de chacun (soutient, contredit, neutre) puis rend un verdict cité, ou s'abstient quand les preuves ne suffisent pas.</p>
+    </div>
+
+    <form class="card" id="form">
+      <label class="field">Affirmation à vérifier
+        <textarea id="claim" dir="auto" style="min-height:80px" required></textarea>
+      </label>
+      <div class="examples">Exemples (jeu de développement fictif) :
+        <button type="button" class="chip" data-ex="0">chômage (FR)</button>
+        <button type="button" class="chip" data-ex="1">pain (AR)</button>
+        <button type="button" class="chip" data-ex="2">sans preuve</button>
+      </div>
+      <div class="row">
+        <label class="field">Langue
+          <select id="lang"><option value="fr">français</option><option value="ar">arabe standard</option><option value="tn">tunisien</option></select>
+        </label>
+        <label class="field">Passages retrouvés
+          <input type="number" id="k" min="1" max="20" value="5">
+        </label>
+        <label class="field">Position des preuves (NLI)
+          <select id="nli">
+            <option value="regles">règles du Lot D (provisoire)</option>
+            <option value="lot-c">modèle du Lot C</option>
+          </select>
+        </label>
+        <button class="btn" type="submit" id="go">Vérifier</button>
+      </div>
+    </form>
+
+    <div class="error" id="err" hidden></div>
+    <div id="notice"></div>
+    <section class="grid-2" id="res" hidden>
+      <div class="card">
+        <h2>Verdict</h2>
+        <div id="verdict"></div>
+      </div>
+      <div class="card">
+        <h2>Passages retrouvés</h2>
+        <div class="stack" id="evs"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Mesures du Lot D</h2>
+      <p class="sub" style="margin:0">Jeux d'évaluation : jeu de développement fictif et jeu réel Tunifact (articles du Lot A1). Journal : entrées EXP-D-001 à EXP-D-006 de <code>experiments.md</code>. Les fichiers de résultats sont dans le <a href="evaluation.html">tableau de bord d'évaluation</a>.</p>
+    </section>
+  </main>
+
+  <script src="assets/app.js"></script>
+  <script>
+    NC.init("d");
+    const EXAMPLES = [
+      ["Le chômage en Tunisie a atteint 25 % en 2025.", "fr"],
+      ["سعر الخبز المدعم 190 مليما", "ar"],
+      ["Le ministre a inauguré un nouvel aéroport à Kairouan.", "fr"],
+    ];
+    document.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => {
+      const [t, l] = EXAMPLES[+b.dataset.ex];
+      document.getElementById("claim").value = t; document.getElementById("lang").value = l;
+    }));
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err"), go = document.getElementById("go");
+      err.hidden = true; go.disabled = true;
+      try {
+        const d = await NC.api("/verdict/detail", {
+          claim: document.getElementById("claim").value,
+          lang: document.getElementById("lang").value,
+          k: +document.getElementById("k").value || 5,
+          nli: document.getElementById("nli").value,
+        });
+        const notes = [];
+        if (d.corpus && d.corpus.warning) notes.push(`Le corpus chargé par l'API ne contient que ${d.corpus_size} passage(s) d'exemple. Pour les vrais articles Tunifact : créer le corpus avec <code>python -m rag_llm.build_tunifact_eval</code>, puis relancer l'API avec la variable <code>EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl</code> (voir <code>frontend/README.md</code>).`);
+        else notes.push(`Corpus chargé : ${d.corpus_size} passages (${NC.esc(d.corpus ? d.corpus.origin : "?")}).`);
+        if (d.nli === "lot-c") notes.push("NLI du Lot C : tant que le modèle n'est pas branché, il répond toujours « neutre » et le système s'abstient.");
+        document.getElementById("notice").innerHTML = `<p class="notice">${notes.join(" ")}</p>`;
+        document.getElementById("verdict").innerHTML = NC.verdictBox(d.verdict);
+        const cited = new Set(d.verdict.citations);
+        document.getElementById("evs").innerHTML = d.evidences.length ? d.evidences.map((ev) => `
+          <div class="ev${cited.has(ev.doc_id) ? " cited" : ""}">
+            <div class="h"><span class="num">#${ev.rank}</span><span class="doc">${NC.esc(ev.doc_id)}</span>
+              <span class="num">score ${NC.fmt(ev.score)}</span>${NC.stanceChip(ev.stance, ev.confidence)}
+              ${cited.has(ev.doc_id) ? '<span class="tag">citée</span>' : ""}<span>${NC.esc(ev.source)}</span></div>
+            <div class="tx">${NC.text(ev.text)}</div>
+          </div>`).join("") : `<p class="empty">Aucun passage retrouvé : aucun mot en commun avec le corpus.</p>`;
+        document.getElementById("res").hidden = false;
+      } catch (ex) {
+        err.hidden = false; err.textContent = ex.message;
+      } finally { go.disabled = false; }
+    });
+  </script>
+</body>
+</html>
