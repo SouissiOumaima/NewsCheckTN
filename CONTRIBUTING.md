@@ -83,6 +83,11 @@ Puis ouvrir une **Pull Request** `lot-xxx → main` sur GitHub.
 
 **Données et modèles**
 - **Jamais** de corpus brut, de checkpoint, d'index ou de clé API dans git (voir `.gitignore`).
+  - *Exception décidée par l'équipe (octobre 2026)* : `normalization/resources/arabizi_ngrams.json`
+    (environ 315 Ko), poids du modèle arabizi du Lot A2. Il est versionné pour que la CI et les
+    autres lots l'utilisent sans scikit-learn ni corpus. Conditions : il reste petit ; il est
+    régénérable à l'identique (`python -m normalization.train_langid`, vérifié par le test lent
+    `test_arabizi_model_is_regenerable`) ; il est marqué `linguist-generated` dans `.gitattributes`.
 - Les gros fichiers se partagent via le drive de l'équipe / Hugging Face Hub ; le lien et la procédure
   de téléchargement sont documentés dans le README du dossier concerné.
 - Les secrets vont dans `.env` (jamais commité), modèle dans `.env.example`.

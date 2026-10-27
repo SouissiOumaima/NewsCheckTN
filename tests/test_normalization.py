@@ -439,3 +439,138 @@ def test_french_comments_about_tunisia_are_french(text):
     # français. Avant EXP-A2-005, le mot "tunisie" suffisait à les faire classer arabizi.
     assert detect_script(text) == "latin"
     assert detect_language(text) == Lang.FR
+
+
+@pytest.mark.slow
+def test_arabizi_model_is_regenerable(tmp_path):
+    """Le fichier de poids versionné se régénère à l'identique (EXP-A2-006).
+
+    Condition de l'équipe pour versionner ce fichier. Lent (1 à 3 min) : ignoré en CI
+    (pytest -m "not slow"), et sauté sans scikit-learn ou sans les corpus de data/raw/langid/.
+    """
+    pytest.importorskip("sklearn")
+    from normalization import train_langid
+
+    corpora = ("tunizi_train", "TSAC", "UD_French-GSD")
+    needed = [train_langid.RAW / name for name in corpora] + [train_langid.SAMPLE]
+    missing = [str(path) for path in needed if not path.exists()]
+    if missing:
+        pytest.skip(f"corpus locaux absents : {missing}")
+    output = tmp_path / "arabizi_ngrams.json"
+    train_langid.main(output)  # écrit dans un dossier temporaire, jamais dans le dépôt
+    assert output.read_bytes() == train_langid.OUTPUT.read_bytes(), (
+        "fichier de poids non régénérable : relancer python -m normalization.train_langid "
+        "et noter l'expérience dans experiments.md"
+    )
+
+
+@pytest.mark.parametrize("token", ["8ali", "8odwa", "s8ir", "lou8a", "fer8a"])
+def test_digit_8_is_arabizi(token):
+    # 8 = غ en arabizi tunisien (EXP-A2-008, revue de la PR #3).
+    from normalization.normalize import _is_arabizi_token
+
+    assert _is_arabizi_token(token)
+
+
+@pytest.mark.parametrize("token", ["A380", "8h", "8eme", "8bits", "B8"])
+def test_digit_8_false_friends_are_not_arabizi(token):
+    from normalization.normalize import _is_arabizi_token
+
+    assert not _is_arabizi_token(token)
+
+
+def test_digit_8_example_from_review():
+    doc = normalize("8ali barcha")
+    assert doc.script == "arabizi"
+    assert doc.lang == Lang.TN
+
+
+def test_historical_rule_ignores_digit_8():
+    # Tirage des échantillons et entraînement gardent la règle d'origine, sans le 8.
+    from normalization.normalize import ARABIZI_DIGITS_V1, detect_script_by_rules
+
+    assert detect_script_by_rules("8ali barcha") == "arabizi"
+    assert detect_script_by_rules("8ali barcha", digits=ARABIZI_DIGITS_V1) == "latin"
+
+
+def test_evaluate_default_dataset_does_not_depend_on_current_folder():
+    # Revue de la PR #3 (Lot D) : chemin construit depuis l'emplacement de evaluate.py.
+    from normalization import evaluate
+
+    assert evaluate.DEFAULT_DATASET.is_absolute()
+    assert evaluate.DEFAULT_DATASET.exists()
+
+
+def test_evaluate_scores_precision_recall_f1():
+    from normalization.evaluate import scores
+
+    examples = [{"lang": "fr"}, {"lang": "fr"}, {"lang": "tn"}]
+    result = scores(examples, ["fr", "tn", "tn"], "lang")
+    # fr : 1 bonne prédiction sur 1 (précision 1), 1 retrouvée sur 2 (rappel 0.5).
+    assert result["by_class"]["fr"] == {"precision": 1.0, "recall": 0.5, "f1": 0.6667, "support": 2}
+    assert result["by_class"]["tn"]["precision"] == 0.5
+    assert result["macro_f1"] == 0.6667
+    assert result["accuracy"] == 0.6667
+
+
+def test_evaluate_save_writes_dashboard_format(tmp_path, monkeypatch):
+    import json
+
+    from normalization import evaluate
+
+    monkeypatch.setattr(evaluate, "RESULTS_DIR", tmp_path)  # jamais dans le vrai dossier
+    lang = {"n": 3, "accuracy": 0.5, "macro_f1": 0.5, "by_class": {"fr": {}}}
+    path = evaluate.save_results(lang, None, "EXP-A2-008", "regles-ngrams", "dev",
+                                 evaluate.DEFAULT_DATASET)
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert path.name.startswith("a2_langid_regles-ngrams_")
+    assert (record["exp_id"], record["lot"], record["task"]) == ("EXP-A2-008", "A2", "langid")
+    assert record["dataset"] == "tests/fixtures/linguistic_analysis/eval_30.jsonl"
+    assert record["metrics"]["by_lang"] == {"fr": {}}
+
+
+def test_presentation_helpers_are_public():
+    # Revue de la PR #3 (Lot D) : annotation.py et lexicon.py n'importent plus de noms internes.
+    from normalization.langid import ARABIC_WORD
+    from normalization.normalize import ARABIC_PRESENTATION, expand_presentation_forms
+
+    assert expand_presentation_forms("\ufefb") == "\u0644\u0627"  # ligature lam-alef -> 2 lettres
+    assert ARABIC_PRESENTATION.search("\ufefb")
+    assert ARABIC_WORD.findall("abc \u0628\u0631\u0634\u0627") == ["\u0628\u0631\u0634\u0627"]
+
+
+@pytest.mark.xfail(strict=True, reason="limite connue (README) : mot seul tout en majuscules")
+def test_all_caps_arabizi_single_word_limit():
+    assert normalize("SA7A").script == "arabizi"
+
+
+@pytest.mark.xfail(strict=True, reason="limite connue (README) : verbe standard en ش hors liste")
+def test_standard_sh_verb_missing_from_list_limit():
+    text = "الاقتصاد ما ينتعش بسرعة في هذه الظروف"  # arabe standard
+    assert normalize(text).lang == Lang.AR
+
+def test_perplexity_model_prefers_seen_text():
+    # EXP-A2-010 : un texte proche des textes appris est moins « surprenant » qu'un texte au hasard.
+    from normalization.perplexity import CharNgramModel
+
+    model = CharNgramModel().fit(["barcha nas t7eb el bled", "barcha flous", "el bled behya"] * 5)
+    assert model.perplexity("barcha nas") < model.perplexity("zqxv wkpj")
+
+
+def test_perplexity_is_none_without_model(tmp_path, monkeypatch):
+    from normalization import perplexity as ppl
+
+    monkeypatch.setattr(ppl, "MODEL_FILE", tmp_path / "absent.pkl")  # pas de modèle entraîné
+    ppl.load_model.cache_clear()
+    assert ppl.perplexity("barcha nas") is None
+    assert ppl.is_noisy("barcha nas") is None
+    ppl.load_model.cache_clear()
+
+
+def test_perplexity_encoding_noise_changes_arabic_text():
+    import random
+
+    from normalization.perplexity import corrupt
+
+    word = "الحكومة"
+    assert corrupt(word, "encodage", random.Random(0), []) != word

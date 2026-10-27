@@ -50,3 +50,15 @@ Pour le réentraîner :
 
 Le script est déterministe (graine 13) : mêmes corpus et même version de scikit-learn (1.7.2 ici),
 même modèle. Résultats et limites : EXP-A2-003 dans `experiments.md`.
+
+## Limites connues
+
+- **Arabizi tout en majuscules.** La règle à chiffres ignore les mots entièrement en majuscules,
+  pour ne pas prendre un sigle (« COP2 », « MP3 ») pour de l'arabizi. Un texte de deux mots ou plus
+  est en général rattrapé par le modèle à n-grammes, qui lit le texte en minuscules ; un mot seul
+  (« SA7A ») reste classé `latin` / `fr`. Test : `test_all_caps_arabizi_single_word_limit` (xfail).
+- **Négation tunisienne et verbes standard en ش.** La règle « ما + verbe terminé par ش » s'appuie
+  sur une liste écrite à la main de verbes d'arabe standard (`_STANDARD_SH_VERBS`, dans
+  `langid.py`). Un verbe absent de la liste (« ما ينتعش ») déclenche une fausse négation
+  tunisienne. Aucune fausse alerte mesurée sur la presse (0 sur 1 589 phrases, EXP-A2-004), mais la
+  liste n'est pas exhaustive. Test : `test_standard_sh_verb_missing_from_list_limit` (xfail).

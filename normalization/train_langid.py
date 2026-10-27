@@ -23,7 +23,7 @@ import random
 from pathlib import Path
 
 from normalization import langid
-from normalization.normalize import detect_script_by_rules, normalize
+from normalization.normalize import ARABIZI_DIGITS_V1, detect_script_by_rules, normalize
 
 RAW = Path("data/raw/langid")
 SAMPLE = Path("data/interim/langid/tsac_latin_sample.tsv")  # annoté à la main, jamais appris
@@ -59,7 +59,11 @@ def load_arabizi() -> list[str]:
     for name in ("train_pos.txt", "train_neg.txt", "test_pos.txt", "test_neg.txt"):
         # Règles seules : le choix des exemples ne doit pas dépendre d'un modèle déjà entraîné.
         lines = read_lines(RAW / "TSAC" / name)
-        texts += [t for t in lines if detect_script_by_rules(normalize(t).text) == "arabizi"]
+        # Règle d'origine, sans le 8 : les exemples (donc le modèle) restent ceux d'EXP-A2-006.
+        texts += [
+            t for t in lines
+            if detect_script_by_rules(normalize(t).text, digits=ARABIZI_DIGITS_V1) == "arabizi"
+        ]
     return texts
 
 
@@ -121,7 +125,7 @@ def rate(scores: list[float], threshold: float) -> float:
     return sum(1 for value in scores if value >= threshold) / len(scores)
 
 
-def main() -> None:
+def main(output: Path = OUTPUT) -> None:
     rng = random.Random(SEED)
 
     # --- 1. Données -------------------------------------------------------
@@ -172,8 +176,14 @@ def main() -> None:
               f" | {rate(arabizi_scores, threshold):6.2%}")
     # Le plus petit seuil pour lequel aucun texte français de mesure n'est classé arabizi.
     allowed = [t for t in THRESHOLDS if rate(french_scores, t) <= MAX_FALSE_ALARM]
-    threshold = allowed[0] if allowed else THRESHOLDS[-1]
-    print(f"seuil retenu : {threshold}")
+    if allowed:
+        threshold = allowed[0]
+        print(f"seuil retenu : {threshold}")
+    else:
+        # Aucun seuil ne tient le critère : on garde le plus haut, et on le dit.
+        threshold = THRESHOLDS[-1]
+        print(f"seuil retenu : {threshold} (repli : aucun seuil n'atteint"
+              f" {MAX_FALSE_ALARM:.2%} de français classé arabizi)")
 
     model = {
         "description": "Poids par n-gramme de caractères : positif = arabizi, négatif = français.",
@@ -184,13 +194,17 @@ def main() -> None:
         "threshold": threshold,
         "weights": exported,
     }
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    with OUTPUT.open("w", encoding="utf-8", newline="\n") as handle:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
         json.dump(model, handle, ensure_ascii=False, indent=0, sort_keys=True)
         handle.write("\n")
+    size = output.stat().st_size / 1024
+    print(f"modèle écrit : {output} ({len(exported)} poids, {size:.0f} Ko)")
+    if output.resolve() != OUTPUT.resolve():
+        # Écrit ailleurs (test de régénération) : langid lit toujours le fichier du dépôt,
+        # les mesures ci-dessous porteraient donc sur un autre modèle. On s'arrête ici.
+        return
     langid.load_arabizi_model.cache_clear()  # force langid à relire le nouveau fichier
-    size = OUTPUT.stat().st_size / 1024
-    print(f"modèle écrit : {OUTPUT} ({len(exported)} poids, {size:.0f} Ko)")
 
     # --- 5. Mesures finales, avec la fonction réellement livrée ------------
     test = [prepare(s) for s in load_french("test")]

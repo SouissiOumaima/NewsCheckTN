@@ -61,7 +61,7 @@ _ARABIC_LETTER_MAP = str.maketrans(
 # "Formes de présentation" : anciens codes où une lettre arabe est stockée
 # déjà dessinée (isolée, initiale, ligature lam-alef...). Certains PDF et
 # vieux sites en produisent. On les reconvertit en lettres normales.
-_ARABIC_PRESENTATION = re.compile(r"[\uFB50-\uFDFF\uFE70-\uFEFC]+")
+ARABIC_PRESENTATION = re.compile(r"[\uFB50-\uFDFF\uFE70-\uFEFC]+")
 
 # Chiffres arabes-indiens et persans -> chiffres 0-9, pour que "٢٠٢٣" dans une
 # affirmation retrouve "2023" dans une preuve. La VALEUR ne change pas.
@@ -112,13 +112,18 @@ _ELONGATION = re.compile(r"(.)\1{2,}")
 _TOKEN = re.compile(r"[^\W_]+")
 
 # Chiffres utilisés en arabizi à la place de lettres arabes
-# (3 = ع, 7 = ح, 9 = ق, 5 = خ, 2 = ء, 6 = ط).
-_ARABIZI_DIGITS = frozenset("235679")
+# (3 = ع, 7 = ح, 9 = ق, 5 = خ, 2 = ء, 6 = ط, 8 = غ).
+# ARABIZI_DIGITS_V1 : la règle d'origine (EXP-A2-001), sans le 8. Elle reste figée pour le
+# tirage des échantillons annotés (annotation.py) et le choix des exemples d'entraînement
+# (train_langid.py) : la changer modifierait en silence ces résultats déjà publiés.
+# ARABIZI_DIGITS : la règle du pipeline, avec le 8 (EXP-A2-008).
+ARABIZI_DIGITS_V1 = frozenset("235679")
+ARABIZI_DIGITS = ARABIZI_DIGITS_V1 | {"8"}
 
 # Mots internationaux qui ressemblent à de l'arabizi sans en être.
 _NOT_ARABIZI = frozenset(
     {"mp3", "b2b", "b2c", "p2p", "co2", "h2o", "web3", "ps5", "ipv6",
-     "km2", "cm2", "mm2", "km3", "cm3", "dm3"}
+     "km2", "cm2", "mm2", "km3", "cm3", "dm3", "8bit", "8bits"}
 )
 
 # Un chiffre suivi d'une unité ou d'un suffixe ordinal : "2eme", "5km", "3rd".
@@ -138,7 +143,7 @@ _ARABIZI_MIN_RATIO = 0.05
 # 2. Détection du script (alphabet) et de la langue
 # ---------------------------------------------------------------------------
 
-def _is_arabizi_token(token: str) -> bool:
+def _is_arabizi_token(token: str, digits: frozenset[str] = ARABIZI_DIGITS) -> bool:
     """Dit si UN mot ressemble à de l'arabizi ("3lech", "mta3", "Sa7a").
 
     L'ancien stub répondait oui dès qu'un chiffre touchait une lettre, donc
@@ -151,7 +156,7 @@ def _is_arabizi_token(token: str) -> bool:
         return False  # pas de chiffre, ou trop court ("2e", "9h", "5G", "m2")
     if _ARABIC_LETTER.search(token):
         return False  # l'arabizi s'écrit en lettres latines
-    if any(run not in _ARABIZI_DIGITS for run in digit_runs):
+    if any(run not in digits for run in digit_runs):
         return False  # un nombre ("A320", "covid19") ou un chiffre hors liste
     if token.isupper():
         return False  # un sigle tout en majuscules ("COP2", "MP3")
@@ -167,15 +172,18 @@ def _count_letters(text: str) -> tuple[int, int]:
 
 def _mask(text: str) -> str:
     """Retire ce qui n'est pas de la langue (liens, adresses) et déplie l'arabe "dessiné"."""
-    return _expand_presentation_forms(_PROTECTED.sub(" ", text))
+    return expand_presentation_forms(_PROTECTED.sub(" ", text))
 
 
-def detect_script_by_rules(text: str) -> str:
+def detect_script_by_rules(text: str, digits: frozenset[str] = ARABIZI_DIGITS) -> str:
     """Retourne arabic | latin | arabizi | mixed, avec les RÈGLES seules.
 
     L'arabizi n'est reconnu ici qu'à ses chiffres ("3lech"). Cette fonction ne
     dépend d'aucun modèle appris : c'est elle que l'entraînement utilise pour
     choisir ses exemples, afin de ne jamais apprendre de ses propres réponses.
+
+    digits : chiffres d'arabizi reconnus. ARABIZI_DIGITS_V1 redonne les résultats d'avant
+    l'ajout du 8 (tirage des échantillons, entraînement).
     """
     masked = _mask(text)
     n_ar, n_lat = _count_letters(masked)
@@ -191,7 +199,7 @@ def detect_script_by_rules(text: str) -> str:
     # Texte majoritairement latin (ou sans aucune lettre) : arabizi ou non ?
     tokens = _TOKEN.findall(masked)
     n_latin_words = sum(1 for token in tokens if _LATIN_LETTER.search(token))
-    n_arabizi = sum(1 for token in tokens if _is_arabizi_token(token))
+    n_arabizi = sum(1 for token in tokens if _is_arabizi_token(token, digits))
     needed = math.ceil(_ARABIZI_MIN_RATIO * n_latin_words)
     if n_arabizi and n_arabizi >= needed:
         return "arabizi"
@@ -215,7 +223,7 @@ def detect_language(text: str) -> Lang:
     """Identifie la langue : script, puis marques dialectales en lettres arabes."""
     # TODO(Lot A2): classifieur appris pour le tunisien sans mot du lexique et
     # pour l'arabizi sans chiffres (voir experiments.md).
-    if sum(_count_letters(_expand_presentation_forms(_PROTECTED.sub(" ", text)))) == 0:
+    if sum(_count_letters(expand_presentation_forms(_PROTECTED.sub(" ", text)))) == 0:
         return Lang.UNKNOWN  # vide, ou seulement chiffres / emojis / liens
     script = detect_script(text)
     if script == "arabizi":
@@ -223,7 +231,7 @@ def detect_language(text: str) -> Lang:
     if script in ("arabic", "mixed"):
         # Même repli que dans normalize(), pour que la fonction donne la même
         # réponse sur un texte brut et sur un texte déjà normalisé.
-        folded = normalize_arabic(_expand_presentation_forms(text))
+        folded = normalize_arabic(expand_presentation_forms(text))
         return Lang.TN if is_dialectal_arabic(folded) else Lang.AR
     return Lang.FR
 
@@ -232,9 +240,9 @@ def detect_language(text: str) -> Lang:
 # 3. Normalisation
 # ---------------------------------------------------------------------------
 
-def _expand_presentation_forms(text: str) -> str:
+def expand_presentation_forms(text: str) -> str:
     """Remplace les lettres arabes "déjà dessinées" (ligature lam-alef...) par des lettres."""
-    return _ARABIC_PRESENTATION.sub(
+    return ARABIC_PRESENTATION.sub(
         lambda run: unicodedata.normalize("NFKC", run.group()), text
     )
 
@@ -290,7 +298,7 @@ def normalize(text: str) -> Document:
     #    "10²" en "102", ce qui change un nombre.
     text = unicodedata.normalize("NFC", text)
     #    Exception ciblée : les formes de présentation arabes, sans risque.
-    text = _expand_presentation_forms(text)
+    text = expand_presentation_forms(text)
 
     # 2. Caractères invisibles.
     text = _INVISIBLE.sub("", text)
