@@ -25,6 +25,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-C-008 | 2026-10-26 | C | Analyse qualitative cross-seed | 25 erreurs seed42 + 5 seed2026 | 30 erreurs catégorisées | hypothèses 8 ; opinions 13 | prioriser modalités et opinions TN |
 | EXP-C-007 | 2026-10-24 | C | Ablation raw vs normalisé | XLM-R + LoRA, seed42, test gelé | macro-F1 ; bootstrap | raw 0,7108 vs normalisé 0,6671 ; p=0,188 | raw retenu ; API alignée sur raw |
 | EXP-C-006 | 2026-10-24 | C | Baseline neuronale | MiniLM figé + LR, 3 runs | macro-F1 | 0,6350 ± 0,0000 | baseline de comparaison conservée |
 | EXP-C-005 | 2026-10-24 | C | Bootstrap apparié | TF-IDF vs XLM-R seed42, 1 000 réplications | Δ macro-F1 ; IC 95 % ; p | +0,0673 ; [-0,0468 ; 0,1860] ; p=0,254 | gain non concluant statistiquement |
@@ -38,6 +39,30 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
 
 ## Entrées
+
+### EXP-C-008 — Analyse qualitative cross-seed de 30 erreurs Model 1
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Lot C
+- **Objectif / hypothèse** : rendre traçables les erreurs représentatives du
+  classifieur Model 1 et identifier les phénomènes à prioriser.
+- **Données** : `errors_30_cross_seed.jsonl` : 25 erreurs de `seed42` et 5
+  erreurs distinctes de `seed2026`. Ce n'est pas un échantillon aléatoire : il
+  sert à l'analyse qualitative, non au calcul d'un taux d'erreur.
+- **Méthode / configuration** : catégorisation déterministe à partir du label
+  gold, de la modalité et de la prédiction, avec
+  `bronze/analyze_model1_errors.py`.
+- **Code** : `bronze/analyze_model1_errors.py` ; sortie structurée
+  `evaluation/results/model1_errors_30_cross_seed.jsonl`.
+- **Résultats** : 30 erreurs : hypothèses non reconnues 8, opinions prises pour
+  AFFIRMATION 7, opinions prises pour AUTRE 6, affirmations non reconnues 3,
+  autres confusions 2, souhaits 2, question 1, discours rapporté 1.
+- **Analyse** : les modalités non factuelles (hypothèse, souhait, question)
+  totalisent 11 erreurs ; les opinions 13. Les exemples mélangent FR, arabe et
+  tunisien, en particulier arabizi/mixed, ce qui confirme la difficulté des
+  formulations informelles.
+- **Décision / suite** : rapporter cette analyse dans la revue et prioriser des
+  exemples annotés supplémentaires pour ces phénomènes avant tout nouveau
+  réglage du modèle. Rapport : `docs/lot-c_error_analysis_cross_seed.md`.
 
 ### EXP-C-007 — Ablation texte brut contre texte normalisé et alignement API
 - **Date** : 2026-10-24

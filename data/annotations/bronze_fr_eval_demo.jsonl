@@ -1,0 +1,2 @@
+{"id":"demo-fr-001","text":"Tunis est la capitale de la Tunisie.","gold_label":"vrai","relevant_doc_ids":["demo-001"]}
+{"id":"demo-fr-002","text":"Le taux de chômage en Tunisie était de 16,4 % au deuxième trimestre 2023.","gold_label":"vrai","relevant_doc_ids":["demo-002"]}

@@ -1,0 +1,3 @@
+# Remplacer les valeurs <...> par des annotations humaines avant toute métrique officielle.
+# Chaque texte est une affirmation factuelle française ; gold_label est vrai|faux|trompeur|preuves_insuffisantes.
+{"id":"fr-001","text":"<affirmation française vérifiable>","gold_label":"<vrai|faux|trompeur|preuves_insuffisantes>","relevant_doc_ids":["<id preuve>"]}

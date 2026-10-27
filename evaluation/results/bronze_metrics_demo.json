@@ -1,0 +1,31 @@
+{
+  "n": 2,
+  "macro_f1": 1.0,
+  "recall_at_k": 1.0,
+  "items": [
+    {
+      "id": "demo-fr-001",
+      "gold_label": "vrai",
+      "predicted_label": "vrai",
+      "relevant_doc_ids": [
+        "demo-001"
+      ],
+      "retrieved_doc_ids": [
+        "demo-001"
+      ],
+      "correct": true
+    },
+    {
+      "id": "demo-fr-002",
+      "gold_label": "vrai",
+      "predicted_label": "vrai",
+      "relevant_doc_ids": [
+        "demo-002"
+      ],
+      "retrieved_doc_ids": [
+        "demo-002"
+      ],
+      "correct": true
+    }
+  ]
+}
