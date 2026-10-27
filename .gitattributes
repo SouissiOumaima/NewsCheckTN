@@ -3,3 +3,6 @@
 *.png binary
 *.jpg binary
 *.pdf binary
+
+# Poids du modèle arabizi (Lot A2) : fichier généré, replié dans les diffs GitHub
+normalization/resources/arabizi_ngrams.json linguist-generated=true

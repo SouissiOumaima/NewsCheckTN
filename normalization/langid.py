@@ -28,8 +28,8 @@ from pathlib import Path
 
 _MARKERS_FILE = Path(__file__).parent / "resources" / "tn_markers.txt"
 
-# Un mot écrit en lettres arabes.
-_ARABIC_WORD = re.compile(r"[\u0621-\u064A\u066E-\u06D3]+")
+# Un mot écrit en lettres arabes (public : aussi utilisé par lexicon.py).
+ARABIC_WORD = re.compile(r"[\u0621-\u064A\u066E-\u06D3]+")
 
 # Une lettre répétée 3 fois ou plus ("ماااسط") : ramenée à une seule pour
 # comparer au lexique. Deux lettres identiques sont conservées : "اللي" doit
@@ -91,7 +91,7 @@ def find_dialect_markers(folded_text: str) -> list[str]:
     décision et d'analyser les erreurs.
     """
     markers = load_markers()
-    words = [_key(word) for word in _ARABIC_WORD.findall(folded_text)]
+    words = [_key(word) for word in ARABIC_WORD.findall(folded_text)]
     found = []
     for index, word in enumerate(words):
         previous = words[index - 1] if index else ""
@@ -111,7 +111,7 @@ def find_dialect_markers(folded_text: str) -> list[str]:
 
 def is_dialectal_arabic(folded_text: str) -> bool:
     """Dit si le texte (lettres arabes, déjà normalisé) est dialectal."""
-    n_words = len(_ARABIC_WORD.findall(folded_text))
+    n_words = len(ARABIC_WORD.findall(folded_text))
     n_found = len(find_dialect_markers(folded_text))
     return n_found > 0 and n_found >= math.ceil(_DIALECT_MIN_RATIO * n_words)
 

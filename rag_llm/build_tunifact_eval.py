@@ -26,6 +26,9 @@ Droits : la redistribution des textes Tunifact n'est pas confirmée (Data Card A
 est écrit dans `data/interim/` (non versionné) et n'est pas recopié dans le dépôt. Les articles
 613, 797 et 890 sont des reformulations du Lot A1, pas des citations originales.
 
+Chaque version lit les fichiers du Lot A1 à un commit figé (`PINNED` : v0 → 19976a4,
+v1 → 77a00b9), même si la branche `lot-a1-data` a avancé depuis.
+
 Usage (depuis la racine du dépôt, après `git fetch origin`) :
     python -m rag_llm.build_tunifact_eval              # v1 (défaut)
     python -m rag_llm.build_tunifact_eval --version v0
@@ -43,6 +46,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BRANCH = "origin/lot-a1-data"
+# Version du Lot A1 utilisée par chaque jeu : un commit fixe, pour que le corpus de test reste
+# identique même si la branche lot-a1-data avance (test gelé, voir rag_llm/freeze_test.py).
+PINNED = {"v0": "19976a4", "v1": "77a00b9"}
 TUNIFACT_V0 = "data/annotations/tunifact_review_30.jsonl"
 TUNIFACT_EXPORT = "data/exports/lot_d/tunifact_sentences_46.jsonl"
 TARC = "data/annotations/tarc_review_30.jsonl"
@@ -120,10 +126,12 @@ def merge_tunifact(export: list[dict], older: list[dict]) -> list[dict]:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--version", choices=["v0", "v1"], default="v1")
-    p.add_argument("--branch", default=BRANCH)
+    p.add_argument("--branch", default=None,
+                   help="version du Lot A1 à lire (défaut : le commit figé du jeu, voir PINNED)")
     p.add_argument("--source-dir", type=Path, default=ROOT)
     p.add_argument("--out", type=Path, default=None)
     args = p.parse_args()
+    args.branch = args.branch or PINNED[args.version]
 
     read = lambda path: read_jsonl(path, args.branch, args.source_dir)  # noqa: E731
     older, tarc = read(TUNIFACT_V0), read(TARC)

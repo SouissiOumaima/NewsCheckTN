@@ -98,3 +98,20 @@ python -m rag_llm.evaluate_verdict --stance lot-c   # NLI du Lot C (stub : toujo
   peut remplacer le stub NLI du Lot C (même signature).
 - **C** : tant que le NLI renvoie toujours « neutre », le pipeline s'abstient sur tout.
 - **B** : exposer `resolved_text` (coréférence résolue) dans `Claim` : meilleure requête que `text`.
+
+## Palier Bronze (revue du 28/10/2026, EXP-D-007)
+
+Composants classiques uniquement : BM25 + NLI Bronze du Lot C (`models/nli/bronze.py`) + gabarit.
+
+```bash
+python -m rag_llm.build_tunifact_eval      # corpus du test (non versionné, droits Tunifact)
+python -m rag_llm.freeze_test --check      # preuve du gel du test (SHA-256 + date)
+python -m rag_llm.bronze_report            # tableaux 1 à 3 : scores, baselines, langues, erreurs
+python -m rag_llm.bronze_report --stance rules   # comparaison avec le NLI provisoire du Lot D
+```
+
+- Test gelé : `data/splits/lot_d_tunifact_v1.json` (gelé le 23/10/2026, EXP-D-006).
+- Erreurs : `docs/lot-d_erreurs_bronze.csv` (versionné, sans texte de preuve) ;
+  `evaluation/results/lot-d_erreurs_lot-c.csv` (avec les textes, non versionné).
+- Démo : l'API utilise BM25 par défaut (`RETRIEVAL_METHOD=bm25`) ; la recherche dense / hybride
+  est neuronale et reste hors de la démo Bronze.

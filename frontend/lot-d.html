@@ -85,8 +85,8 @@
           nli: document.getElementById("nli").value,
         });
         const notes = [];
-        if (d.corpus_size <= 2) notes.push(`Le corpus chargé par l'API ne contient que ${d.corpus_size} passage(s) d'exemple. Pour les vrais articles Tunifact : créer le corpus avec <code>python -m rag_llm.build_tunifact_eval</code>, puis relancer l'API avec la variable <code>EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl</code> (voir <code>frontend/README.md</code>).`);
-        else notes.push(`Corpus chargé : ${d.corpus_size} passages.`);
+        if (d.corpus && d.corpus.warning) notes.push(`Le corpus chargé par l'API ne contient que ${d.corpus_size} passage(s) d'exemple. Pour les vrais articles Tunifact : créer le corpus avec <code>python -m rag_llm.build_tunifact_eval</code>, puis relancer l'API avec la variable <code>EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl</code> (voir <code>frontend/README.md</code>).`);
+        else notes.push(`Corpus chargé : ${d.corpus_size} passages (${NC.esc(d.corpus ? d.corpus.origin : "?")}).`);
         if (d.nli === "lot-c") notes.push("NLI du Lot C : tant que le modèle n'est pas branché, il répond toujours « neutre » et le système s'abstient.");
         document.getElementById("notice").innerHTML = `<p class="notice">${notes.join(" ")}</p>`;
         document.getElementById("verdict").innerHTML = NC.verdictBox(d.verdict);

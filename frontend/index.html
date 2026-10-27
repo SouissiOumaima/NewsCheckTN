@@ -36,7 +36,7 @@
 
     <section>
       <h2>Explorer la plateforme</h2>
-      <p class="sub">Ouvre « Démo Bronze » pour suivre toute la chaîne classique, ou une page de lot pour tester une brique seule.</p>
+      <p class="sub">Chaque lot a sa page : on peut y tester sa brique seule.</p>
       <div class="tiles" id="tiles"></div>
     </section>
 
@@ -88,7 +88,7 @@
           </article>`).join("")
           : `<p class="empty">Aucune affirmation vérifiable détectée dans ce texte.</p>`;
         if (verdicts.length && verdicts.every((v) => v.abstained)) {
-          out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention : aucune preuve assez pertinente ou assez décisive n'a été trouvée. Essaie la <a href="bronze.html">Démo Bronze</a> pour voir chaque étape.</p>`);
+          out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention. C'est normal tant que le modèle NLI du Lot C n'est pas branché (le module actuel répond toujours « neutre ») ou que le corpus de preuves n'est pas installé : voir la page « D · Preuves et verdict ».</p>`);
         }
       } catch (ex) {
         err.hidden = false; err.textContent = ex.message;

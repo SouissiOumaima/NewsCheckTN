@@ -28,12 +28,14 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-C-010 | 2026-10-27 | C | Analyse qualitative cross-seed | 25 erreurs seed42 + 5 seed2026 | 30 erreurs catégorisées | hypothèses 8 ; opinions 13 | prioriser modalités et opinions TN |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
+| EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
 | EXP-C-007 | 2026-10-24 | C | Ablation raw vs normalisé | XLM-R + LoRA, seed42, test gelé | macro-F1 ; bootstrap | raw 0,7108 vs normalisé 0,6671 ; p=0,188 | raw retenu ; API alignée sur raw |
 | EXP-C-006 | 2026-10-24 | C | Baseline neuronale | MiniLM figé + LR, 3 runs | macro-F1 | 0,6350 ± 0,0000 | baseline de comparaison conservée |
 | EXP-C-005 | 2026-10-24 | C | Bootstrap apparié | TF-IDF vs XLM-R seed42, 1 000 réplications | Δ macro-F1 ; IC 95 % ; p | +0,0673 ; [-0,0468 ; 0,1860] ; p=0,254 | gain non concluant statistiquement |
 | EXP-C-003 | 2026-10-23 | C | Évaluation détaillée XLM-R + LoRA | seed 42, test gelé 120 | macro-F1 | 0.7108 ; FR 0.9148 / AR 0.6989 / TN 0.6445 | analyse d'erreurs à compléter |
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
 | EXP-E-002 | 2026-10-27 | E | Audit d'intégration Bronze | règles + BM25 + NLI lexical + gabarit, 4 contrôles FR versionnés | succès E2E / Macro-F1 / Recall@5 / citations / latence | 1,00 / 1,00 / 1,00 / 0 citation invalide / 5,82 ms moyen | contrôle de régression, non représentatif |
+| EXP-D-007 | 2026-10-26 | D | Palier Bronze : baselines triviales, verdict avec le NLI Bronze du Lot C, erreurs | BM25 top-5 + NLI Bronze (Lot C) + gabarit ; test Tunifact v1 gelé | Rappel@5 ; exactitude et macro-F1 du verdict | Rappel@5 0.411 vs 0.060 (aléatoire) ; verdict exact. 0.238 vs 0.524 (majorité), macro-F1 0.188 vs 0.172 ; 40 + 16 erreurs classées | configuration Bronze retenue ; suite : translittération A2, jeu de test élargi |
 | EXP-D-006 | 2026-10-23 | D | Jeu réel Tunifact v1 (6 articles) | BM25 + NLI par règles + gabarit, sans réglage | Hit@1 / Recall@5 ; exactitude verdict | 0.61 / 0.41 ; verdict 0.14, 1 verdict émis (faux) | nouvelle référence de test ; dense à mesurer (Colab) |
 | EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
 | EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
@@ -50,6 +52,13 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-004 | 2026-10-19 | A2 | Reproductibilité : échantillons annotés et lexique | `normalization.annotation`, `normalization.lexicon` | tirage refait ; lexique retrouvé ; fausses alertes sur la presse | 100/100 et 100/100 ; 55/78 (+ 23 variantes) ; 0/1 589 | tout est refaisable ; suite : kappa, presse d'une autre source |
 | EXP-A2-005 | 2026-10-19 | A2 | Biais de sujet : noms de lieux tunisiens | 8 lieux ajoutés aux mots neutres ; modèle inchangé | bascules français → arabizi ; arabizi perdu par le pipeline | 22 → 0 ; 13 sur 7 363, dont 8 en réalité français | liste élargie retenue ; suite : réentraîner, retirer le français des corpus arabizi |
 | EXP-B-005 | 2026-10-20 | B | Extraction d'affirmations : lexiques selon l'écriture, verbe de parole précédé de « و » / « ف » collé | règles ; règles + spaCy FR / Stanza AR | sorties eval_30 inchangées ; tests ciblés | eval_30 identique (SPO 0.91 / 0.77) ; effet non mesuré sur un jeu annoté | retenu ; mesure sur eval_100 |
+| EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
+| EXP-A2-006 | 2026-10-21 | A2 | Arabizi : modèle réentraîné avec la liste neutre à jour | même configuration qu'EXP-A2-003, graine 13 ; seuil 5.0 | régénération ; FR de test ; eval_30 ; bascules ; échantillon annoté | régénérable (2 essais identiques) ; 0 sur 416 ; eval_30 identique ; 0 sur 20 384 ; TN classé arabizi 61 → 62 sur 67, FR classé arabizi 4 → 5 sur 16 | nouveau modèle retenu ; suite : test de régénération en CI |
+| EXP-A2-007 | 2026-10-21 | A2 | Double annotation de la langue (accord entre annotateurs) | 2 annotateurs indépendants par échantillon ; guide envoyé sans les étiquettes du premier | kappa de Cohen, 3 classes | lettres latines 0.84 (accord 0.92) ; lettres arabes 0.65 (accord 0.87) ; 100 textes chacun | guides utilisables ; suite : adjudication, préciser emprunts français et usage de `x` |
+| EXP-A2-008 | 2026-10-25 | A2 | Arabizi : chiffre 8 (= غ) | 8 ajouté pour le pipeline ; règle d'origine (235679) gardée pour le tirage et l'entraînement | fausses alertes sur le français ; gain sur les commentaires ; reproductibilité | 0 nouvelle fausse alerte (UD train / dev / test) ; règles +180, décision finale +20 sur 78 173 commentaires ; modèle et tirage inchangés | retenu ; suite : translittération arabizi → arabe (Lot D) |
+| EXP-A2-009 | 2026-10-26 | A2 | Adjudication de l'annotation et analyse d'erreurs (≥ 30) | 21 désaccords tranchés à deux ; règles ajoutées au guide ; erreurs classées | langue par classe sur les étiquettes de référence ; erreurs par catégorie | arabe : `a` 23/23, `t` 41/77 ; latin : `f` 12/16, `t` 65/70 ; 45 erreurs en 10 catégories | référence retenue ; suite : lexique élargi, affixes, négation contractée |
+| EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
+| EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 
 ## Entrées
 
@@ -95,10 +104,365 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Analyse** : le modèle tranche rarement à tort (précision 0.93–0.95 sur supports / refutes) ; ses erreurs vont presque toutes vers « neutral », ce qui mène le verdict du Lot D à s'abstenir plutôt qu'à affirmer une erreur. Pas d'écart entre français et arabe. Limites : petit test (IC large), corpus v3 encore en correction, aucune paire en tunisien ou en arabizi.
 - **Décision / suite** : baseline retenue et branchée dans `models/nli/stance.py` (utilisable par le Lot D). Suite : affiner ce même modèle sur le train (plutôt qu'entraîner XLM-R depuis zéro sur 174 paires), 3 graines, comparaison bootstrap à cette baseline ; mesures officielles une seule fois sur la v4 du corpus ; demander au Lot A1 des paires en tunisien.
 
-| EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
+### EXP-A2-011 — Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : donner, pour chaque composant du Lot A2, le score sur un jeu gelé à côté
+  d'une baseline triviale, séparer dev et test, mesurer le normaliseur et regrouper les erreurs en
+  4 à 6 familles, comme l'exige le guide de la revue Bronze. Aucun réglage : mesure seulement.
+- **Données** :
+  - **test** : `tests/fixtures/linguistic_analysis/eval_30.jsonl` (34 phrases : 10 FR, 10 arabe
+    standard, 14 tunisien dont 5 en lettres arabes, 5 en arabizi, 4 mixtes), jamais utilisé pour
+    écrire les règles du Lot A2 (EXP-A2-002) ; gelé au commit `85fb77d` (2026-10-20),
+    SHA-256 `1d0bcfaa4b2a01fbd428fb18240174e309ac9877dc474a4dc1399e15e9dd34ce` ;
+  - **dev (mise au point)** : références adjudiquées d'EXP-A2-009, non versionnées, gelées le
+    2026-10-26 : `tsac_arabic_sample_reference.tsv` (100 textes : 77 `t`, 23 `a`), SHA-256
+    `a59f3d27621a4f4d4297f7d73b80301418767197316fb785cb7f0f32bb4ad92f` ; `tsac_latin_sample_reference.tsv` (86 textes décidés : 70 `t`, 16 `f`), SHA-256
+    `1703f003cc0132c148ca46bf92b86ea05270d8851eb3d447109e366985877a46`. Ces échantillons ont servi à écrire le guide et à choisir des mots (EXP-A2-002) :
+    ils ne sont pas un test ;
+  - rappel, tests de fausses alertes : PADT `test` (680 phrases, EXP-A2-004), UD French-GSD `test`
+    (416 phrases, EXP-A2-003 / 008).
+- **Méthode / configuration** : `python -X utf8 -m normalization.review` (déterministe). Baselines :
+  « majorité » (toujours la classe la plus fréquente du jeu) ; « alphabet seul » (lettres arabes →
+  `ar`, sinon `fr` : le comportement d'avant le Lot A2). Normaliseur : textes dont les nombres sont
+  identiques avant et après `normalize` (chiffres arabes-indiens convertis comptés comme conservés),
+  et mots différents avant / après, contre la baseline « copie de la source ». Erreurs du dev
+  exportées avec leur catégorie d'EXP-A2-009, regroupées en 5 familles. Sortie gardée hors dépôt :
+  `data/interim/langid/bronze_review.txt` et `bronze_erreurs.csv` (textes du corpus, non versionnés).
+- **Code** : `normalization/review.py`, 3 tests dans `tests/test_normalization_review.py` (ce commit) ;
+  tableaux de la revue dans `docs/lot-a2_revue_bronze.md`.
+- **Résultats** (macro-F1 / exactitude) :
+  - test eval_30 : système 0.94 / 0.94 ; majorité 0.19 / 0.41 ; alphabet seul 0.50 / 0.59. Par
+    classe : `ar` F1 0.95, `fr` 0.95, `tn` 0.92 (rappel 0.86). Par langue et alphabet : ar/arabe
+    10/10, fr/latin 10/10, tn/arabe 4/5, tn/arabizi 5/5, tn/mixte 3/4 ;
+  - dev lettres arabes : système 0.63 / 0.64 ; majorité 0.43 / 0.77 ; alphabet seul 0.19 / 0.23.
+    `ar` : précision 0.39, rappel 1.00 ; `tn` : précision 1.00, rappel 0.53 ;
+  - dev lettres latines : système 0.83 / 0.90 ; majorité 0.45 / 0.81 ; alphabet seul 0.16 / 0.19.
+    `fr` F1 0.73 ; `tn` F1 0.94 ;
+  - normaliseur (220 textes des trois jeux) : nombres conservés 29/29 textes (copie : 29/29) ;
+    mots différents 1 366 → 1 340, soit 1.9 % de moins (copie : 0 %) ;
+  - erreurs du dev (45) : lexique incomplet 13, morphologie dialectale 11, texte trop court ou sous
+    le seuil 9, effet d'une règle choisie 7, étiquette discutable 5 ; aucune sans catégorie ;
+  - tests : 540 réussis ; `ruff check .` sans remarque.
+- **Analyse** : sur le test, le Lot A2 dépasse nettement les deux baselines (0.94 contre 0.50 pour
+  l'alphabet seul, qui ne voit jamais le tunisien). Sur le dev en lettres arabes, la majorité a une
+  meilleure exactitude (0.77 contre 0.64) mais une macro-F1 bien plus basse (0.43 contre 0.63) : elle
+  répond `tn` partout et ne trouve jamais l'arabe standard ; avec 77 % de `tn`, seule la macro-F1
+  rend compte des deux classes. Le système est prudent (précision `tn` 1.00, aucune presse classée
+  tunisienne) au prix du rappel (0.53). Le normaliseur respecte la règle d'or ; sa réduction du
+  vocabulaire est modeste, car son rôle est une forme canonique, pas une réduction forte. Limites :
+  test petit (34 phrases, 5 en tunisien lettres arabes), annoté par une seule personne (Lot B) ;
+  les scores du dev sont optimistes, ce jeu ayant servi à la mise au point.
+- **Décision / suite** : chiffres retenus pour la revue Bronze (tableaux dans
+  `docs/lot-a2_revue_bronze.md`). Suite : tirer un échantillon TSAC neuf, jamais vu, et le faire
+  annoter par deux personnes pour disposer d'un vrai test du tunisien.
 
-## Entrées
+### EXP-A2-010 — Perplexité : repérer les textes bruités
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : repérer les segments bruités (encodage abîmé, lettres au hasard) avant
+  l'annotation et l'analyse (plan S3). Hypothèse : un modèle de langue appris sur des commentaires
+  donne une perplexité nettement plus haute à un texte cassé qu'à un commentaire ordinaire.
+- **Données** : commentaires TSAC (4 fichiers) et Tunizi (`tunizi_train`), préparés par `normalize`,
+  minuscules, emojis et symboles retirés, 3 mots ou plus, doublons retirés, non versionnés. Rangés par
+  alphabet (≥ 90 % de lettres arabes ou ≤ 10 %, textes mêlés exclus), mélangés (graine 13), découpés
+  80 / 10 / 10 : lettres arabes 4 556 / 569 / 569 ; lettres latines 53 804 / 6 725 / 6 725.
+- **Méthode / configuration** : modèle de langue à n-grammes de caractères, ordre 4, interpolation des
+  ordres 1 à 4 (poids 0,1 / 0,2 / 0,3 / 0,4), lissage add-one à l'ordre 1 ; un modèle par alphabet.
+  Seuil = 95e centile des perplexités de dev (5 % de fausses alertes visées) ; le test ne sert qu'à
+  mesurer. Bruit artificiel sur 1 000 textes de test : « encodage » (UTF-8 relu en Windows-1252),
+  « lettres » (30 % des lettres remplacées au hasard), « mélange » (lettres de chaque mot mélangées).
+  AUC sur 300 textes propres × 300 bruités ; baseline aléatoire : AUC 0,5.
+  Commande : `python -X utf8 -m normalization.perplexity` ; sortie gardée hors dépôt
+  (`data/interim/langid/exp010_perplexity.txt`), modèle dans `data/interim/langid/perplexity_model.pkl`.
+- **Code** : `normalization/perplexity.py` (`perplexity`, `is_noisy`), 3 tests dans
+  `tests/test_normalization.py` (ce commit).
+- **Résultats** :
+  - lettres arabes : seuil 11,4 ; textes propres de test signalés 4,7 % ; repérés : encodage 100 %
+    (AUC 1,000), lettres 99,6 % (0,999), mélange 99,5 % (0,997) ;
+  - lettres latines : seuil 13,2 ; textes propres de test signalés 5,3 % ; repérés : encodage 12,3 %
+    (AUC 0,532), lettres 99,3 % (0,996), mélange 99,0 % (0,990) ;
+  - textes réels de dev les plus « surprenants » : en lettres latines, accents décoratifs dans de
+    l'arabizi (« jàwna a7là jàw »), suites de chiffres, répétitions ; en lettres arabes, lettres rares
+    mais propres au tunisien (ڨ) et lettres d'autres alphabets proches (ھ) ;
+  - tests : 477 réussis ; `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient pour les lettres au hasard et mélangées (≥ 99 %) dans les deux
+  alphabets, et pour l'encodage abîmé en lettres arabes. Le taux de fausses alertes sur test (4,7 % et
+  5,3 %) confirme le seuil réglé sur dev. Limite : en lettres latines, l'encodage abîmé n'est presque
+  pas repéré (AUC 0,53, proche du hasard), car l'arabizi n'a presque pas de lettres accentuées et la
+  relecture en Windows-1252 le laisse quasi inchangé. Les textes réels les plus surprenants ne sont pas
+  du bruit mais une écriture atypique : la perplexité mesure l'écart à un commentaire ordinaire, et
+  pénalise des lettres légitimes du tunisien (ڨ), rares dans TSAC.
+- **Décision / suite** : retenu pour **signaler** les textes (`is_noisy`), pas pour les supprimer
+  (risque de perdre du tunisien authentique). Suite : règle de détection des motifs d'encodage abîmé
+  (« Ã », « Ø ») pour les lettres latines ; mesurer le taux de textes signalés sur les nouvelles
+  annotations du Lot A1.
 
+### EXP-A2-009 — Adjudication de l'annotation et analyse d'erreurs
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 2 / Lot A2, avec les secondes annotatrices des Lots B et D
+- **Objectif / hypothèse** : (a) fixer des étiquettes de référence pour les deux échantillons
+  annotés, en tranchant les 21 désaccords d'EXP-A2-007 ; (b) analyser au moins 30 erreurs de
+  l'identification de langue, classées par cause, comme l'exige le palier Bronze.
+- **Données** : les deux échantillons d'EXP-A2-004 (TSAC, 100 textes chacun, non versionnés).
+  Fichiers de référence créés à côté des fichiers d'origine, qui restent inchangés (le kappa
+  d'EXP-A2-007 reste vérifiable) : `tsac_arabic_sample_reference.tsv` et
+  `tsac_latin_sample_reference.tsv`.
+- **Méthode / configuration** : séance d'adjudication commune (lettres arabes avec le Lot D, lettres
+  latines avec le Lot B), une règle écrite par décision. Lettres arabes : 10 étiquettes changées sur 13
+  désaccords ; lettres latines : 4 sur 8. Après la séance, l'annotateur 1 a remis en question 3 lignes
+  sur lesquelles les deux annotateurs étaient d'accord (74, 82, 86) et une ligne tranchée à deux (44) :
+  les étiquettes communes sont gardées, ces lignes sont signalées (catégorie A8). Puis
+  `normalization.evaluate --errors` sur les fichiers de référence et classement des erreurs.
+- **Code** : `normalization/evaluate.py` (commit `3df2b10`) ; guide `docs/lot-a2_guide_annotation.md`
+  et analyse `docs/lot-a2_analyse_erreurs.md` (ce commit).
+- **Résultats** :
+  - règles ajoutées au guide : insultes et mots étrangers mis de côté (jamais une raison de `x`) ;
+    `حلو` / `حلوة` compté comme marque tunisienne ; `معاك` / `معاه` en fin de phrase standard ne
+    suffit pas ; vœu en arabe standard → `a` ; en lettres latines, un emprunt ou un mot français
+    isolé ne rend pas la phrase mélangée ; seuil de 3 mots pour `x` discuté, non retenu ;
+  - sur les étiquettes de référence : lettres arabes, `a` 23/23, `t` 41/77 (0,53) ; lettres latines,
+    `f` 12/16, `t` 65/70 (0,93). Première passe, pour comparaison : `a` 15/15, `t` 41/78 ; `f` 11/16,
+    `t` 62/67 ;
+  - 45 erreurs classées en 10 catégories (détail : `docs/lot-a2_analyse_erreurs.md`). Lettres arabes
+    (36) : mot absent du lexique 7, variante orthographique 6, affixe collé 5, négation contractée 4,
+    texte très court 4, marque écartée par choix 3, construction 2, étiquette discutable 5. Lettres
+    latines (9) : « bravo + nom » 4, texte court ou sous le seuil 5.
+- **Analyse** : le rappel du tunisien en lettres arabes (0,53) ne change pas avec l'adjudication ; ses
+  erreurs ont des causes précises. 21 sur 36 (A1 à A4) sont réparables par des règles (lexique plus
+  grand, variantes, affixes, négation contractée), à condition de remesurer les fausses alertes sur la
+  presse. Les erreurs en lettres latines viennent surtout de textes de 1 à 3 mots, prix du seuil
+  prudent, et de la règle fragile « bravo + nom ». Limites : une seule séance d'adjudication ; `حلو`
+  compté comme marque sur 2 lignes seulement ; 4 lignes signalées restent à revoir.
+- **Décision / suite** : étiquettes de référence retenues pour les mesures suivantes. Suite :
+  lexique élargi, affixes et négation contractée (une expérience, mesurée sur la presse et sur ces
+  références) ; revoir les lignes A8 avec la seconde annotatrice.
+
+### EXP-A2-008 — Arabizi : chiffre 8 (= غ) dans la règle à chiffres
+- **Date** : 2026-10-25
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : suggestion de la revue de la PR #3 (Lot D) : en arabizi tunisien, 8
+  remplace غ (« 8ali », « 8odwa »), absent de la règle (`235679`). Hypothèse : l'ajouter ne crée
+  aucune fausse alerte sur le français et apporte un gain, sans changer les résultats déjà publiés.
+- **Données** : UD French-GSD (train 14 450, dev 1 476, test 416 phrases) ; commentaires TSAC + Tunizi
+  en lettres latines, sans doublon (78 173) ; échantillon annoté en lettres latines (100 textes).
+- **Méthode / configuration** : mesure avant tout changement de code, avec la liste de chiffres
+  modifiée en mémoire seulement (script hors dépôt `data/interim/langid/exp008_digit8.py`, sortie
+  `exp008_digit8.txt`) ; lecture des 40 mots avec 8 les plus fréquents. Puis code : deux constantes
+  publiques, `ARABIZI_DIGITS_V1` (règle d'origine) et `ARABIZI_DIGITS` (avec le 8, utilisée par le
+  pipeline) ; `annotation.py` et `train_langid.py` gardent la règle d'origine, pour que l'échantillon
+  publié (EXP-A2-004) et le modèle (EXP-A2-006) ne changent pas. « 8bit » et « 8bits » ajoutés aux
+  faux amis.
+- **Code** : commit `76e92e8` : `normalization/normalize.py`, `normalization/annotation.py`,
+  `normalization/train_langid.py`, `tests/test_normalization.py`.
+- **Résultats** :
+  - français classé arabizi par les règles : train 7 → 7, dev 1 → 1, test 0 → 0 : aucune nouvelle
+    fausse alerte ;
+  - commentaires en lettres latines reconnus arabizi par les règles seules : 50 166 → 50 346
+    (+180) ; décision finale (règles + modèle) modifiée pour 20 textes, tous de `latin` à `arabizi`
+    (« darban lou8a », « el 8ira », « ye 8oul »…) ;
+  - mots avec 8 reconnus : tous tunisiens parmi les 40 plus fréquents (8ir, 8ali, 8alta, 8oul,
+    8odwa…) ; un faux ami vu dans les exemples, « 8bits », dans un commentaire par ailleurs tunisien ;
+  - échantillon annoté : aucune ligne ne change ;
+  - preuves après le changement : 470 tests réussis (12 nouveaux), modèle régénéré à l'identique
+    (test lent), tirage latin refait identique (100 sur 100), `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient. Sur 180 textes gagnés par les règles, 160 étaient déjà reconnus
+  par le modèle à n-grammes : le gain net pour la détection est faible (20 sur 78 173). Ce chiffre
+  est optimiste pour le modèle, car Tunizi fait partie de ses données d'entraînement. L'intérêt
+  principal du 8 est ailleurs : les textes trop courts pour que le modèle se prononce, et la future
+  translittération arabizi → arabe (« 8ali » → غالي). Garder deux règles explicites évite qu'un
+  changement de la règle du pipeline modifie en silence un résultat déjà publié.
+- **Décision / suite** : retenu. Suite : translittération arabizi → arabe pour le Lot D (3 candidats
+  par mot avec score, meilleure phrase, nombres et mots français intacts).
+
+### EXP-A2-007 — Double annotation de la langue : accord entre annotateurs (kappa)
+- **Date** : 2026-10-21
+- **Auteur / Lot** : Membre 2 / Lot A2 ; secondes annotatrices : Membre 3 / Lot B (lettres
+  latines), une membre du Lot D (lettres arabes)
+- **Objectif / hypothèse** : vérifier que les guides d'annotation sont utilisables par une autre
+  personne, en mesurant l'accord avec le kappa de Cohen. Repères usuels (Landis et Koch) : au-dessus
+  de 0.6, accord substantiel ; au-dessus de 0.8, presque parfait.
+- **Données** : les deux échantillons d'EXP-A2-004 (TSAC, 100 commentaires chacun, graine 13, non
+  versionnés) : lettres arabes (`t` / `a` / `x`) et lettres latines (`t` / `f` / `x`). Annotateur 1 :
+  première passe d'EXP-A2-002 et EXP-A2-003, après application des règles écrites.
+- **Méthode / configuration** : copie vierge (`annotation blank`, toutes les étiquettes à `?`, textes
+  vérifiés identiques ligne à ligne), envoyée en privé avec une version du guide sans les comptages ni
+  les remarques sur des lignes de la première passe ; annotation seule, sans voir les sorties du
+  modèle. Une ligne oubliée (`?`) a été complétée par l'annotatrice, sans indication. Calcul :
+  `python -m normalization.annotation kappa` (3 classes) ; sorties gardées hors dépôt
+  (`data/interim/langid/kappa_latin.txt`, `kappa_arabic.txt`).
+- **Code** : `normalization/annotation.py`, commande `kappa` (commit `e001a7d`).
+- **Résultats** :
+  - lettres latines : accord observé 0.92, attendu par hasard 0.50, **kappa 0.84** ; 8 désaccords ;
+    répartitions 67 `t` / 16 `f` / 17 `x` (annotateur 1) et 67 `t` / 15 `f` / 18 `x` ;
+  - lettres arabes : accord observé 0.87, attendu par hasard 0.63, **kappa 0.65** ; 13 désaccords ;
+    répartitions 78 `t` / 15 `a` / 7 `x` (annotateur 1) et 76 `t` / 23 `a` / 1 `x` ;
+  - avec 100 textes, intervalle à 95 % d'environ ± 0.11 (latin) et ± 0.18 (arabe).
+- **Analyse** :
+  - latin : aucun texte `t` de l'annotateur 1 n'est `f` pour l'annotatrice ; 7 des 8 désaccords
+    opposent `x` à une langue. Cause principale (lignes 6, 26, 61, 84) : le guide ne dit pas quand un
+    mot d'origine française rend la phrase mélangée (emprunt courant comme « patron », ou mot
+    grammatical comme « mais ») ; l'annotateur 1 n'a pas tranché ces cas de la même façon partout.
+    Lignes 37 et 52 : écarts de l'annotateur 1 à son propre guide (« bravo » est passe-partout) ;
+    ligne 14 : écart de l'annotatrice au cas « bravo + nom → `f` » ; ligne 43, notée douteuse à la
+    première passe : `t` pour l'annotatrice ;
+  - arabe : aucun des 7 `x` de l'annotateur 1 n'est partagé (lignes 10, 15, 28, 43, 47, 76, 95) : la
+    règle « formule figée ou trop courte pour décider » n'a pas de seuil. Lignes 12, 33, 44, 71 : `t`
+    de l'annotateur 1 sur des textes standard dont le seul indice est une non-marque du guide (mot
+    familier commun, insulte, mot étranger). Ligne 20 : le cas ouvert « … معاك ». Ligne 40 : cas
+    réellement difficile. Le kappa est aussi abaissé par le déséquilibre des classes (77 % de `t`),
+    d'où un accord attendu par hasard de 0.63 ;
+  - lecture complémentaire, calculée après avoir vu les résultats et non retenue comme résultat : sur
+    les 92 lignes arabes sans `x` d'aucun côté, 87 accords et kappa d'environ 0.82. Le désaccord porte
+    surtout sur l'usage de `x`, peu sur tunisien / arabe standard ;
+  - limites : un seul second annotateur par échantillon ; 100 textes. Les deux annotatrices ont relu
+    la PR #3 avant d'annoter ; le guide du dépôt y cite des lignes douteuses de la première passe
+    (latin : ligne 43, avec son étiquette ; arabe : lignes 12, 20, 33, 71, 86, sans étiquette). La
+    ligne 43 latine et 4 de ces lignes arabes sont parmi les désaccords : influence possible, non
+    mesurable.
+- **Décision / suite** : guides retenus comme utilisables (latin : presque parfait ; arabe :
+  substantiel). Suite : adjudication des 21 désaccords avec chaque annotatrice pour fixer les
+  étiquettes de référence ; préciser dans les guides les emprunts français et l'usage de `x` ; retirer
+  du guide du dépôt les comptages et numéros de ligne avant toute nouvelle annotation ; remesurer les
+  modèles sur les étiquettes de référence.
+
+### EXP-A2-006 — Arabizi : modèle réentraîné avec la liste de mots neutres à jour
+- **Date** : 2026-10-21
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : rendre le fichier de poids régénérable avec le code actuel. Le modèle
+  d'EXP-A2-003 (7 oct.) a été entraîné avant l'ajout de 8 noms de lieux aux mots neutres
+  (EXP-A2-005, 19 oct.). Comme `prepare_latin` retire aussi ces mots à l'entraînement,
+  `python -m normalization.train_langid` ne redonnait plus le fichier commité (19 983 lignes sur
+  environ 20 000 différentes). Hypothèse : le réentraînement ne dégrade aucune mesure du pipeline.
+- **Données** : mêmes corpus et même graine (13) qu'EXP-A2-003 : arabizi, 66 241 textes pour
+  apprendre et 7 360 mis de côté ; français, 35 194 morceaux pour apprendre et 1 476 phrases `dev`
+  (2 941 textes avec leurs 5 premiers mots) ; français de test (416) ; eval_30 (34 phrases) ;
+  échantillon annoté en lettres latines (67 `t`, 16 `f`) ; test de bascule d'EXP-A2-005 (2 912 textes
+  × 7 ajouts = 20 384 variantes).
+- **Méthode / configuration** : réentraînement sans autre changement (régression logistique,
+  n-grammes de caractères 1-4, C = 0.5, 20 000 poids exportés). Comparaison de l'ancien et du nouveau
+  modèle sur exactement les mêmes textes, au même seuil 5.0 (script hors dépôt
+  `data/interim/langid/exp006_compare.py`). Entraînement lancé deux fois : fichiers identiques.
+  `train_langid.py` dit désormais quand le seuil est choisi par repli.
+- **Code** : commit `e365e55` : `normalization/resources/arabizi_ngrams.json`,
+  `normalization/train_langid.py`.
+- **Résultats** (ancien → nouveau modèle) :
+  - nettoyage du corpus arabizi : 60 → 57 textes retirés comme français ;
+  - français `dev` classé arabizi au seuil 5.0 : 0 → 1 sur 2 941. Ce texte est « can you feel it a »
+    (score 4.79 → 5.10), de l'anglais rangé dans UD French-GSD. Aucun seuil n'atteint 0 : le script
+    garde 5.0 par repli ;
+  - français de test : 0/416 → 0/416 ; eval_30 identique : FR 10/10, AR 10/10, TN 12/14 ;
+  - bascules dues aux noms de lieux : 0 → 0 sur 20 384 ;
+  - échantillon annoté : TN classé arabizi 61 → 62 sur 67 (gagné : « Kalib rcd . ») ; FR classé
+    arabizi 4 → 5 sur 16 (perdu : « Bravo Mme Meherziya », cas « bravo + nom » que le guide laisse
+    ouvert) ;
+  - arabizi mis de côté retrouvé : 6 687 sur 7 360 (91,24 %). Pas strictement comparable aux 6 701
+    sur 7 363 d'EXP-A2-005 : changer la liste modifie les doublons, donc le tirage ;
+  - tests : 518 réussis ; `ruff check .` sans remarque.
+- **Analyse** : l'hypothèse tient. Le seul écart négatif sur le français `dev` vient d'une erreur
+  d'étiquette du corpus (texte anglais) ; l'écart sur l'échantillon porte sur un cas que le guide ne
+  tranche pas nettement. Les mesures utiles au pipeline sont inchangées. Le seuil n'est pas réajusté
+  après avoir vu les résultats : il reste celui d'EXP-A2-003. Limite : le critère « aucun français
+  `dev` classé arabizi » n'est plus atteint au sens strict, à cause de ce texte anglais ; à revoir avec
+  le nettoyage des corpus.
+- **Décision / suite** : nouveau modèle retenu, régénérable à l'identique. Suite : test de
+  régénération (sauté sans corpus ni scikit-learn), exception dans `CONTRIBUTING.md`,
+  `linguist-generated` dans `.gitattributes`.
+### EXP-C-010 — Détection d'affirmations (Model 1), palier Bronze : TF-IDF de caractères
+
+- **Date / auteur** : 2026-10-25, Achref (Lot C) ; branchement dans l'API 2026-10-26.
+- **Objectif / hypothèse** : un classifieur classique (TF-IDF + régression logistique) suffit-il à distinguer AFFIRMATION / OPINION / AUTRE nettement mieux que la classe majoritaire, en français, arabe, tunisien et arabizi ?
+- **Données** : 600 phrases annotées (`claim_detection_600.jsonl`, privé, non versionné). Split stratifié `data/splits/claim_detection_multiclass_600_seed42.json` : train 480, test 120 (AFFIRMATION 63, AUTRE 38, OPINION 19).
+- **Test gelé** : SHA-256 `9a25686286ccb3271ca98fe9b03046e2a0cb55cf6e5b7f43ab467669b5a8cee0` (fichier versionné dans git), gelé le 2026-10-25 au commit 533071d, mesuré une seule fois.
+- **Méthode / configuration** : `models/baselines/claim_detection_multiclass_tfidf.py`. TF-IDF de n-grammes de caractères 3–5 (`char_wb`) + régression logistique `class_weight=balanced`. Représentation caractères choisie d'avance (robuste aux variantes d'écriture du tunisien et de l'arabizi) ; comparaison en validation croisée 5 plis sur le train : BoW mots 0.679, TF-IDF mots 0.717, caractères 0.679, caractères + normalisation A2 0.671. Baseline triviale : classe majoritaire du train. Déterministe.
+- **Code** : `python models/baselines/claim_detection_multiclass_tfidf.py data/interim/lot_c/claim_detection_600.jsonl --split-file data/splits/claim_detection_multiclass_600_seed42.json --output evaluation/results/lot-c_claim-detection_tfidf_test.json --save-model models/checkpoints/claim_detection_tfidf_seed42.joblib`
+- **Résultats (test, n = 120)** : macro-F1 **0.643** (reproduit : 0.6435) ; accuracy 0.733 vs **0.230** classe majoritaire (acc 0.525). Par langue : fr 0.576 (n = 26), ar 0.478 (n = 30), tunisien arabe 0.704 (n = 18), arabizi 0.554 (n = 28), mixte 0.813 (n = 18) ; petits effectifs, écarts indicatifs. Mesures sur le test des autres représentations, pour information seulement (pas de choix sur le test) : BoW 0.605, TF-IDF mots 0.550, caractères 0.643, caractères + A2 0.680.
+- **Analyse d'erreurs** : 32 erreurs sur 120 : opinion non reconnue 11, question / souhait 8, hypothèse / conditionnel 6, récit personnel pris pour un fait 4, fait tunisien classé opinion 3.
+- **Décision** : composant Bronze de la démo. L'API garde la classe la plus probable (argmax), comme dans l'évaluation. XLM-R + LoRA reste disponible avec `CLAIM_DETECTOR_BACKEND=xlmr` (après le Bronze).
+- **Numérotation** : EXP-C-010, car EXP-C-001 désigne déjà le pilote binaire du 2026-10-21 (60 extraits, 0.4286), conservé tel quel.
+
+### EXP-D-007 — Palier Bronze : baselines triviales, verdict avec le NLI Bronze du Lot C, erreurs
+- **Date** : 2026-10-26
+- **Auteur / Lot** : Membre 5 / Lot D
+- **Objectif / hypothèse** : mesurer les composants Bronze du Lot D (retrieval BM25, verdict par
+  gabarit) sur le test gelé, face aux baselines triviales exigées par la revue Bronze ; remplacer
+  le NLI provisoire du Lot D par le NLI Bronze du Lot C ; classer les erreurs.
+- **Données** :
+  - dev : jeu fictif v2 (`tests/fixtures/rag_llm/`, 20 affirmations, 15 passages) ;
+  - test : Tunifact v1, **gelé le 23/10/2026** (EXP-D-006, commit `ff08633`) ; 21 affirmations
+    (18 avec preuve), 84 passages reconstruits depuis `lot-a1-data@77a00b9`. Empreintes SHA-256
+    dans `data/splits/lot_d_tunifact_v1.json` : affirmations `9e2acf6f1d1954d9e91e24ada642b62ddf495047f84424a7335ab09b74a625b8`,
+    corpus `ae0a351a32f6ce47046e78739ccf35a8076e9647a2fef7a1d70a7e7f134af362`
+    (vérification : `python -m rag_llm.freeze_test --check`). Le test n'a servi à régler aucun
+    paramètre.
+- **Méthode / configuration** :
+  - retrieval BM25 (k1 = 1.5, b = 0.75), top 5 ; verdict par gabarit (seuils inchangés depuis
+    EXP-D-002) ;
+  - NLI : **NLI Bronze du Lot C** (`models/nli/bronze.py`, règles R1–R6, seuils réglés par le
+    Lot C sur train + val du corpus NLI v3, dont le split test contient les 6 articles de ce test :
+    pas de fuite). Ce choix est fixé par l'architecture (le NLI relève du Lot C ;
+    `rag_llm/baseline_stance.py` est documenté comme provisoire depuis EXP-D-002), il n'a pas été
+    fait au vu des scores du test. Le NLI provisoire du Lot D est mesuré pour comparaison ;
+  - baselines : passage aléatoire (espérance exacte du tirage, sans graine), classe majoritaire du
+    dev (`faux`) appliquée partout, toujours s'abstenir ;
+  - correctif de `baseline_stance.py` : un chiffre collé à des lettres en arabizi (« 5obez »,
+    « 3am ») n'est plus lu comme un nombre. Trouvé en démonstration sur une phrase hors test
+    (« soum 5obez 190 millimes »), puis vérifié : dev 0.70 et test 0.143 inchangés.
+  - Composants déterministes : un seul passage sur le test. Nécessite le NLI Bronze du Lot C
+    (PR #7) dans le dépôt.
+- **Code** : `python -m rag_llm.bronze_report` (`--stance rules` pour la comparaison) ;
+  erreurs dans `docs/lot-d_erreurs_bronze.csv` (sans texte de preuve) et
+  `evaluation/results/lot-d_erreurs_lot-c.csv` (avec les textes, non versionné : droits Tunifact).
+- **Résultats — tableau 1 (test ; dev entre parenthèses)** :
+
+  | Composant | Méthode Bronze | Baseline triviale | Métrique | Baseline | Bronze | N test |
+  |-----------|----------------|-------------------|----------|----------|--------|--------|
+  | Retrieval | BM25 | passage aléatoire | Rappel@5 (↑) | 0.060 (0.333) | **0.411** (0.667) | 18 |
+  | Retrieval | BM25 | passage aléatoire | MRR (↑) | 0.116 (0.302) | **0.630** (0.907) | 18 |
+  | Verdict | gabarit + NLI Bronze C | classe majoritaire (`faux`) | exactitude (↑) | **0.524** (0.600) | 0.238 (0.500) | 21 |
+  | Verdict | gabarit + NLI Bronze C | classe majoritaire (`faux`) | macro-F1 (↑) | 0.172 (0.187) | **0.188** (0.375) | 21 |
+  | Verdict | gabarit + NLI Bronze C | toujours s'abstenir | exactitude (↑) | 0.143 (0.100) | **0.238** (0.500) | 21 |
+
+  Verdict (test) : couverture 0.333, précision sélective 0.429 (3 verdicts justes sur 7 émis),
+  abstention justifiée 0.667 (2 sur 3), 0 citation invalide. Avec le NLI provisoire du Lot D :
+  exactitude 0.143, macro-F1 0.065, couverture 0.048 (dev : 0.700, 0.524, 0.650).
+- **Résultats — tableau 2 (test, par langue / écriture)** :
+
+  | Groupe | N | Rappel@5 BM25 | Rappel@5 aléatoire | Exactitude du verdict |
+  |--------|---|---------------|--------------------|-----------------------|
+  | FR | 9 | 0.357 | 0.060 | 0.444 |
+  | AR | 7 | 0.650 | 0.060 | 0.143 |
+  | Tunisien (arabe) | 2 | 0.167 | 0.060 | 0.000 |
+  | Tunisien (arabizi) | 3 | 0.222 | 0.060 | 0.000 |
+
+  Rappel@5 calculé sur les affirmations qui ont une preuve (FR 7, AR 6, tunisien 2 + 3).
+- **Résultats — tableau 3 (erreurs ; test + dev)** :
+  - retrieval BM25, chaque preuve attendue absente du top 5 : **52** (40 test + 12 dev) — langue
+    croisée 24 (16 + 8), arabizi 12 (10 + 2), tunisien en lettres arabes 9 (7 + 2), même langue
+    classé après le top 5 : 4 (4 + 0), paraphrase sans mot commun 3 (3 + 0) ;
+  - verdict : **26** (16 test + 10 dev), toutes les erreurs des deux jeux — preuve retrouvée mais
+    non décisive 8, bonne preuve non retrouvée 7, position inversée vrai ↔ faux 5, « trompeur »
+    non produit par le gabarit 3, preuves jugées contradictoires 2, verdict émis sans preuve 1.
+    Moins de 30 : le test ne compte que 21 affirmations ; aucune erreur n'est omise.
+- **Analyse** :
+  1. BM25 bat nettement le hasard (Rappel@5 × 7, MRR × 5). 45 de ses 52 échecs viennent du
+     croisement de langues et du dialecte : sans mot commun, BM25 ne peut rien retrouver. C'est ce
+     que corrige la recherche dense (EXP-D-003, hors palier Bronze) et ce que la translittération
+     arabizi du Lot A2 doit améliorer.
+  2. Le NLI Bronze du Lot C rend le verdict utile : couverture 0.048 → 0.333, exactitude 0.143 →
+     0.238, et le démenti « Tunifact a classé comme fausse… » est enfin reconnu (`tf-c02`,
+     `tf-c03`). Les affirmations françaises en profitent le plus (0.444).
+  3. En exactitude, le verdict reste **sous la classe majoritaire** (0.238 contre 0.524) : le test
+     est déséquilibré (11 affirmations fausses sur 21, comme la plupart des articles de
+     fact-checking) et « tout est faux » n'est jamais en abstention. En macro-F1, qui compte
+     chaque verdict à égalité, le système dépasse légèrement cette baseline (0.188 contre 0.172).
+  4. Erreur la plus grave : `tf-c13` (« Le ministère de l'Éducation a annulé l'examen du
+     baccalauréat 2026 ») reçoit « faux » en citant deux phrases de l'article sur le bac, qui ne
+     parlent pas d'annulation : l'abstention justifiée passe de 1.00 à 0.67.
+  5. Petit jeu (21 affirmations, 6 articles) : chiffres indicatifs.
+- **Décision / suite** : configuration Bronze retenue : BM25 + NLI Bronze du Lot C + gabarit. Suite :
+  translittération arabizi (Lot A2), test élargi à d'autres articles du Lot A1, label « trompeur »
+  et recherche dense au palier Silver.
 ### EXP-C-007 — Ablation texte brut contre texte normalisé et alignement API
 - **Date** : 2026-10-24
 - **Auteur / Lot** : Lot C

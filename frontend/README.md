@@ -2,9 +2,10 @@
 
 **Base et tableau de bord : Membre 5 (Hadil) · Chaque lot complète sa propre page · Relecture : 2 membres**
 
-Il n'y a pas de Membre 6 : la plateforme est construite par toute l'équipe. Membre 5 maintient la base
-commune (en-tête, styles, accès à l'API, page d'accueil, tableau de bord d'évaluation) ; chaque lot
-remplit la page qui le concerne.
+Une page par lot (`lot-a1.html` … `lot-d.html`), une page d'accueil (`index.html`) et un tableau de
+bord d'évaluation (`evaluation.html`), avec des styles et un accès à l'API communs (`assets/`).
+La plateforme est construite par toute l'équipe. Membre 5 maintient la base commune ; chaque lot
+remplit sa page. La page `bronze.html` est la démonstration intégrée classique du palier Bronze.
 
 ## Lancer la plateforme
 
@@ -36,6 +37,11 @@ bash :
 ```bash
 EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl uvicorn api.main:app --reload
 ```
+
+Si le chemin de `EVIDENCE_CORPUS` est faux ou si le fichier est invalide, l'API répond par une erreur
+claire (code 503, avec le fichier et le numéro de ligne) au lieu de retomber en silence sur l'échantillon.
+Le fichier `data/processed/evidence_corpus*.jsonl` est ignoré par Git, pour ne jamais versionner par
+erreur un corpus dont les droits ne sont pas confirmés.
 
 ## Pages
 

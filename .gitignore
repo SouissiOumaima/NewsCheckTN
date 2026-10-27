@@ -39,6 +39,8 @@ data/raw/*
 data/interim/*
 !data/interim/.gitkeep
 # Les petits jeux annotés (< 5 Mo) et échantillons peuvent être versionnés dans data/processed/ et data/annotations/
+# … sauf le corpus de preuves lu par l'API (droits de redistribution souvent non confirmés) :
+data/processed/evidence_corpus*.jsonl
 *.parquet
 *.arrow
 
