@@ -1,6 +1,6 @@
 # `api/` — Lot E : API FastAPI
 
-**Partagé par toute l'équipe (pas de Membre 6) · Chaque lot maintient ses routes · Relecture : 2 membres**
+**Responsable : Membre 6 · Branche : `lot-e-integration`**
 
 ## Rôle
 Exposer le pipeline et chacune de ses étapes via HTTP, pour le frontend et pour tester chaque lot isolément.

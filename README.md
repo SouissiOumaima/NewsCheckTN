@@ -65,7 +65,7 @@ sont définies **une seule fois** dans [`common/schemas.py`](common/schemas.py).
 | B  | Membre 3 | `linguistic_analysis/` | `lot-b-linguistic` | POS, dépendances, SPO, modalité, coréférence |
 | C  | Membre 4 | `models/` | `lot-c-models` | Baselines, fine-tuning XLM-R/AraBERT + LoRA, NLI |
 | D  | Membre 5 | `rag_llm/` | `lot-d-rag` | Retrieval hybride, re-ranking, prompting, abstention, fidélité |
-| E  | toute l'équipe (base : Membre 5) | `api/`, `frontend/`, `evaluation/`, `pipeline.py`, `common/` | `lot-e-*` | Intégration, API, plateforme, dashboard, CI, rapport |
+| E  | Membre 6 | `api/`, `frontend/`, `evaluation/`, `pipeline.py`, `common/` | `lot-e-integration` | Intégration, API, dashboard, CI, rapport |
 
 Dossiers partagés : `docs/`, `notebooks/` (un sous-dossier par lot), `tests/` (un fichier par lot), `experiments.md`.
 

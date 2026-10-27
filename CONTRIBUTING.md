@@ -10,7 +10,7 @@
 | `lot-b-linguistic` | Lot B — analyse linguistique | Membre 3 |
 | `lot-c-models` | Lot C — modèles appris | Membre 4 |
 | `lot-d-rag` | Lot D — RAG & LLM | Membre 5 |
-| `lot-e-*` (ex. `lot-e-plateforme`) | Lot E — intégration, API, plateforme (partagé) | toute l'équipe |
+| `lot-e-integration` | Lot E — intégration, API, audit | Membre 6 |
 
 Pour une tâche plus large, on peut créer une sous-branche à partir de sa branche de lot,
 préfixée par le lot : `lot-c-models/xlmr-lora`, `lot-d-rag/bm25`… puis la fusionner dans la branche de lot.
@@ -40,7 +40,7 @@ Puis ouvrir une **Pull Request** `lot-xxx → main` sur GitHub.
 
 1. **Petites PR fréquentes** (idéalement au moins une par semaine et par lot) plutôt qu'une énorme PR en fin de projet.
 2. La **CI doit être verte** (lint + tests).
-3. **Au moins 1 relecture** d'un autre membre ; **2 relectures** (dont un membre du lot concerné) si la PR touche
+3. **Au moins 1 relecture** d'un autre membre ; **2 relectures** (dont le Lot E) si la PR touche
    `common/schemas.py`, `pipeline.py`, `api/`, `requirements*.txt` ou `.github/`.
 4. Remplir le template de PR (ce qui change, comment tester, ligne ajoutée dans `experiments.md`).
 5. Fusion par **"Squash and merge"** pour garder un historique de `main` lisible.

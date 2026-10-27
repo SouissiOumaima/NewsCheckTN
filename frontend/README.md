@@ -1,10 +1,9 @@
-# `frontend/` — Plateforme commune (Lot E, partagé)
+# `frontend/` — Lot E : Interface web
 
-**Base et tableau de bord : Membre 5 (Hadil) · Chaque lot complète sa propre page · Relecture : 2 membres**
+**Responsable : Membre 6 · Branche : `lot-e-integration`**
 
-Il n'y a pas de Membre 6 : la plateforme est construite par toute l'équipe. Membre 5 maintient la base
-commune (en-tête, styles, accès à l'API, page d'accueil, tableau de bord d'évaluation) ; chaque lot
-remplit la page qui le concerne.
+Une page par lot (`lot-a1.html` … `lot-d.html`), une page d'accueil (`index.html`) et un tableau de
+bord d'évaluation (`evaluation.html`), avec des styles et un accès à l'API communs (`assets/`).
 
 ## Lancer la plateforme
 
