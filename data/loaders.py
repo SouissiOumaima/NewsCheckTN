@@ -33,6 +33,13 @@ _SAMPLE = [
         source="échantillon",
         url="https://www.tunisie.gov.tn/",
     ),
+    Evidence(
+        doc_id="sample-003",
+        text="سعر الخبز المدعم هو 190 مليما.",
+        source="Exemple pédagogique bilingue",
+        # Cette entrée est un contrôle de démo issu du jeu de fixtures Lot D,
+        # pas une source officielle sur laquelle fonder une décision réelle.
+    ),
 ]
 
 

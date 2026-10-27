@@ -61,6 +61,18 @@ def test_bronze_trace_filters_an_opinion_safely():
     assert response.json()["claims"] == []
 
 
+def test_bronze_trace_supports_the_arabic_bread_demo_case(monkeypatch):
+    monkeypatch.setenv("NLI_BACKEND", "bronze")
+    from models.nli.stance import set_classifier
+
+    set_classifier(None)
+    response = client.post("/bronze/check", json={"text": "سعر الخبز المدعم 190 مليما"})
+    assert response.status_code == 200
+    trace = response.json()["claims"][0]
+    assert trace["verdict"]["label"] == "vrai"
+    assert trace["verdict"]["citations"] == ["sample-003"]
+
+
 def test_check_route():
     r = client.post("/check", json={"text": TEXT})
     assert r.status_code == 200 and len(r.json()["verdicts"]) == 1

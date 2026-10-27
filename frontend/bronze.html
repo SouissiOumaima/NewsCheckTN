@@ -25,6 +25,7 @@
         <button type="button" class="chip" data-ex="0">preuve disponible</button>
         <button type="button" class="chip" data-ex="1">chômage</button>
         <button type="button" class="chip" data-ex="2">sans preuve</button>
+        <button type="button" class="chip" data-ex="3">pain arabe</button>
       </div>
       <div class="row">
         <label class="field">Preuves BM25 <input id="k" type="number" min="1" max="10" value="5"></label>
@@ -51,6 +52,7 @@
       "Tunis est la capitale de la Tunisie.",
       "Le taux de chômage en Tunisie était de 16,4 % au deuxième trimestre 2023.",
       "Un nouvel aéroport a été inauguré à Kairouan en 2026.",
+      "سعر الخبز المدعم 190 مليما",
     ];
     document.querySelectorAll("[data-ex]").forEach((button) => button.addEventListener("click", () => {
       document.getElementById("text").value = examples[+button.dataset.ex];
