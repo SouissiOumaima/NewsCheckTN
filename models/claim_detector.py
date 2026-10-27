@@ -150,7 +150,7 @@ def filter_checkworthy(
     """Conserve les ``AFFIRMATION`` assez confiantes.
 
     Sans ``threshold`` explicite : avec le TF-IDF chargé, on garde la classe la
-    plus probable (argmax), comme dans l'évaluation EXP-C-001 ; à trois classes,
+    plus probable (argmax), comme dans l'évaluation EXP-C-010 ; à trois classes,
     ``P(AFFIRMATION)`` peut gagner sous 0,5. Sinon on applique ``THRESHOLD``.
 
     ``claims`` reste la sortie normalisée de Lot B, utilisée ensuite par la
