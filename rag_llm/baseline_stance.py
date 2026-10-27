@@ -51,6 +51,9 @@ _NUMBER_WORD = re.compile(
 # Un nombre précédé d'une lettre latine (G20, A320, Covid19), ou d'une lettre puis d'un
 # tiret (Covid-19, كوفيد-19), fait partie d'un nom : ce n'est pas une quantité.
 _NUMBER = re.compile(r"(?<![a-z\d.,])(?<![a-z\u0600-\u06ff]-)\d+(?:[.,]\d+)?")
+# Arabizi : un chiffre seul collé à des lettres sert de lettre (5obez = خبز, 3am = عام, 7aja),
+# ce n'est pas une quantité. Les nombres suivis d'une unité collée restent des nombres (10dt, 3kg).
+_UNITS = ("dt", "d", "tnd", "kg", "g", "km", "m", "l", "ml", "h", "min", "mn", "md", "mds", "ans")
 
 # Marqueurs de démenti, sous forme normalisée (voir `normalize_for_retrieval`).
 REFUTE_CUES_FR = (
@@ -73,12 +76,19 @@ def _numbers(text: str) -> set[str]:
     norm = _NUMBER_WORD.sub(
         lambda m: _format(float(m.group(1).replace(",", ".")) * _MULTIPLIERS[m.group(2)]), norm
     )
-    nums = {_format(float(n.replace(",", "."))) for n in _NUMBER.findall(norm)}
+    nums = set()
+    for m in _NUMBER.finditer(norm):
+        rest = re.match(r"[a-z]+", norm[m.end():])
+        if len(m.group()) == 1 and rest and rest.group() not in _UNITS:
+            continue  # chiffre-lettre de l'arabizi (5obez, 3am), pas une quantité
+        nums.add(_format(float(m.group().replace(",", "."))))
     return {n for n in nums if not _YEAR.match(n)}
 
 
 def _stems(text: str) -> set[str]:
-    return {t[:STEM_LEN] for t in tokenize(text) if not any(c.isdigit() for c in t)}
+    # Mots seulement (les nombres sont comparés à part) ; un mot arabizi comme « 5obez »
+    # contient un chiffre mais reste un mot.
+    return {t[:STEM_LEN] for t in tokenize(text) if any(c.isalpha() for c in t)}
 
 
 def topic_overlap(claim_text: str, evidence_text: str) -> float:

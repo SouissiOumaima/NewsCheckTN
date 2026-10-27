@@ -21,6 +21,16 @@ Documentation interactive : http://localhost:8000/docs
 | POST | `/nli` | C | `{"claim", "evidence", "lang"}` | `StanceResult` |
 | POST | `/verdict` | D | `{"claim", "lang", "k"}` | `Verdict` |
 | POST | `/check` | tous | `{"text"}` | `{"verdicts": [Verdict]}` |
+| POST | `/verdict/detail` | D | `{"claim", "lang", "k", "nli": "lot-c"\|"regles"}` | `{"corpus_size", "nli", "evidences": [Evidence + rank, stance, confidence], "verdict"}` |
+| GET  | `/corpus/stats` | A1 | — | `{"size", "by_source", "sample"}` |
+| GET  | `/results` | tous | — | `{"results": [...]}` : fichiers de `evaluation/results/`, allégés |
+| GET  | `/app/` | E | — | pages de la plateforme (`frontend/`) |
+
+Le corpus de preuves est lu dans `data/processed/evidence_corpus.jsonl`, ou dans le fichier indiqué par
+la variable d'environnement `EVIDENCE_CORPUS` (voir `frontend/README.md`). Un corpus **demandé** introuvable
+ou invalide (dossier, JSON invalide, `doc_id` manquant ou en double) renvoie **503** avec un message clair
+(fichier et numéro de ligne) ; sans corpus configuré, l'API utilise un échantillon de 2 passages et
+`GET /corpus/stats` le signale (`origin`, `warning`).
 
 ## Conventions
 - L'API ne contient **aucune logique métier** : elle appelle les points d'entrée des lots.

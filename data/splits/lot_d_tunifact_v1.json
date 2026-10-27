@@ -1,0 +1,43 @@
+{
+  "name": "Lot D — jeu de test réel Tunifact v1",
+  "frozen_on": "2026-10-23",
+  "frozen_in": "EXP-D-006 (commit ff08633 : ajout de claims_tunifact_v1.jsonl)",
+  "hash_recorded_on": "2026-10-26",
+  "rule": "jamais utilisé pour régler une règle, un seuil ou un paramètre",
+  "claims": {
+    "path": "tests/fixtures/rag_llm/claims_tunifact_v1.jsonl",
+    "sha256": "9e2acf6f1d1954d9e91e24ada642b62ddf495047f84424a7335ab09b74a625b8",
+    "n": 21,
+    "ids": [
+      "tf-c01",
+      "tf-c02",
+      "tf-c03",
+      "tf-c04",
+      "tf-c05",
+      "tf-c06",
+      "tf-c07",
+      "tf-c08",
+      "tf-c09",
+      "tf-c10",
+      "tf-c11",
+      "tf-c12",
+      "tf-c13",
+      "tf-c14",
+      "tf-c15",
+      "tf-c16",
+      "tf-c17",
+      "tf-c18",
+      "tf-c19",
+      "tf-c20",
+      "tf-c21"
+    ]
+  },
+  "corpus": {
+    "path": "data/interim/lot_d/evidence_tunifact_v1.jsonl",
+    "built_by": "python -m rag_llm.build_tunifact_eval  (version v1)",
+    "source": "branche lot-a1-data, commit 77a00b9 (export tunifact_sentences_46.jsonl)",
+    "versioned": false,
+    "sha256": "ae0a351a32f6ce47046e78739ccf35a8076e9647a2fef7a1d70a7e7f134af362",
+    "n": 84
+  }
+}
