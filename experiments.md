@@ -27,6 +27,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
+| EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
 | EXP-C-007 | 2026-10-24 | C | Ablation raw vs normalisé | XLM-R + LoRA, seed42, test gelé | macro-F1 ; bootstrap | raw 0,7108 vs normalisé 0,6671 ; p=0,188 | raw retenu ; API alignée sur raw |
 | EXP-C-006 | 2026-10-24 | C | Baseline neuronale | MiniLM figé + LR, 3 runs | macro-F1 | 0,6350 ± 0,0000 | baseline de comparaison conservée |
 | EXP-C-005 | 2026-10-24 | C | Bootstrap apparié | TF-IDF vs XLM-R seed42, 1 000 réplications | Δ macro-F1 ; IC 95 % ; p | +0,0673 ; [-0,0468 ; 0,1860] ; p=0,254 | gain non concluant statistiquement |
@@ -86,6 +87,20 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-006 | 2026-10-26 | B | Extraction d'affirmations : prise en compte du tunisien en lettres arabes identifié `tn` par le Lot A2 (PR #3) | règles ; règles + spaCy FR / Stanza AR ; code du Lot B inchangé | triplet SPO exact | parseurs 0.77 → 0.86 (7 → 5 erreurs) ; règles 0.91 inchangé (4 erreurs) | liste d'erreurs attendues mise à jour ; mesure sur eval_100 |
 
 ## Entrées
+
+### EXP-C-010 — Détection d'affirmations (Model 1), palier Bronze : TF-IDF de caractères
+
+- **Date / auteur** : 2026-10-25, Achref (Lot C) ; branchement dans l'API 2026-10-26.
+- **Objectif / hypothèse** : un classifieur classique (TF-IDF + régression logistique) suffit-il à distinguer AFFIRMATION / OPINION / AUTRE nettement mieux que la classe majoritaire, en français, arabe, tunisien et arabizi ?
+- **Données** : 600 phrases annotées (`claim_detection_600.jsonl`, privé, non versionné). Split stratifié `data/splits/claim_detection_multiclass_600_seed42.json` : train 480, test 120 (AFFIRMATION 63, AUTRE 38, OPINION 19).
+- **Test gelé** : SHA-256 `9a25686286ccb3271ca98fe9b03046e2a0cb55cf6e5b7f43ab467669b5a8cee0` (fichier versionné dans git), gelé le 2026-10-25 au commit 533071d, mesuré une seule fois.
+- **Méthode / configuration** : `models/baselines/claim_detection_multiclass_tfidf.py`. TF-IDF de n-grammes de caractères 3–5 (`char_wb`) + régression logistique `class_weight=balanced`. Représentation caractères choisie d'avance (robuste aux variantes d'écriture du tunisien et de l'arabizi) ; comparaison en validation croisée 5 plis sur le train : BoW mots 0.679, TF-IDF mots 0.717, caractères 0.679, caractères + normalisation A2 0.671. Baseline triviale : classe majoritaire du train. Déterministe.
+- **Code** : `python models/baselines/claim_detection_multiclass_tfidf.py data/interim/lot_c/claim_detection_600.jsonl --split-file data/splits/claim_detection_multiclass_600_seed42.json --output evaluation/results/lot-c_claim-detection_tfidf_test.json --save-model models/checkpoints/claim_detection_tfidf_seed42.joblib`
+- **Résultats (test, n = 120)** : macro-F1 **0.643** (reproduit : 0.6435) ; accuracy 0.733 vs **0.230** classe majoritaire (acc 0.525). Par langue : fr 0.576 (n = 26), ar 0.478 (n = 30), tunisien arabe 0.704 (n = 18), arabizi 0.554 (n = 28), mixte 0.813 (n = 18) ; petits effectifs, écarts indicatifs. Mesures sur le test des autres représentations, pour information seulement (pas de choix sur le test) : BoW 0.605, TF-IDF mots 0.550, caractères 0.643, caractères + A2 0.680.
+- **Analyse d'erreurs** : 32 erreurs sur 120 : opinion non reconnue 11, question / souhait 8, hypothèse / conditionnel 6, récit personnel pris pour un fait 4, fait tunisien classé opinion 3.
+- **Décision** : composant Bronze de la démo. L'API garde la classe la plus probable (argmax), comme dans l'évaluation. XLM-R + LoRA reste disponible avec `CLAIM_DETECTOR_BACKEND=xlmr` (après le Bronze).
+- **Numérotation** : EXP-C-010, car EXP-C-001 désigne déjà le pilote binaire du 2026-10-21 (60 extraits, 0.4286), conservé tel quel.
+
 
 ### EXP-D-007 — Palier Bronze : baselines triviales, verdict avec le NLI Bronze du Lot C, erreurs
 - **Date** : 2026-10-26
