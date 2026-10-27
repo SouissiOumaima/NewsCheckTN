@@ -29,5 +29,22 @@ def recall_at_k(relevant: list[set[str]], retrieved: list[list[str]], k: int) ->
     return sum(hits) / len(hits) if hits else 0.0
 
 
-# TODO(Lot E + Lot D): grille de fidélité (citations valides, absence d'hallucination),
-#                      taux d'abstention, calibration (ECE).
+def abstention_rate(abstained: list[bool]) -> float:
+    """Part des cas où le système a choisi de ne pas trancher."""
+    return sum(abstained) / len(abstained) if abstained else 0.0
+
+
+def citation_validity(citations: list[list[str]], retrieved: list[list[str]]) -> dict[str, float | int]:
+    """Contrôle de fidélité minimal : chaque citation doit être un passage retrouvé."""
+    invalid = sum(
+        1
+        for cited, available in zip(citations, retrieved, strict=True)
+        for doc_id in cited
+        if doc_id not in set(available)
+    )
+    total = sum(len(cited) for cited in citations)
+    return {
+        "citation_count": total,
+        "invalid_citations": invalid,
+        "citation_validity": 1.0 if not total else (total - invalid) / total,
+    }

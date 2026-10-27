@@ -1,0 +1,4 @@
+{"id":"integration-001","text":"Tunis est la capitale de la Tunisie.","gold_label":"vrai","expected_claims":1,"relevant_doc_ids":["sample-002"]}
+{"id":"integration-002","text":"Le taux de chômage en Tunisie était de 25 % au deuxième trimestre 2023.","gold_label":"faux","expected_claims":1,"relevant_doc_ids":["sample-001"]}
+{"id":"integration-003","text":"Un nouvel aéroport a été inauguré à Kairouan en 2026.","gold_label":"preuves_insuffisantes","expected_claims":1,"relevant_doc_ids":[]}
+{"id":"integration-004","text":"Je pense que Tunis est magnifique.","gold_label":null,"expected_claims":0,"relevant_doc_ids":[]}

@@ -23,7 +23,7 @@
       <h1>Tableau de bord d'évaluation</h1>
       <p class="lede">Tous les fichiers de résultats écrits par les scripts d'évaluation des lots dans <code>evaluation/results/</code> (format commun de <code>evaluation/README.md</code>). Chaque ligne renvoie à une entrée de <code>experiments.md</code> par son identifiant.</p>
     </div>
-    <p class="notice">Les fichiers de résultats ne sont pas versionnés : ce tableau montre ceux présents sur la machine où tourne l'API. Pour les voir, lance d'abord les évaluations de chaque lot (par exemple <code>python -m rag_llm.evaluate_retrieval</code>, <code>python -m linguistic_analysis.evaluate --rules</code>).</p>
+    <p class="notice">Les synthèses légères de revue sont versionnées ; le tableau affiche aussi les résultats générés localement. Pour les mettre à jour, lance les évaluations de chaque lot et <code>python -m evaluation.integration_audit</code>.</p>
     <div class="error" id="err" hidden></div>
     <section class="kpis" id="kpis"></section>
 

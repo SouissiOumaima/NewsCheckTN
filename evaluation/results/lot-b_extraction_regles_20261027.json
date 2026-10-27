@@ -1,0 +1,1700 @@
+{
+  "exp_id": "EXP-B-005",
+  "lot": "B",
+  "task": "extraction-affirmations",
+  "model": "regles",
+  "parsers_used": [
+    "rules"
+  ],
+  "split": "eval_30",
+  "date": "2026-10-27",
+  "metrics": {
+    "n": 34,
+    "is_claim_accuracy": 1.0,
+    "is_claim_macro_f1": 1.0,
+    "modality_accuracy": 1.0,
+    "spo_n": 22,
+    "spo_exact": {
+      "subject": 0.955,
+      "predicate": 0.955,
+      "obj": 0.909
+    },
+    "spo_partial": {
+      "subject": 0.955,
+      "predicate": 0.955,
+      "obj": 0.909
+    },
+    "spo_all_exact": 0.909,
+    "coref_n": 3,
+    "coref_accuracy": 1.0,
+    "by_lang": {
+      "ar-arabic": {
+        "n": 10,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 7,
+        "spo_exact": {
+          "subject": 0.857,
+          "predicate": 0.857,
+          "obj": 0.857
+        },
+        "spo_partial": {
+          "subject": 0.857,
+          "predicate": 0.857,
+          "obj": 0.857
+        },
+        "spo_all_exact": 0.857,
+        "coref_n": 1,
+        "coref_accuracy": 1.0
+      },
+      "fr-latin": {
+        "n": 10,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 8,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 1,
+        "coref_accuracy": 1.0
+      },
+      "tn-arabic": {
+        "n": 5,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 2,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "tn-arabizi": {
+        "n": 5,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 3,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 1,
+        "coref_accuracy": 1.0
+      },
+      "tn-mixed": {
+        "n": 4,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 2,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 0.5
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 0.5
+        },
+        "spo_all_exact": 0.5,
+        "coref_n": 0,
+        "coref_accuracy": null
+      }
+    },
+    "by_phenomenon": {
+      "code_switching": {
+        "n": 4,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 2,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 0.5
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 0.5
+        },
+        "spo_all_exact": 0.5,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "conditionnel_journalistique": {
+        "n": 1,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 1,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "copule": {
+        "n": 1,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 1,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "coréférence": {
+        "n": 3,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 3,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 3,
+        "coref_accuracy": 1.0
+      },
+      "fait_chiffré": {
+        "n": 9,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 9,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "hypothétique": {
+        "n": 1,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 0,
+        "spo_exact": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_partial": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_all_exact": null,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "négation": {
+        "n": 3,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 3,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "opinion": {
+        "n": 5,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 0,
+        "spo_exact": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_partial": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_all_exact": null,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "passif": {
+        "n": 2,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 2,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "phrase_nominale": {
+        "n": 1,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 1,
+        "spo_exact": {
+          "subject": 0.0,
+          "predicate": 0.0,
+          "obj": 0.0
+        },
+        "spo_partial": {
+          "subject": 0.0,
+          "predicate": 0.0,
+          "obj": 0.0
+        },
+        "spo_all_exact": 0.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "question": {
+        "n": 4,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 0,
+        "spo_exact": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_partial": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_all_exact": null,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "rapporté": {
+        "n": 7,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 7,
+        "spo_exact": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_partial": {
+          "subject": 1.0,
+          "predicate": 1.0,
+          "obj": 1.0
+        },
+        "spo_all_exact": 1.0,
+        "coref_n": 0,
+        "coref_accuracy": null
+      },
+      "souhait": {
+        "n": 2,
+        "is_claim_accuracy": 1.0,
+        "is_claim_macro_f1": 1.0,
+        "modality_accuracy": 1.0,
+        "spo_n": 0,
+        "spo_exact": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_partial": {
+          "subject": null,
+          "predicate": null,
+          "obj": null
+        },
+        "spo_all_exact": null,
+        "coref_n": 0,
+        "coref_accuracy": null
+      }
+    }
+  },
+  "items": [
+    {
+      "id": "fr-01",
+      "group": "fr-latin",
+      "phenomena": [
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Les exportations d'huile d'olive",
+        "predicate": "ont progressé",
+        "obj": "de 12 %",
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "Les exportations d'huile d'olive",
+        "predicate": "ont progressé",
+        "obj": "de 12 %",
+        "resolved_text": "Les exportations d'huile d'olive ont progressé de 12 % en 2024.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "fait:pourcentage",
+          "fait:date"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-02",
+      "group": "fr-latin",
+      "phenomena": [
+        "passif",
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Trois nouvelles stations de dessalement",
+        "predicate": "ont été inaugurées",
+        "obj": "par le gouvernement",
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "Trois nouvelles stations de dessalement",
+        "predicate": "ont été inaugurées",
+        "obj": "par le gouvernement",
+        "resolved_text": "Trois nouvelles stations de dessalement ont été inaugurées par le gouvernement.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-03",
+      "group": "fr-latin",
+      "phenomena": [
+        "négation"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Le prix du pain",
+        "predicate": "n'a pas augmenté",
+        "obj": null,
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "Le prix du pain",
+        "predicate": "n'a pas augmenté",
+        "obj": null,
+        "resolved_text": "Le prix du pain n'a pas augmenté depuis janvier.",
+        "parser": "rules",
+        "triggers": [
+          "fait:date"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-04",
+      "group": "fr-latin",
+      "phenomena": [
+        "copule",
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "La dette publique",
+        "predicate": "est",
+        "obj": "de 80 % du PIB",
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "La dette publique",
+        "predicate": "est",
+        "obj": "de 80 % du PIB",
+        "resolved_text": "La dette publique est de 80 % du PIB.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "fait:pourcentage",
+          "fait:entité"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-05",
+      "group": "fr-latin",
+      "phenomena": [
+        "rapporté",
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "l'inflation",
+        "predicate": "a reculé",
+        "obj": "à 7 %",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": "l'inflation",
+        "predicate": "a reculé",
+        "obj": "à 7 %",
+        "resolved_text": "Selon l'Institut national de la statistique, l'inflation a reculé à 7 %.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "fait:pourcentage",
+          "fait:entité",
+          "rapporté:selon"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-06",
+      "group": "fr-latin",
+      "phenomena": [
+        "rapporté"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Le ministre des Finances",
+        "predicate": "a affirmé",
+        "obj": "le déficit budgétaire avait baissé",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": "Le ministre des Finances",
+        "predicate": "a affirmé",
+        "obj": "le déficit budgétaire avait baissé",
+        "resolved_text": "Le ministre des Finances a affirmé que le déficit budgétaire avait baissé.",
+        "parser": "rules",
+        "triggers": [
+          "fait:entité",
+          "rapporté:verbe_de_parole"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-07",
+      "group": "fr-latin",
+      "phenomena": [
+        "conditionnel_journalistique"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "La banque centrale",
+        "predicate": "aurait relevé",
+        "obj": "son taux directeur",
+        "modality": "conditionnel"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "conditionnel",
+        "subject": "La banque centrale",
+        "predicate": "aurait relevé",
+        "obj": "son taux directeur",
+        "resolved_text": "La banque centrale aurait relevé son taux directeur la semaine dernière.",
+        "parser": "rules",
+        "triggers": [
+          "conditionnel:aurait"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-08",
+      "group": "fr-latin",
+      "phenomena": [
+        "opinion"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "Je",
+        "predicate": "trouve",
+        "obj": "cette décision est totalement injuste",
+        "modality": "opinion"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "opinion",
+        "subject": "Je trouve que cette décision",
+        "predicate": "est totalement",
+        "obj": "injuste",
+        "resolved_text": "Je trouve que cette décision est totalement injuste.",
+        "parser": "rules",
+        "triggers": [
+          "opinion:1re_personne:trouve",
+          "opinion:intensifieur:totalement",
+          "opinion"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-09",
+      "group": "fr-latin",
+      "phenomena": [
+        "question"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "Le gouvernement",
+        "predicate": "a-t-il vraiment créé",
+        "obj": "50 000 emplois",
+        "modality": "interrogatif"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "interrogatif",
+        "subject": "Le gouvernement a-t-il vraiment",
+        "predicate": "créé",
+        "obj": "50 000 emplois",
+        "resolved_text": "Le gouvernement a-t-il vraiment créé 50 000 emplois cette année ?",
+        "parser": "rules",
+        "triggers": [
+          "question:?",
+          "fait:nombre",
+          "interrogatif"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "fr-10",
+      "group": "fr-latin",
+      "phenomena": [
+        "coréférence"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Elle",
+        "predicate": "a annoncé",
+        "obj": "l'ouverture d'un nouveau service d'urgence",
+        "modality": "assertif",
+        "resolved_text": "La ministre de la Santé a annoncé l'ouverture d'un nouveau service d'urgence."
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "Elle",
+        "predicate": "a annoncé",
+        "obj": "l'ouverture d'un nouveau service d'urgence",
+        "resolved_text": "La ministre de la Santé a annoncé l'ouverture d'un nouveau service d'urgence.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": [
+          "Elle → La ministre de la Santé"
+        ]
+      }
+    },
+    {
+      "id": "ar-01",
+      "group": "ar-arabic",
+      "phenomena": [
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "عدد السياح الوافدين على تونس",
+        "predicate": "ارتفع",
+        "obj": "بنسبة 15 بالمئة",
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "عدد السياح الوافدين علي تونس",
+        "predicate": "ارتفع",
+        "obj": "بنسبه 15 بالمئه",
+        "resolved_text": "ارتفع عدد السياح الوافدين علي تونس بنسبه 15 بالمئه.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "fait:pourcentage"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-02",
+      "group": "ar-arabic",
+      "phenomena": [
+        "phrase_nominale"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "البطالة",
+        "predicate": "est",
+        "obj": "مرتفعة في المناطق الداخلية",
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "البطاله مرتفعه في المناطق الداخليه.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-03",
+      "group": "ar-arabic",
+      "phenomena": [
+        "rapporté",
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "احتياطي العملة الصعبة",
+        "predicate": "تراجع",
+        "obj": "إلى 100 يوم توريد",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": "احتياطي العمله الصعبه",
+        "predicate": "تراجع",
+        "obj": "الي 100 يوم توريد",
+        "resolved_text": "حسب البنك المركزي، تراجع احتياطي العمله الصعبه الي 100 يوم توريد.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "rapporté:حسب"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-04",
+      "group": "ar-arabic",
+      "phenomena": [
+        "rapporté",
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "وزير الفلاحة",
+        "predicate": "قال",
+        "obj": "صابة الحبوب بلغت 2 مليون طن",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": "وزير الفلاحه",
+        "predicate": "قال",
+        "obj": "صابه الحبوب بلغت 2 مليون طن",
+        "resolved_text": "قال وزير الفلاحه ان صابه الحبوب بلغت 2 مليون طن.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "rapporté:verbe_de_parole"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-05",
+      "group": "ar-arabic",
+      "phenomena": [
+        "passif"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "نتائج الامتحانات الوطنية",
+        "predicate": "أعلنت",
+        "obj": null,
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "نتائج الامتحانات الوطنيه",
+        "predicate": "اعلنت",
+        "obj": null,
+        "resolved_text": "اعلنت نتائج الامتحانات الوطنيه يوم الجمعه.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-06",
+      "group": "ar-arabic",
+      "phenomena": [
+        "négation"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "أسعار المحروقات",
+        "predicate": "لم ترتفع",
+        "obj": null,
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "اسعار المحروقات",
+        "predicate": "لم ترتفع",
+        "obj": null,
+        "resolved_text": "لم ترتفع اسعار المحروقات هذا الشهر.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-07",
+      "group": "ar-arabic",
+      "phenomena": [
+        "opinion"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": null,
+        "predicate": "أعتقد",
+        "obj": "الحكومة فشلت في معالجة الأزمة",
+        "modality": "opinion"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "opinion",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "اعتقد ان الحكومه فشلت في معالجه الازمه.",
+        "parser": "rules",
+        "triggers": [
+          "opinion:اعتقد",
+          "opinion"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-08",
+      "group": "ar-arabic",
+      "phenomena": [
+        "question"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "نسبة الفقر",
+        "predicate": "انخفضت",
+        "obj": null,
+        "modality": "interrogatif"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "interrogatif",
+        "subject": "هل",
+        "predicate": "انخفضت",
+        "obj": "نسبه الفقر في السنوات الاخيره",
+        "resolved_text": "هل انخفضت نسبه الفقر في السنوات الاخيره؟",
+        "parser": "rules",
+        "triggers": [
+          "question:?",
+          "interrogatif"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-09",
+      "group": "ar-arabic",
+      "phenomena": [
+        "hypothétique"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "الإنتاج الفلاحي",
+        "predicate": "سينخفض",
+        "obj": null,
+        "modality": "hypothétique"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "hypothétique",
+        "subject": "اذا استمر الجفاف فان الانتاج الفلاحي",
+        "predicate": "سينخفض",
+        "obj": null,
+        "resolved_text": "اذا استمر الجفاف فان الانتاج الفلاحي سينخفض.",
+        "parser": "rules",
+        "triggers": [
+          "hypothétique:اذا"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "ar-10",
+      "group": "ar-arabic",
+      "phenomena": [
+        "coréférence"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "هو",
+        "predicate": "أعلن",
+        "obj": "عن مشاريع جديدة في الجهة",
+        "modality": "assertif",
+        "resolved_text": "رئيس الحكومة أعلن عن مشاريع جديدة في الجهة."
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "هو",
+        "predicate": "اعلن",
+        "obj": "عن مشاريع جديده في الجهه",
+        "resolved_text": "رئيس الحكومه اعلن عن مشاريع جديده في الجهه.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": [
+          "هو → رئيس الحكومه"
+        ]
+      }
+    },
+    {
+      "id": "tn-a1",
+      "group": "tn-arabic",
+      "phenomena": [
+        "rapporté",
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "الوزارة",
+        "predicate": "قالت",
+        "obj": "سوم الزيت هبط 20 بالمية",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": "الوزاره",
+        "predicate": "قالت",
+        "obj": "سوم الزيت هبط 20 بالميه",
+        "resolved_text": "الوزاره قالت اللي سوم الزيت هبط 20 بالميه.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "rapporté:verbe_de_parole"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-a2",
+      "group": "tn-arabic",
+      "phenomena": [
+        "opinion"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": null,
+        "predicate": "نحس",
+        "obj": "القرار هذا ظالم برشا",
+        "modality": "opinion"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "opinion",
+        "subject": null,
+        "predicate": "نحس",
+        "obj": "اللي القرار هذا ظالم برشا",
+        "resolved_text": "نحس اللي القرار هذا ظالم برشا.",
+        "parser": "rules",
+        "triggers": [
+          "opinion:نحس",
+          "opinion:intensifieur:برشا",
+          "opinion"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-a3",
+      "group": "tn-arabic",
+      "phenomena": [
+        "souhait"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": null,
+        "predicate": "يحلو",
+        "obj": "الطريق الجديدة",
+        "modality": "souhait"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "souhait",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "يا ريت يحلو الطريق الجديده قبل الصيف.",
+        "parser": "rules",
+        "triggers": [
+          "souhait:يا ريت",
+          "souhait"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-a4",
+      "group": "tn-arabic",
+      "phenomena": [
+        "négation"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "الأسعار",
+        "predicate": "ما هبطتش",
+        "obj": null,
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "الاسعار",
+        "predicate": "ما هبطتش",
+        "obj": null,
+        "resolved_text": "الاسعار ما هبطتش الشهر هذا.",
+        "parser": "rules",
+        "triggers": [],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-a5",
+      "group": "tn-arabic",
+      "phenomena": [
+        "question"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "الماء",
+        "predicate": "est",
+        "obj": "مقطوع في صفاقس",
+        "modality": "interrogatif"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "interrogatif",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "علاش الماء مقطوع في صفاقس؟",
+        "parser": "rules",
+        "triggers": [
+          "question:?",
+          "interrogatif"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-z1",
+      "group": "tn-arabizi",
+      "phenomena": [
+        "fait_chiffré"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "El 7koma",
+        "predicate": "3mlet",
+        "obj": "500 khedma jdida",
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "El 7koma",
+        "predicate": "3mlet",
+        "obj": "500 khedma jdida",
+        "resolved_text": "El 7koma 3mlet 500 khedma jdida fi Gafsa.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre",
+          "fait:entité"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-z2",
+      "group": "tn-arabizi",
+      "phenomena": [
+        "rapporté"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": null,
+        "predicate": "9alou",
+        "obj": "el banka el markazia hbatet el faida",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": null,
+        "predicate": "9alou",
+        "obj": "el banka el markazia hbatet el faida",
+        "resolved_text": "9alou elli el banka el markazia hbatet el faida.",
+        "parser": "rules",
+        "triggers": [
+          "rapporté:9alou",
+          "rapporté:verbe_de_parole"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-z3",
+      "group": "tn-arabizi",
+      "phenomena": [
+        "opinion"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "el mounadhama hedhi",
+        "predicate": "ma t5adem",
+        "obj": "chay",
+        "modality": "opinion"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "opinion",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "Fi ra2yi el mounadhama hedhi ma t5adem chay.",
+        "parser": "rules",
+        "triggers": [
+          "opinion:fi ra2yi",
+          "opinion"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-z4",
+      "group": "tn-arabizi",
+      "phenomena": [
+        "souhait"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "el as3ar",
+        "predicate": "yahbtou",
+        "obj": null,
+        "modality": "souhait"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "souhait",
+        "subject": "Inchallah el as3ar",
+        "predicate": "yahbtou",
+        "obj": "fel 3am ejjay",
+        "resolved_text": "Inchallah el as3ar yahbtou fel 3am ejjay.",
+        "parser": "rules",
+        "triggers": [
+          "souhait:inchallah",
+          "souhait"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "tn-z5",
+      "group": "tn-arabizi",
+      "phenomena": [
+        "coréférence"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Howa",
+        "predicate": "a3len",
+        "obj": "3la 3 machari3 jdida",
+        "modality": "assertif",
+        "resolved_text": "El wazir a3len 3la 3 machari3 jdida."
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "Howa",
+        "predicate": "a3len",
+        "obj": "3la 3 machari3 jdida",
+        "resolved_text": "El wazir a3len 3la 3 machari3 jdida.",
+        "parser": "rules",
+        "triggers": [
+          "fait:nombre"
+        ],
+        "resolution_log": [
+          "Howa → El wazir"
+        ]
+      }
+    },
+    {
+      "id": "mx-1",
+      "group": "tn-mixed",
+      "phenomena": [
+        "code_switching",
+        "rapporté"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Le gouverneur",
+        "predicate": "9al",
+        "obj": "el projet bech yabda fi septembre",
+        "modality": "rapporté"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "rapporté",
+        "subject": "Le gouverneur",
+        "predicate": "9al",
+        "obj": "el projet bech yabda fi septembre",
+        "resolved_text": "Le gouverneur 9al elli el projet bech yabda fi septembre.",
+        "parser": "rules",
+        "triggers": [
+          "fait:date",
+          "futur:bech",
+          "rapporté:verbe_de_parole"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "mx-2",
+      "group": "tn-mixed",
+      "phenomena": [
+        "code_switching"
+      ],
+      "gold": {
+        "is_claim": true,
+        "subject": "Les prix",
+        "predicate": "tal3ou",
+        "obj": null,
+        "modality": "assertif"
+      },
+      "pred": {
+        "is_claim": true,
+        "modality": "assertif",
+        "subject": "Les prix",
+        "predicate": "tal3ou",
+        "obj": "barcha had el chhar, surtout el 5odra",
+        "resolved_text": "Les prix tal3ou barcha had el chhar, surtout el 5odra.",
+        "parser": "rules",
+        "triggers": [
+          "opinion:intensifieur:barcha"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "mx-3",
+      "group": "tn-mixed",
+      "phenomena": [
+        "code_switching",
+        "question"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "el 7koma",
+        "predicate": "bech tna9es",
+        "obj": "el impôts",
+        "modality": "interrogatif"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "interrogatif",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "Est-ce que el 7koma bech tna9es el impôts ?",
+        "parser": "rules",
+        "triggers": [
+          "question:?",
+          "interrogatif",
+          "futur:bech"
+        ],
+        "resolution_log": []
+      }
+    },
+    {
+      "id": "mx-4",
+      "group": "tn-mixed",
+      "phenomena": [
+        "code_switching",
+        "opinion"
+      ],
+      "gold": {
+        "is_claim": false,
+        "subject": "el réforme hedhi",
+        "predicate": "est",
+        "obj": "catastrophe",
+        "modality": "opinion"
+      },
+      "pred": {
+        "is_claim": false,
+        "modality": "opinion",
+        "subject": null,
+        "predicate": null,
+        "obj": null,
+        "resolved_text": "Franchement, el réforme hedhi catastrophe.",
+        "parser": "rules",
+        "triggers": [
+          "opinion:franchement",
+          "opinion:évaluatif:attribut:catastrophe",
+          "opinion"
+        ],
+        "resolution_log": []
+      }
+    }
+  ],
+  "bootstrap": {
+    "seed": 20261015,
+    "resamples": 1000,
+    "confidence": 0.95,
+    "global": {
+      "is_claim_accuracy": {
+        "low": 1.0,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "is_claim_macro_f1": {
+        "low": 1.0,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "modality_accuracy": {
+        "low": 1.0,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_exact.subject": {
+        "low": 0.842,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_exact.predicate": {
+        "low": 0.842,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_exact.obj": {
+        "low": 0.769,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_partial.subject": {
+        "low": 0.842,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_partial.predicate": {
+        "low": 0.842,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_partial.obj": {
+        "low": 0.769,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "spo_all_exact": {
+        "low": 0.769,
+        "high": 1.0,
+        "valid": 1000
+      },
+      "coref_accuracy": {
+        "low": 1.0,
+        "high": 1.0,
+        "valid": 943
+      }
+    },
+    "by_lang": {
+      "ar-arabic": {
+        "is_claim_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "is_claim_macro_f1": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "modality_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.subject": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.predicate": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.obj": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_partial.subject": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_partial.predicate": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_partial.obj": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_all_exact": {
+          "low": 0.5,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "coref_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 647
+        }
+      },
+      "fr-latin": {
+        "is_claim_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "is_claim_macro_f1": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "modality_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.obj": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_partial.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_partial.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_partial.obj": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_all_exact": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "coref_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 647
+        }
+      },
+      "tn-arabic": {
+        "is_claim_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "is_claim_macro_f1": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "modality_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "spo_exact.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "spo_exact.obj": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "spo_partial.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "spo_partial.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "spo_partial.obj": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "spo_all_exact": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 927
+        },
+        "coref_accuracy": {
+          "low": null,
+          "high": null,
+          "valid": 0
+        }
+      },
+      "tn-arabizi": {
+        "is_claim_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "is_claim_macro_f1": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "modality_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "spo_exact.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "spo_exact.obj": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "spo_partial.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "spo_partial.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "spo_partial.obj": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "spo_all_exact": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 987
+        },
+        "coref_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 683
+        }
+      },
+      "tn-mixed": {
+        "is_claim_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "is_claim_macro_f1": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "modality_accuracy": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 1000
+        },
+        "spo_exact.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "spo_exact.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "spo_exact.obj": {
+          "low": 0.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "spo_partial.subject": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "spo_partial.predicate": {
+          "low": 1.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "spo_partial.obj": {
+          "low": 0.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "spo_all_exact": {
+          "low": 0.0,
+          "high": 1.0,
+          "valid": 940
+        },
+        "coref_accuracy": {
+          "low": null,
+          "high": null,
+          "valid": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,329 @@
+{
+  "exp_id": "EXP-D-001",
+  "lot": "D",
+  "task": "retrieval",
+  "model": "bm25",
+  "split": "dev-fictif-v2",
+  "metrics": {
+    "n": 18,
+    "recall@1": 0.528,
+    "hit@1": 0.889,
+    "recall@5": 0.667,
+    "hit@5": 0.944,
+    "recall@10": 0.694,
+    "hit@10": 0.944,
+    "mrr": 0.907,
+    "by_group": {
+      "ar-arabic": {
+        "n": 4,
+        "recall@1": 0.625,
+        "hit@1": 1.0,
+        "recall@5": 0.75,
+        "hit@5": 1.0,
+        "recall@10": 0.75,
+        "hit@10": 1.0,
+        "mrr": 1.0
+      },
+      "fr-latin": {
+        "n": 10,
+        "recall@1": 0.6,
+        "hit@1": 1.0,
+        "recall@5": 0.7,
+        "hit@5": 1.0,
+        "recall@10": 0.75,
+        "hit@10": 1.0,
+        "mrr": 1.0
+      },
+      "tn-arabic": {
+        "n": 2,
+        "recall@1": 0.25,
+        "hit@1": 0.5,
+        "recall@5": 0.5,
+        "hit@5": 1.0,
+        "recall@10": 0.5,
+        "hit@10": 1.0,
+        "mrr": 0.667
+      },
+      "tn-arabizi": {
+        "n": 2,
+        "recall@1": 0.25,
+        "hit@1": 0.5,
+        "recall@5": 0.5,
+        "hit@5": 0.5,
+        "recall@10": 0.5,
+        "hit@10": 0.5,
+        "mrr": 0.5
+      }
+    }
+  },
+  "no_gold_top_scores": {
+    "dev-c16": 0.0,
+    "dev-c17": 0.0
+  },
+  "per_claim": [
+    {
+      "claim_id": "dev-c01",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev001",
+        "dev-ev002"
+      ],
+      "retrieved": [
+        "dev-ev001",
+        "dev-ev011",
+        "dev-ev014",
+        "dev-ev007",
+        "dev-ev013",
+        "dev-ev002",
+        "dev-ev003"
+      ],
+      "top_score": 4.88
+    },
+    {
+      "claim_id": "dev-c02",
+      "group": "ar-arabic",
+      "gold": [
+        "dev-ev002",
+        "dev-ev001"
+      ],
+      "retrieved": [
+        "dev-ev002",
+        "dev-ev008",
+        "dev-ev012",
+        "dev-ev004"
+      ],
+      "top_score": 6.638
+    },
+    {
+      "claim_id": "dev-c03",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev003",
+        "dev-ev004"
+      ],
+      "retrieved": [
+        "dev-ev003",
+        "dev-ev009"
+      ],
+      "top_score": 5.609
+    },
+    {
+      "claim_id": "dev-c04",
+      "group": "tn-arabic",
+      "gold": [
+        "dev-ev004",
+        "dev-ev003"
+      ],
+      "retrieved": [
+        "dev-ev004"
+      ],
+      "top_score": 2.348
+    },
+    {
+      "claim_id": "dev-c05",
+      "group": "tn-arabizi",
+      "gold": [
+        "dev-ev003",
+        "dev-ev004"
+      ],
+      "retrieved": [],
+      "top_score": 0.0
+    },
+    {
+      "claim_id": "dev-c06",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev005",
+        "dev-ev006"
+      ],
+      "retrieved": [
+        "dev-ev005",
+        "dev-ev013"
+      ],
+      "top_score": 10.415
+    },
+    {
+      "claim_id": "dev-c07",
+      "group": "tn-arabic",
+      "gold": [
+        "dev-ev006",
+        "dev-ev005"
+      ],
+      "retrieved": [
+        "dev-ev002",
+        "dev-ev015",
+        "dev-ev006"
+      ],
+      "top_score": 2.089
+    },
+    {
+      "claim_id": "dev-c08",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev007",
+        "dev-ev008"
+      ],
+      "retrieved": [
+        "dev-ev007",
+        "dev-ev011",
+        "dev-ev001",
+        "dev-ev013",
+        "dev-ev002",
+        "dev-ev003"
+      ],
+      "top_score": 1.07
+    },
+    {
+      "claim_id": "dev-c09",
+      "group": "tn-arabizi",
+      "gold": [
+        "dev-ev008",
+        "dev-ev007"
+      ],
+      "retrieved": [
+        "dev-ev007",
+        "dev-ev008"
+      ],
+      "top_score": 2.206
+    },
+    {
+      "claim_id": "dev-c10",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev009",
+        "dev-ev010"
+      ],
+      "retrieved": [
+        "dev-ev009",
+        "dev-ev003"
+      ],
+      "top_score": 4.189
+    },
+    {
+      "claim_id": "dev-c11",
+      "group": "ar-arabic",
+      "gold": [
+        "dev-ev010",
+        "dev-ev009"
+      ],
+      "retrieved": [
+        "dev-ev010",
+        "dev-ev004"
+      ],
+      "top_score": 7.461
+    },
+    {
+      "claim_id": "dev-c12",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev011",
+        "dev-ev012"
+      ],
+      "retrieved": [
+        "dev-ev011"
+      ],
+      "top_score": 2.449
+    },
+    {
+      "claim_id": "dev-c13",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev013"
+      ],
+      "retrieved": [
+        "dev-ev013"
+      ],
+      "top_score": 6.505
+    },
+    {
+      "claim_id": "dev-c14",
+      "group": "ar-arabic",
+      "gold": [
+        "dev-ev015"
+      ],
+      "retrieved": [
+        "dev-ev015",
+        "dev-ev006"
+      ],
+      "top_score": 11.715
+    },
+    {
+      "claim_id": "dev-c15",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev014"
+      ],
+      "retrieved": [
+        "dev-ev014",
+        "dev-ev001",
+        "dev-ev004",
+        "dev-ev003"
+      ],
+      "top_score": 9.636
+    },
+    {
+      "claim_id": "dev-c16",
+      "group": "fr-latin",
+      "gold": [],
+      "retrieved": [],
+      "top_score": 0.0
+    },
+    {
+      "claim_id": "dev-c17",
+      "group": "tn-arabizi",
+      "gold": [],
+      "retrieved": [],
+      "top_score": 0.0
+    },
+    {
+      "claim_id": "dev-c18",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev007",
+        "dev-ev008"
+      ],
+      "retrieved": [
+        "dev-ev007",
+        "dev-ev011",
+        "dev-ev001",
+        "dev-ev008",
+        "dev-ev013",
+        "dev-ev002",
+        "dev-ev003"
+      ],
+      "top_score": 7.894
+    },
+    {
+      "claim_id": "dev-c19",
+      "group": "ar-arabic",
+      "gold": [
+        "dev-ev010",
+        "dev-ev009"
+      ],
+      "retrieved": [
+        "dev-ev010",
+        "dev-ev004",
+        "dev-ev009"
+      ],
+      "top_score": 12.242
+    },
+    {
+      "claim_id": "dev-c20",
+      "group": "fr-latin",
+      "gold": [
+        "dev-ev011",
+        "dev-ev012"
+      ],
+      "retrieved": [
+        "dev-ev011",
+        "dev-ev012",
+        "dev-ev007",
+        "dev-ev001",
+        "dev-ev013",
+        "dev-ev002",
+        "dev-ev003"
+      ],
+      "top_score": 7.75
+    }
+  ]
+}

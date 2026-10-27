@@ -63,6 +63,9 @@ lightning_logs/
 evaluation/results/*
 !evaluation/results/.gitkeep
 !evaluation/results/README.md
+# Les synthèses légères et reproductibles présentées à la revue Bronze sont
+# versionnées. Les sorties lourdes restent exclues par les règles ci-dessus.
+!evaluation/results/*.json
 
 # ---------- IDE / OS ----------
 .vscode/

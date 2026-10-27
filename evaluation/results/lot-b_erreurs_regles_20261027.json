@@ -1,0 +1,48 @@
+{
+  "exp_id": "EXP-B-005",
+  "model": "regles",
+  "errors": [
+    {
+      "id": "ar-02",
+      "group": "ar-arabic",
+      "field": "subject",
+      "gold": "البطالة",
+      "pred": null,
+      "parser": "rules",
+      "triggers": [],
+      "resolution_log": []
+    },
+    {
+      "id": "ar-02",
+      "group": "ar-arabic",
+      "field": "predicate",
+      "gold": "est",
+      "pred": null,
+      "parser": "rules",
+      "triggers": [],
+      "resolution_log": []
+    },
+    {
+      "id": "ar-02",
+      "group": "ar-arabic",
+      "field": "obj",
+      "gold": "مرتفعة في المناطق الداخلية",
+      "pred": null,
+      "parser": "rules",
+      "triggers": [],
+      "resolution_log": []
+    },
+    {
+      "id": "mx-2",
+      "group": "tn-mixed",
+      "field": "obj",
+      "gold": null,
+      "pred": "barcha had el chhar, surtout el 5odra",
+      "parser": "rules",
+      "triggers": [
+        "opinion:intensifieur:barcha"
+      ],
+      "resolution_log": []
+    }
+  ]
+}

@@ -41,6 +41,26 @@ def test_stage_routes():
     assert client.post("/verdict", json={"claim": TEXT}).status_code == 200
 
 
+def test_bronze_trace_is_complete_and_timed():
+    response = client.post("/bronze/check", json={"text": TEXT, "k": 5})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["document"]["lang"] == "fr"
+    assert payload["claims"]
+    trace = payload["claims"][0]
+    assert trace["verdict"]["label"]
+    evidence_ids = {citation["doc_id"] for citation in trace["evidence"]}
+    assert set(trace["verdict"]["citations"]) <= evidence_ids
+    assert trace["timings_ms"].keys() == {"retrieval", "nli", "verdict"}
+    assert payload["timings_ms"]["total"] >= 0
+
+
+def test_bronze_trace_filters_an_opinion_safely():
+    response = client.post("/bronze/check", json={"text": "Je pense que Tunis est magnifique."})
+    assert response.status_code == 200
+    assert response.json()["claims"] == []
+
+
 def test_check_route():
     r = client.post("/check", json={"text": TEXT})
     assert r.status_code == 200 and len(r.json()["verdicts"]) == 1

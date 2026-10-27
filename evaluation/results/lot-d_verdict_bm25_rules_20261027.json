@@ -1,0 +1,306 @@
+{
+  "exp_id": "EXP-D-002",
+  "lot": "D",
+  "task": "verdict",
+  "model": "bm25+gabarit+rules",
+  "split": "dev-fictif-v2",
+  "metrics": {
+    "n": 20,
+    "accuracy": 0.7,
+    "macro_f1": 0.524,
+    "coverage": 0.65,
+    "selective_accuracy": 0.923,
+    "justified_abstention": 1.0,
+    "invalid_citations": 0,
+    "by_group": {
+      "ar-arabic": {
+        "n": 4,
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "coverage": 1.0,
+        "selective_accuracy": 1.0,
+        "justified_abstention": null,
+        "invalid_citations": 0
+      },
+      "fr-latin": {
+        "n": 11,
+        "accuracy": 0.818,
+        "macro_f1": 0.625,
+        "coverage": 0.818,
+        "selective_accuracy": 0.889,
+        "justified_abstention": 1.0,
+        "invalid_citations": 0
+      },
+      "tn-arabic": {
+        "n": 2,
+        "accuracy": 0.0,
+        "macro_f1": 0.0,
+        "coverage": 0.0,
+        "selective_accuracy": null,
+        "justified_abstention": null,
+        "invalid_citations": 0
+      },
+      "tn-arabizi": {
+        "n": 3,
+        "accuracy": 0.333,
+        "macro_f1": 0.167,
+        "coverage": 0.0,
+        "selective_accuracy": null,
+        "justified_abstention": 1.0,
+        "invalid_citations": 0
+      }
+    },
+    "abstention_reasons": {
+      "preuves_non_decisives": 4,
+      "aucune_preuve": 3
+    }
+  },
+  "per_claim": [
+    {
+      "claim_id": "dev-c01",
+      "group": "fr-latin",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev001"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.167
+    },
+    {
+      "claim_id": "dev-c02",
+      "group": "ar-arabic",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev002"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.1
+    },
+    {
+      "claim_id": "dev-c03",
+      "group": "fr-latin",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev003"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.1
+    },
+    {
+      "claim_id": "dev-c04",
+      "group": "tn-arabic",
+      "gold": "faux",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "preuves_non_decisives",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c05",
+      "group": "tn-arabizi",
+      "gold": "faux",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "aucune_preuve",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c06",
+      "group": "fr-latin",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev005"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.143
+    },
+    {
+      "claim_id": "dev-c07",
+      "group": "tn-arabic",
+      "gold": "faux",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "preuves_non_decisives",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c08",
+      "group": "fr-latin",
+      "gold": "faux",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "preuves_non_decisives",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c09",
+      "group": "tn-arabizi",
+      "gold": "vrai",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "preuves_non_decisives",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c10",
+      "group": "fr-latin",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev009"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.2
+    },
+    {
+      "claim_id": "dev-c11",
+      "group": "ar-arabic",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev010"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.125
+    },
+    {
+      "claim_id": "dev-c12",
+      "group": "fr-latin",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev011"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.1
+    },
+    {
+      "claim_id": "dev-c13",
+      "group": "fr-latin",
+      "gold": "trompeur",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev013"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.2
+    },
+    {
+      "claim_id": "dev-c14",
+      "group": "ar-arabic",
+      "gold": "faux",
+      "pred": "faux",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev015"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.1
+    },
+    {
+      "claim_id": "dev-c15",
+      "group": "fr-latin",
+      "gold": "vrai",
+      "pred": "vrai",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev014"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.125
+    },
+    {
+      "claim_id": "dev-c16",
+      "group": "fr-latin",
+      "gold": "preuves_insuffisantes",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "aucune_preuve",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c17",
+      "group": "tn-arabizi",
+      "gold": "preuves_insuffisantes",
+      "pred": "preuves_insuffisantes",
+      "abstained": true,
+      "reason": "aucune_preuve",
+      "citations": [],
+      "invalid_citations": [],
+      "uncertainty": 1.0
+    },
+    {
+      "claim_id": "dev-c18",
+      "group": "fr-latin",
+      "gold": "vrai",
+      "pred": "vrai",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev007"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.167
+    },
+    {
+      "claim_id": "dev-c19",
+      "group": "ar-arabic",
+      "gold": "vrai",
+      "pred": "vrai",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev010"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.1
+    },
+    {
+      "claim_id": "dev-c20",
+      "group": "fr-latin",
+      "gold": "vrai",
+      "pred": "vrai",
+      "abstained": false,
+      "reason": null,
+      "citations": [
+        "dev-ev011"
+      ],
+      "invalid_citations": [],
+      "uncertainty": 0.125
+    }
+  ]
+}

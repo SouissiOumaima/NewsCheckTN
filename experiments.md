@@ -33,6 +33,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-C-005 | 2026-10-24 | C | Bootstrap apparié | TF-IDF vs XLM-R seed42, 1 000 réplications | Δ macro-F1 ; IC 95 % ; p | +0,0673 ; [-0,0468 ; 0,1860] ; p=0,254 | gain non concluant statistiquement |
 | EXP-C-003 | 2026-10-23 | C | Évaluation détaillée XLM-R + LoRA | seed 42, test gelé 120 | macro-F1 | 0.7108 ; FR 0.9148 / AR 0.6989 / TN 0.6445 | analyse d'erreurs à compléter |
 | EXP-E-001 | 2026-10-02 | E | Squelette pipeline | stubs | — | pipeline + API OK | base de départ |
+| EXP-E-002 | 2026-10-27 | E | Audit d'intégration Bronze | règles + BM25 + NLI lexical + gabarit, 4 contrôles FR versionnés | succès E2E / Macro-F1 / Recall@5 / citations / latence | 1,00 / 1,00 / 1,00 / 0 citation invalide / 5,82 ms moyen | contrôle de régression, non représentatif |
 | EXP-D-006 | 2026-10-23 | D | Jeu réel Tunifact v1 (6 articles) | BM25 + NLI par règles + gabarit, sans réglage | Hit@1 / Recall@5 ; exactitude verdict | 0.61 / 0.41 ; verdict 0.14, 1 verdict émis (faux) | nouvelle référence de test ; dense à mesurer (Colab) |
 | EXP-D-005 | 2026-10-20 | D | NLI par règles v2 : lecture des nombres | milliers, ×ألف/mille, nombres collés à un nom ignorés | verdicts faux émis (Tunifact) | 3 → 1 ; exactitude 0.20 inchangée ; dev inchangé | retenu ; reste : phrase de verdict qui reprend la rumeur |
 | EXP-D-004 | 2026-10-20 | D | 1re évaluation sur données réelles (Tunifact, Lot A1) | BM25 + NLI par règles + gabarit | Hit@1 / Recall@5 ; exactitude verdict | 0.83 / 0.54 ; verdict 0.20, 3 verdicts émis tous faux | NLI par règles inutilisable sur données réelles ; seuil BM25 invalide |
@@ -864,6 +865,28 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Résultats** : 22 tests passent ; le pipeline s'abstient (attendu, NLI non implémentée).
 - **Analyse** : —
 - **Décision / suite** : chaque lot remplace son stub.
+
+### EXP-E-002 — Audit d'intégration classique Bronze
+- **Date** : 2026-10-27
+- **Auteur / Lot** : Lot E
+- **Objectif / hypothèse** : vérifier que les composants classiques intégrés communiquent correctement
+  et que la démo ne produit ni citation invalide ni crash sur les sorties attendues.
+- **Données** : quatre contrôles français versionnés dans
+  `data/annotations/bronze_fr_integration_eval.jsonl` : affirmation confirmée, contradiction
+  numérique, absence de preuve et opinion filtrée. Ce jeu est un contrôle E2E, **pas** un test
+  statistique de performance.
+- **Méthode / configuration** : `python -m evaluation.integration_audit`. Route
+  `POST /bronze/check` : normalisation, extraction à règles, BM25, NLI lexical Bronze, gabarit.
+  Aucun encodeur dense, LLM ou Model 1 appris.
+- **Résultats** : 4/4 sorties attendues ; macro-F1 1,000 et Recall@5 1,000 sur les trois assertions
+  ayant un verdict ; 1/3 abstention ; 2 citations, 0 invalide ; latence moyenne 5,82 ms
+  (maximum 18,89 ms) sur la machine de mesure. Artefact :
+  `evaluation/results/lot-e_integration_bronze_20261027.json`.
+- **Analyse** : les scores parfaits viennent du caractère réduit et contrôlé du jeu ; ils démontrent
+  l'intégration et non la qualité générale. Les métriques de qualité à présenter restent celles des
+  évaluations B, C et D sur leurs jeux dédiés.
+- **Décision / suite** : conserver l'audit dans la CI locale et l'étendre seulement avec de nouveaux
+  cas annotés avant de le considérer comme un jeu de validation.
 
 ### EXP-C-001 — Baseline TF-IDF + régression logistique pour la détection d'affirmations
 - **Date** : 2026-10-21

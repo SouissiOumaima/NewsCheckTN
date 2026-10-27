@@ -1,0 +1,96 @@
+{
+  "exp_id": "EXP-E-002",
+  "lot": "E",
+  "task": "integration_bronze",
+  "model": "regles+bm25+nli-lexical+gabarit",
+  "split": "integration-fr-v1 (n=4)",
+  "date": "2026-10-27",
+  "metrics": {
+    "n": 4,
+    "end_to_end_success_rate": 1.0,
+    "macro_f1": 1.0,
+    "recall_at_5": 1.0,
+    "abstention_rate": 0.333,
+    "latency_ms_mean": 5.82,
+    "latency_ms_max": 18.89,
+    "citation_count": 2,
+    "invalid_citations": 0,
+    "citation_validity": 1.0,
+    "items": [
+      {
+        "id": "integration-001",
+        "expected_claims": 1,
+        "actual_claims": 1,
+        "claim_count_ok": true,
+        "gold_label": "vrai",
+        "predicted_label": "vrai",
+        "abstained": false,
+        "retrieved_doc_ids": [
+          "sample-002",
+          "sample-001"
+        ],
+        "citations": [
+          "sample-002"
+        ],
+        "latency_ms": {
+          "normalization": 7.05,
+          "extraction": 8.91,
+          "total": 18.89
+        }
+      },
+      {
+        "id": "integration-002",
+        "expected_claims": 1,
+        "actual_claims": 1,
+        "claim_count_ok": true,
+        "gold_label": "faux",
+        "predicted_label": "faux",
+        "abstained": false,
+        "retrieved_doc_ids": [
+          "sample-001",
+          "sample-002"
+        ],
+        "citations": [
+          "sample-001"
+        ],
+        "latency_ms": {
+          "normalization": 0.28,
+          "extraction": 1.1,
+          "total": 2.64
+        }
+      },
+      {
+        "id": "integration-003",
+        "expected_claims": 1,
+        "actual_claims": 1,
+        "claim_count_ok": true,
+        "gold_label": "preuves_insuffisantes",
+        "predicted_label": "preuves_insuffisantes",
+        "abstained": true,
+        "retrieved_doc_ids": [],
+        "citations": [],
+        "latency_ms": {
+          "normalization": 0.23,
+          "extraction": 0.71,
+          "total": 1.12
+        }
+      },
+      {
+        "id": "integration-004",
+        "expected_claims": 0,
+        "actual_claims": 0,
+        "claim_count_ok": true,
+        "gold_label": null,
+        "predicted_label": null,
+        "abstained": null,
+        "retrieved_doc_ids": [],
+        "citations": [],
+        "latency_ms": {
+          "normalization": 0.2,
+          "extraction": 0.35,
+          "total": 0.63
+        }
+      }
+    ]
+  }
+}

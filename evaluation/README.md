@@ -6,7 +6,8 @@
 - `metrics.py` : métriques **communes** pour que tous les lots se comparent de la même manière
   (précision / rappel / F1, macro-F1, Recall@k ; à venir : fidélité, taux d'abstention, calibration).
 - `dashboard/app.py` : tableau de bord Streamlit agrégeant les résultats.
-- `results/` : fichiers de résultats produits par les scripts d'évaluation (**non versionnés**, sauf ce README).
+- `results/` : fichiers de résultats produits par les scripts d'évaluation. Les synthèses légères
+  présentées à la revue sont versionnées ; les sorties brutes lourdes restent ignorées.
 - Audit bout-en-bout du pipeline sur `data/processed/factchecks.jsonl`.
 
 ## Format des résultats
@@ -27,3 +28,13 @@ L'`exp_id` renvoie à l'entrée correspondante de `experiments.md`.
 ```bash
 streamlit run evaluation/dashboard/app.py
 ```
+
+## Audit d'intégration Bronze (Lot E)
+
+```bash
+python -m evaluation.integration_audit
+```
+
+Il vérifie quatre cas annotés : affirmation confirmée, contradiction numérique,
+abstention sans preuve et opinion filtrée. Il publie le taux de succès de chaîne,
+macro-F1, Recall@5, abstention, validité des citations et latence mesurée.

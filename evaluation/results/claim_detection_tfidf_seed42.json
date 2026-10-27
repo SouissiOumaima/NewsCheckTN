@@ -1,0 +1,27 @@
+{
+  "task": "claim_detection_binary",
+  "model": "char_tfidf_3_5 + logistic_regression",
+  "seed": 42,
+  "n_train": 48,
+  "n_test": 12,
+  "macro_f1": 0.4286,
+  "macro_f1_by_lang": {
+    "ar": 0.5,
+    "fr": 0.5,
+    "tn": 0.2
+  },
+  "test_ids": [
+    "tunifact-937-003",
+    "tarc-forum-0023",
+    "tarc-forum-0007",
+    "tunifact-937-007",
+    "tunifact-937-005",
+    "tunifact-797-001",
+    "tunifact-613-002",
+    "tarc-forum-0170",
+    "tunifact-797-004",
+    "tunifact-890-005",
+    "tunifact-698-006",
+    "tarc-forum-0081"
+  ]
+}

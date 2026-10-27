@@ -8,6 +8,7 @@ Plateforme web  : http://localhost:8000/app/
 from __future__ import annotations
 
 import json
+import time
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
@@ -60,6 +61,12 @@ class VerdictDetailIn(ClaimIn):
     nli: Literal["lot-c", "regles"] = "lot-c"
 
 
+class BronzeCheckIn(TextIn):
+    """Entrée de la démo intégrée Bronze (composants classiques uniquement)."""
+
+    k: int = Field(5, ge=1, le=10)
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "version": app.version, "claim_detector": model_status()}
@@ -95,6 +102,63 @@ def bronze_extract_route(body: TextIn) -> dict:
     document = normalize(body.text)
     claims = [claim for claim in extract_claims(document) if claim.modality == "assertif"]
     return {"claims": [asdict(c) for c in claims]}
+
+
+@app.post("/bronze/check")
+def bronze_check_route(body: BronzeCheckIn) -> dict:
+    """Exécute et chronomètre toutes les étapes classiques visibles de Bronze.
+
+    Cette route est volontairement distincte de ``/check`` : elle évite le
+    classifieur appris de Model 1 et expose le détail nécessaire à la revue
+    (texte normalisé, candidats, preuves, positions et citations).
+    """
+    started = time.perf_counter()
+    mark = started
+
+    document = normalize(body.text)
+    normalized_ms = (time.perf_counter() - mark) * 1000
+    mark = time.perf_counter()
+    candidates = extract_claims(document)
+    claims = [claim for claim in candidates if claim.modality == "assertif"]
+    extraction_ms = (time.perf_counter() - mark) * 1000
+    corpus = load_evidence_corpus()
+
+    traces = []
+    for claim in claims:
+        mark = time.perf_counter()
+        evidences = retrieve(claim, corpus, k=body.k)
+        retrieval_ms = (time.perf_counter() - mark) * 1000
+        mark = time.perf_counter()
+        stances = predict_stances(claim, evidences)
+        nli_ms = (time.perf_counter() - mark) * 1000
+        mark = time.perf_counter()
+        verdict = generate_verdict(claim, stances)
+        verdict_ms = (time.perf_counter() - mark) * 1000
+        traces.append({
+            "claim": asdict(claim),
+            "evidence": [asdict(item) for item in evidences],
+            "stances": [
+                {"doc_id": item.evidence.doc_id, "stance": item.stance.value,
+                 "confidence": item.confidence}
+                for item in stances
+            ],
+            "verdict": asdict(verdict),
+            "timings_ms": {
+                "retrieval": round(retrieval_ms, 2), "nli": round(nli_ms, 2),
+                "verdict": round(verdict_ms, 2),
+            },
+        })
+    return {
+        "document": asdict(document),
+        "candidates": [asdict(claim) for claim in candidates],
+        "claims": traces,
+        "timings_ms": {
+            "normalization": round(normalized_ms, 2),
+            "extraction": round(extraction_ms, 2),
+            "total": round((time.perf_counter() - started) * 1000, 2),
+        },
+        "corpus_size": len(corpus),
+    }
 
 
 @app.post("/retrieve")  # Lot D
