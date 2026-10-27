@@ -34,6 +34,8 @@ def test_results_are_normalized_for_the_web_dashboard(tmp_path, monkeypatch):
 def test_stage_routes():
     assert client.post("/normalize", json={"text": TEXT}).status_code == 200
     assert client.post("/extract", json={"text": TEXT}).json()["claims"]
+    bronze = client.post("/extract/bronze", json={"text": "Tunis est la capitale de la Tunisie."})
+    assert bronze.status_code == 200 and bronze.json()["claims"]
     assert client.post("/retrieve", json={"claim": TEXT}).status_code == 200
     assert client.post("/nli", json={"claim": TEXT, "evidence": TEXT}).status_code == 200
     assert client.post("/verdict", json={"claim": TEXT}).status_code == 200

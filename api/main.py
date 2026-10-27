@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 import pipeline
 from common.schemas import Claim, Evidence, Lang
 from data.loaders import load_evidence_corpus
+from linguistic_analysis.claim_extraction import extract_claims
 from models.claim_detector import filter_checkworthy, model_status
 from models.nli.stance import predict_stance, predict_stances
 from normalization.normalize import normalize
@@ -79,6 +80,20 @@ def normalize_route(body: TextIn) -> dict:
 def extract_route(body: TextIn) -> dict:
     claims, raw_texts = pipeline._claims_for_model1(body.text)
     claims = filter_checkworthy(claims, classification_texts=raw_texts)
+    return {"claims": [asdict(c) for c in claims]}
+
+
+@app.post("/extract/bronze")  # Lots B + C, démonstration classique
+def bronze_extract_route(body: TextIn) -> dict:
+    """Extraction à règles pour la démo Bronze, sans filtre Model 1 appris.
+
+    Le but est de montrer toutes les étapes classiques du pipeline. Les
+    opinions, questions, souhaits et hypothèses restent exclues selon leur
+    modalité, mais une affirmation assertive ne dépend pas ici d'un score de
+    classifieur.
+    """
+    document = normalize(body.text)
+    claims = [claim for claim in extract_claims(document) if claim.modality == "assertif"]
     return {"claims": [asdict(c) for c in claims]}
 
 

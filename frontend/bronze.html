@@ -68,7 +68,7 @@
       err.hidden = true; go.disabled = true; document.getElementById("status").textContent = "Exécution des 5 étapes…";
       try {
         const normalized = await NC.api("/normalize", { text });
-        const extracted = await NC.api("/extract", { text });
+        const extracted = await NC.api("/extract/bronze", { text });
         const claim = extracted.claims[0];
         document.getElementById("normalization").innerHTML = `<dt>langue</dt><dd><span class="tag">${NC.esc(normalized.lang)}</span></dd><dt>écriture</dt><dd><span class="tag">${NC.esc(normalized.script)}</span></dd><dt>texte normalisé</dt><dd>${NC.text(normalized.text)}</dd>`;
         document.getElementById("claims").innerHTML = claim ? `<div class="notice">${NC.text(claim.text)}<br><span class="tag">${NC.esc(claim.modality || "assertif")}</span> <span class="tag">P(AFFIRMATION) ${NC.fmt(claim.checkworthiness, 3)}</span></div>` : '<p class="empty">Aucune affirmation n’a été retenue : les étapes suivantes s’arrêtent ici.</p>';

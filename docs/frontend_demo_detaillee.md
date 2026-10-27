@@ -82,8 +82,10 @@ La page appelle `POST /normalize`. Elle affiche :
 
 ### Étape 2 — B + C : affirmation retenue
 
-La page appelle `POST /extract`. Le système segmente le texte, extrait les
-candidats, puis Model 1 conserve une affirmation vérifiable. La démo affiche :
+La page appelle `POST /extract/bronze`. Le système segmente le texte et garde
+les affirmations assertives par règles, sans filtre Model 1 appris. Ainsi, une
+affirmation claire ne bloque pas la démonstration complète à cause d'une erreur
+du classifieur. La démo affiche :
 
 - l'affirmation choisie ;
 - la modalité ;
@@ -175,7 +177,8 @@ Bronze et les analyses d'erreurs Model 1.
 | --- | --- | --- |
 | `/health` | GET | Vérifie que l'API est disponible. |
 | `/normalize` | POST | A2 : normalisation, langue, écriture. |
-| `/extract` | POST | B + C : affirmations retenues. |
+| `/extract` | POST | B + C : affirmations retenues avec le filtre Model 1. |
+| `/extract/bronze` | POST | B : affirmations assertives à règles pour la Démo Bronze. |
 | `/retrieve` | POST | D : passages BM25/dense/hybrides selon la configuration. |
 | `/nli` | POST | C : position d'une preuve face à une affirmation. |
 | `/verdict` | POST | D : verdict simple avec citations. |
