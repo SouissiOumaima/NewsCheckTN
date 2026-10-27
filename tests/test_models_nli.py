@@ -179,7 +179,7 @@ def test_bronze_indices_lexicaux():
     s = bronze.signals(
         "Le chômage a atteint 25 % en 2025.", "Le chômage a atteint 15 % en 2025, selon l'INS."
     )
-    assert s.number_conflict is False and s.numbers_match is False  # 2025 commun, 25 absent
+    assert s.number_conflict and s.numbers_match is False  # année commune, pourcentages opposés
     s = bronze.signals("Le taux de chômage est de 25 %.", "Le taux de chômage est de 15 %.")
     assert s.number_conflict
     s = bronze.signals("الصورة مفبركة", "الصورة غير مفبركه")

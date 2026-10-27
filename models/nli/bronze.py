@@ -215,6 +215,25 @@ def _numbers(text: str) -> set[str]:
     return {n.replace(",", ".") for n in _NUMBER.findall(text)}
 
 
+def _values_to_compare(numbers: set[str]) -> set[str]:
+    """Écarte les années : deux passages peuvent partager la date mais diverger sur le fait.
+
+    Exemple : « 25 % en 2023 » contre « 16,4 % en 2023 ». L'année commune
+    ne doit pas masquer le conflit entre les deux pourcentages.
+    """
+    values = set()
+    for number in numbers:
+        try:
+            value = float(number)
+        except ValueError:
+            values.add(number)
+            continue
+        if number.isdigit() and 1900 <= value <= 2100:
+            continue
+        values.add(number)
+    return values
+
+
 def _has_cue(text: str, words: set[str]) -> bool:
     return any(
         (cue in text) if (" " in cue or "'" in cue) else (cue in words) for cue in REFUTE_CUES
@@ -226,7 +245,7 @@ def signals(claim: str, evidence: str) -> Signals:
     cw, ew = _words(c), _words(e)
     cs = _content_stems(cw)
     overlap = len(cs & _content_stems(ew)) / len(cs) if cs else 0.0
-    cn, en = _numbers(c), _numbers(e)
+    cn, en = _values_to_compare(_numbers(c)), _values_to_compare(_numbers(e))
     return Signals(
         overlap=round(overlap, 4),
         number_conflict=bool(cn and en and not (cn & en)),
