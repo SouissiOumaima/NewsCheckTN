@@ -15,6 +15,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -30,6 +31,7 @@ from rag_llm.verdict import generate_verdict
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "evaluation" / "results"
 HEAVY_RESULT_KEYS = {"items", "per_claim", "bootstrap", "errors"}
+RESULT_METADATA_KEYS = {"exp_id", "lot", "task", "model", "split", "date", "seed"}
 
 app = FastAPI(title="NewsCheck TN API", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -60,6 +62,12 @@ class VerdictDetailIn(ClaimIn):
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "version": app.version, "claim_detector": model_status()}
+
+
+@app.get("/", include_in_schema=False)
+def application_home() -> RedirectResponse:
+    """La page web est montée sous /app ; redirige l'adresse de base utilement."""
+    return RedirectResponse(url="/app/", status_code=307)
 
 
 @app.post("/normalize")  # Lot A2
@@ -176,9 +184,53 @@ def corpus_stats_route() -> dict:
     }
 
 
+def _infer_result_lot(filename: str) -> str:
+    """Lot de secours pour les anciens résultats qui n'ont pas encore ce champ."""
+    name = filename.casefold()
+    if "claim_detection" in name or "model1" in name or "nli" in name:
+        return "C"
+    if "retriev" in name or "verdict" in name or "rag" in name:
+        return "D"
+    if "normal" in name or "langid" in name:
+        return "A2"
+    if "linguistic" in name or "claim_extract" in name:
+        return "B"
+    if "bronze" in name:
+        return "Bronze"
+    return "?"
+
+
+def _dashboard_result(path: Path, data: dict) -> dict:
+    """Adapte formats historiques et format commun au contrat du dashboard web."""
+    metrics = dict(data.get("metrics", {})) if isinstance(data.get("metrics"), dict) else {}
+    for key, value in data.items():
+        if key in HEAVY_RESULT_KEYS | RESULT_METADATA_KEYS | {"metrics"}:
+            continue
+        if "_by_" in key and isinstance(value, dict):
+            metric_name, group_name = key.rsplit("_by_", 1)
+            metrics[f"by_{group_name}"] = {
+                name: item if isinstance(item, dict) else {metric_name: item}
+                for name, item in value.items()
+            }
+        elif isinstance(value, (int, float)) or key.startswith("by_"):
+            metrics[key] = value
+        elif key == "per_class" and isinstance(value, dict):
+            metrics["by_class"] = value
+    return {
+        "file": path.name,
+        "exp_id": data.get("exp_id", "-"),
+        "lot": data.get("lot") or _infer_result_lot(path.name),
+        "task": data.get("task", path.stem),
+        "model": data.get("model", ""),
+        "split": data.get("split", ""),
+        "date": data.get("date", ""),
+        "metrics": metrics,
+    }
+
+
 @app.get("/results")
 def results_route() -> dict:
-    """Expose les fichiers JSON légers de ``evaluation/results`` au dashboard."""
+    """Expose les résultats au format commun attendu par le dashboard web."""
     results = []
     for path in sorted(RESULTS_DIR.glob("*.json")):
         try:
@@ -187,12 +239,7 @@ def results_route() -> dict:
             results.append({"file": path.name, "error": "fichier JSON illisible"})
             continue
         if isinstance(data, dict):
-            results.append(
-                {
-                    "file": path.name,
-                    **{key: value for key, value in data.items() if key not in HEAVY_RESULT_KEYS},
-                }
-            )
+            results.append(_dashboard_result(path, data))
     return {"results": results}
 
 
