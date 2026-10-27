@@ -13,14 +13,15 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import pipeline
 from common.schemas import Claim, Evidence, Lang
-from data.loaders import load_evidence_corpus
+from data.loaders import CorpusError, corpus_origin, load_evidence_corpus
 from models.claim_detector import filter_checkworthy, model_status
 from models.nli.stance import predict_stance, predict_stances
 from normalization.normalize import normalize
@@ -33,6 +34,12 @@ HEAVY_RESULT_KEYS = {"items", "per_claim", "bootstrap", "errors"}
 
 app = FastAPI(title="NewsCheck TN API", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.exception_handler(CorpusError)
+def corpus_error_handler(_: Request, exc: CorpusError) -> JSONResponse:
+    """Corpus de preuves demandé mais introuvable ou invalide : message clair, pas d'erreur 500."""
+    return JSONResponse(status_code=503, content={"detail": f"Corpus de preuves : {exc}"})
 
 
 class TextIn(BaseModel):
@@ -146,11 +153,13 @@ def _stance_function(nli: str):
 def verdict_detail_route(body: VerdictDetailIn) -> dict:
     """Détail retrieval/NLI/verdict pour la page Lot D."""
     claim = Claim(text=body.claim, lang=body.lang)
-    evidences = retrieve(claim, load_evidence_corpus(), k=body.k)
+    corpus = load_evidence_corpus()
+    evidences = retrieve(claim, corpus, k=body.k)
     stances = _stance_function(body.nli)(claim, evidences)
     verdict = generate_verdict(claim, stances)
     return {
-        "corpus_size": len(load_evidence_corpus()),
+        "corpus_size": len(corpus),
+        "corpus": corpus_origin(),
         "nli": body.nli,
         "evidences": [
             {
@@ -171,6 +180,7 @@ def corpus_stats_route() -> dict:
     corpus = load_evidence_corpus()
     return {
         "size": len(corpus),
+        **corpus_origin(),
         "by_source": dict(Counter(item.source for item in corpus).most_common()),
         "sample": [asdict(item) for item in corpus[:5]],
     }
