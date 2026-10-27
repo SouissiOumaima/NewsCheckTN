@@ -15,6 +15,8 @@ const NC = (() => {
   const PAGES = [
     { id: "accueil", href: "index.html", icon: "✦", label: "Vérifier un texte",
       desc: "Coller un texte et obtenir un verdict cité pour chaque affirmation." },
+    { id: "bronze", href: "bronze.html", icon: "🥉", label: "Démo Bronze",
+      desc: "Voir toutes les étapes classiques : règles, BM25, NLI lexicale et verdict." },
     { id: "a1", href: "lot-a1.html", icon: "🗂️", label: "A1 · Données",
       desc: "Le corpus de preuves utilisé par l'API : sources et passages." },
     { id: "a2", href: "lot-a2.html", icon: "🔤", label: "A2 · Normalisation",

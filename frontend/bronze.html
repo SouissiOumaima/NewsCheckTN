@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Démo Bronze · NewsCheck TN</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Démo intégrée · palier Bronze</div>
+      <h1>Suivre une vérification, étape par étape</h1>
+      <p class="lede">Cette page montre les composants classiques de la démo : normalisation, extraction à règles, Model 1 classique, recherche BM25, position par lexique et verdict cité.</p>
+    </div>
+
+    <p class="notice"><strong>Périmètre Bronze :</strong> aucun encodeur dense ni LLM n'est requis. Le verdict dépend du corpus de preuves actuellement chargé par l'API.</p>
+
+    <form class="card" id="form">
+      <label class="field">Texte ou affirmation à démontrer
+        <textarea id="text" dir="auto" required>Tunis est la capitale de la Tunisie.</textarea>
+      </label>
+      <div class="examples">Exemples :
+        <button type="button" class="chip" data-ex="0">preuve disponible</button>
+        <button type="button" class="chip" data-ex="1">chômage</button>
+        <button type="button" class="chip" data-ex="2">sans preuve</button>
+      </div>
+      <div class="row">
+        <label class="field">Preuves BM25 <input id="k" type="number" min="1" max="10" value="5"></label>
+        <button class="btn" type="submit" id="go">Lancer la démo Bronze</button>
+        <span class="empty" id="status"></span>
+      </div>
+    </form>
+
+    <div class="error" id="err" hidden></div>
+    <section id="results" hidden>
+      <div class="kpis" id="kpis"></div>
+      <section class="card"><h2>1 · Normalisation et langue — Lot A2</h2><dl class="kv" id="normalization"></dl></section>
+      <section class="card"><h2>2 · Affirmation retenue — Lots B + C</h2><div id="claims"></div></section>
+      <section class="card"><h2>3 · Preuves BM25 — Lot D</h2><div class="stack" id="evidence"></div></section>
+      <section class="card"><h2>4 · Position par lexique — Model 2 / Lot C</h2><div class="stack" id="stances"></div></section>
+      <section class="card"><h2>5 · Verdict par gabarit — Lot D</h2><div id="verdict"></div></section>
+    </section>
+  </main>
+
+  <script src="assets/app.js"></script>
+  <script>
+    NC.init("bronze");
+    const examples = [
+      "Tunis est la capitale de la Tunisie.",
+      "Le taux de chômage en Tunisie était de 16,4 % au deuxième trimestre 2023.",
+      "Un nouvel aéroport a été inauguré à Kairouan en 2026.",
+    ];
+    document.querySelectorAll("[data-ex]").forEach((button) => button.addEventListener("click", () => {
+      document.getElementById("text").value = examples[+button.dataset.ex];
+    }));
+
+    const showEvidence = (items) => items.length ? items.map((item, index) => `
+      <div class="ev"><div class="h"><span class="num">#${index + 1}</span><span class="doc">${NC.esc(item.doc_id)}</span><span class="num">BM25 ${NC.fmt(item.score, 3)}</span><span>${NC.esc(item.source)}</span></div><div class="tx">${NC.text(item.text)}</div></div>`).join("")
+      : '<p class="empty">Aucune preuve BM25 trouvée dans le corpus chargé.</p>';
+
+    document.getElementById("form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = document.getElementById("text").value;
+      const k = +document.getElementById("k").value || 5;
+      const err = document.getElementById("err"), go = document.getElementById("go");
+      err.hidden = true; go.disabled = true; document.getElementById("status").textContent = "Exécution des 5 étapes…";
+      try {
+        const normalized = await NC.api("/normalize", { text });
+        const extracted = await NC.api("/extract", { text });
+        const claim = extracted.claims[0];
+        document.getElementById("normalization").innerHTML = `<dt>langue</dt><dd><span class="tag">${NC.esc(normalized.lang)}</span></dd><dt>écriture</dt><dd><span class="tag">${NC.esc(normalized.script)}</span></dd><dt>texte normalisé</dt><dd>${NC.text(normalized.text)}</dd>`;
+        document.getElementById("claims").innerHTML = claim ? `<div class="notice">${NC.text(claim.text)}<br><span class="tag">${NC.esc(claim.modality || "assertif")}</span> <span class="tag">P(AFFIRMATION) ${NC.fmt(claim.checkworthiness, 3)}</span></div>` : '<p class="empty">Aucune affirmation n’a été retenue : les étapes suivantes s’arrêtent ici.</p>';
+        if (!claim) {
+          document.getElementById("evidence").innerHTML = ""; document.getElementById("stances").innerHTML = ""; document.getElementById("verdict").innerHTML = "";
+          document.getElementById("kpis").innerHTML = '<div class="kpi"><div class="k">État</div><div class="v">Filtré</div><div class="sub">pas une affirmation vérifiable</div></div>';
+          document.getElementById("results").hidden = false; return;
+        }
+        const retrieved = await NC.api("/retrieve", { claim: claim.text, lang: claim.lang, k });
+        document.getElementById("evidence").innerHTML = showEvidence(retrieved.evidence);
+        const stances = await Promise.all(retrieved.evidence.map((item) => NC.api("/nli", { claim: claim.text, evidence: item.text, lang: claim.lang })));
+        document.getElementById("stances").innerHTML = stances.length ? stances.map((item, index) => `<div class="notice"><span class="doc">${NC.esc(retrieved.evidence[index].doc_id)}</span> ${NC.stanceChip(item.stance, item.confidence)}</div>`).join("") : '<p class="empty">Aucune position : aucune preuve n’a été retrouvée.</p>';
+        const verdict = await NC.api("/verdict", { claim: claim.text, lang: claim.lang, k });
+        document.getElementById("verdict").innerHTML = NC.verdictBox(verdict);
+        document.getElementById("kpis").innerHTML = `<div class="kpi"><div class="k">Étapes exécutées</div><div class="v">5 / 5</div><div class="sub">pipeline Bronze</div></div><div class="kpi"><div class="k">Preuves BM25</div><div class="v">${retrieved.evidence.length}</div><div class="sub">top ${k}</div></div><div class="kpi"><div class="k">Verdict</div><div class="v">${NC.esc(NC.LABELS[verdict.label] || verdict.label)}</div><div class="sub">${verdict.abstained ? "abstention" : "cité"}</div></div>`;
+        document.getElementById("results").hidden = false;
+      } catch (ex) { err.hidden = false; err.textContent = ex.message; }
+      finally { go.disabled = false; document.getElementById("status").textContent = ""; }
+    });
+  </script>
+</body>
+</html>

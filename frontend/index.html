@@ -4,50 +4,98 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NewsCheck TN</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
-    textarea { width: 100%; min-height: 140px; font-size: 1rem; }
-    button { margin-top: .5rem; padding: .5rem 1rem; }
-    .verdict { border: 1px solid #ccc; border-radius: 8px; padding: .75rem; margin-top: 1rem; }
-    .label { font-weight: bold; text-transform: uppercase; }
-  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <h1>NewsCheck TN</h1>
-  <p>Collez un texte (FR / AR / tunisien) pour en extraire les affirmations vérifiables.</p>
-  <textarea id="text" dir="auto"></textarea>
-  <button id="go">Vérifier</button>
-  <div id="out"></div>
+  <main class="page">
+    <div class="page-head">
+      <div class="eyebrow">Plateforme · pipeline complet</div>
+      <h1>Vérifier un texte</h1>
+      <p class="lede">Colle un article, une publication ou une déclaration (français, arabe standard ou tunisien). Le système en extrait les affirmations vérifiables, cherche des preuves et rend pour chacune un verdict cité, ou s'abstient quand les preuves manquent.</p>
+    </div>
+
+    <form class="card" id="form">
+      <label class="field">Texte à vérifier
+        <textarea id="text" dir="auto" required></textarea>
+      </label>
+      <div class="examples">Exemples :
+        <button type="button" class="chip" data-ex="0">français</button>
+        <button type="button" class="chip" data-ex="1">arabe</button>
+        <button type="button" class="chip" data-ex="2">tunisien</button>
+        <button type="button" class="chip" data-ex="3">arabizi</button>
+      </div>
+      <div class="row"><button class="btn" type="submit" id="go">Vérifier</button><span class="empty" id="status"></span></div>
+    </form>
+
+    <section aria-labelledby="h-res">
+      <h2 id="h-res">Résultats</h2>
+      <div class="error" id="err" hidden></div>
+      <div class="stack" id="out"><p class="empty">Les affirmations détectées et leurs verdicts s'afficheront ici.</p></div>
+    </section>
+
+    <section>
+      <h2>Explorer la plateforme</h2>
+      <p class="sub">Ouvre « Démo Bronze » pour suivre toute la chaîne classique, ou une page de lot pour tester une brique seule.</p>
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <section>
+      <h2>Ce que fait la chaîne</h2>
+      <div class="table-wrap">
+        <table class="t">
+          <thead><tr><th>Étape</th><th>Lot</th><th>Route</th><th>Ce qu'elle produit</th></tr></thead>
+          <tbody>
+            <tr><td>Normalisation et langue</td><td>A2</td><td><code>/normalize</code></td><td>texte nettoyé, langue (fr, ar, tn), écriture</td></tr>
+            <tr><td>Extraction des affirmations</td><td>B + C</td><td><code>/extract</code></td><td>affirmations vérifiables, sujet-prédicat-objet, modalité</td></tr>
+            <tr><td>Recherche de preuves</td><td>D</td><td><code>/retrieve</code></td><td>passages du corpus les plus pertinents</td></tr>
+            <tr><td>Position des preuves (NLI)</td><td>C</td><td><code>/nli</code></td><td>soutient, contredit ou neutre</td></tr>
+            <tr><td>Verdict</td><td>D</td><td><code>/verdict</code></td><td>vrai, faux, trompeur ou abstention, avec citations</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/app.js"></script>
   <script>
-    // TODO(Lot E): remplacer par le vrai frontend (framework au choix).
-    const API = "http://localhost:8000";
-    document.getElementById("go").onclick = async () => {
-      const out = document.getElementById("out");
-      out.textContent = "Analyse en cours…";
+    NC.init("accueil");
+    NC.tiles(document.getElementById("tiles"), "accueil");
+    const EXAMPLES = [
+      "Le chômage en Tunisie a atteint 25 % en 2025. Le gouvernement a annoncé de nouvelles mesures pour l'emploi.",
+      "أعلنت الوزارة أن نسبة البطالة في تونس بلغت 25 بالمائة سنة 2025.",
+      "الحكومة باش تزيد في سوم الخبز المدعم الشهر الجاي.",
+      "soum zit zitouna tla3 dhe3f el 3am hedha",
+    ];
+    document.querySelectorAll("[data-ex]").forEach((b) =>
+      b.addEventListener("click", () => { document.getElementById("text").value = EXAMPLES[+b.dataset.ex]; }));
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const out = document.getElementById("out"), err = document.getElementById("err"), go = document.getElementById("go");
+      err.hidden = true; go.disabled = true;
+      document.getElementById("status").textContent = "Analyse en cours…";
       try {
-        const res = await fetch(`${API}/check`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: document.getElementById("text").value }),
-        });
-        const { verdicts } = await res.json();
-        out.innerHTML = "";
-        if (!verdicts.length) out.textContent = "Aucune affirmation vérifiable détectée.";
-        for (const v of verdicts) {
-          const div = document.createElement("div");
-          div.className = "verdict";
-          div.innerHTML = `<div dir="auto"></div><div class="label"></div><div></div><small></small>`;
-          div.children[0].textContent = v.claim.text;
-          div.children[1].textContent = v.label;
-          div.children[2].textContent = v.explanation;
-          div.children[3].textContent =
-            `Incertitude : ${v.uncertainty.toFixed(2)} · Citations : ${v.citations.join(", ") || "—"}`;
-          out.appendChild(div);
+        const { verdicts } = await NC.api("/check", { text: document.getElementById("text").value });
+        out.innerHTML = verdicts.length ? verdicts.map((v, i) => `
+          <article class="card">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <span class="eyebrow">Affirmation ${i + 1}</span>
+              <span class="examples"><span class="tag">${NC.esc(v.claim.lang)}</span>${v.claim.modality ? `<span class="tag">${NC.esc(v.claim.modality)}</span>` : ""}</span>
+            </div>
+            <div style="font-size:1.08rem">${NC.text(v.claim.text)}</div>
+            ${NC.verdictBox(v)}
+          </article>`).join("")
+          : `<p class="empty">Aucune affirmation vérifiable détectée dans ce texte.</p>`;
+        if (verdicts.length && verdicts.every((v) => v.abstained)) {
+          out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention : aucune preuve assez pertinente ou assez décisive n'a été trouvée. Essaie la <a href="bronze.html">Démo Bronze</a> pour voir chaque étape.</p>`);
         }
-      } catch (e) {
-        out.textContent = "Erreur : l'API est-elle lancée ? (" + e + ")";
+      } catch (ex) {
+        err.hidden = false; err.textContent = ex.message;
+      } finally {
+        go.disabled = false; document.getElementById("status").textContent = "";
       }
-    };
+    });
   </script>
 </body>
 </html>

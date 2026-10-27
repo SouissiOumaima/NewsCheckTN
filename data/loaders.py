@@ -8,12 +8,14 @@ Format attendu de data/processed/evidence_corpus.jsonl (une ligne par passage) :
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from common.schemas import Evidence
 
 DATA_DIR = Path(__file__).resolve().parent
-EVIDENCE_CORPUS = DATA_DIR / "processed" / "evidence_corpus.jsonl"
+# Le corpus réel peut être hors du dépôt (droits de redistribution à confirmer).
+EVIDENCE_CORPUS = Path(os.getenv("EVIDENCE_CORPUS") or DATA_DIR / "processed" / "evidence_corpus.jsonl")
 
 # Petit échantillon de démonstration utilisé tant que le vrai corpus n'existe pas.
 _SAMPLE = [
@@ -23,11 +25,13 @@ _SAMPLE = [
             "Selon l'INS, le taux de chômage en Tunisie était de 16,4 % au deuxième trimestre 2023."
         ),
         source="INS (échantillon)",
+        url="https://www.ins.tn/",
     ),
     Evidence(
         doc_id="sample-002",
         text="Tunis est la capitale de la Tunisie.",
         source="échantillon",
+        url="https://www.tunisie.gov.tn/",
     ),
 ]
 
