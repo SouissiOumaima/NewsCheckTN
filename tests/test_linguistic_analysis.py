@@ -8,6 +8,7 @@ import random
 import subprocess
 import sys
 import types
+from collections import Counter
 from dataclasses import asdict, fields
 from pathlib import Path
 
@@ -16,6 +17,7 @@ import pytest
 from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
     agreement,
+    baselines_bronze,
     claim_extraction,
     coreference,
     demo,
@@ -1649,3 +1651,40 @@ def test_demo_json(capsys):
 def test_demo_short_text_has_no_candidate(capsys):
     demo.main(["Bonjour Tunis."])
     assert "Aucune phrase candidate" in capsys.readouterr().out
+
+
+# --- Bronze : baselines triviales (EXP-B-007) ---------------------------------------------
+
+
+def test_baselines_gold_modality_distribution():
+    counts = Counter(it["gold"]["modality"] for it in EVAL_ITEMS)
+    assert counts == {"assertif": 14, "rapporté": 7, "opinion": 5, "interrogatif": 4,
+                      "souhait": 2, "conditionnel": 1, "hypothétique": 1}
+    assert baselines_bronze.majority_label(EVAL_ITEMS) == "assertif"
+
+
+def test_baselines_scores_on_eval_30():
+    records = baselines_bronze.baseline_records(
+        EVAL_ITEMS, baselines_bronze.majority_label(EVAL_ITEMS)
+    )
+    scores = baselines_bronze.scores(records)
+    expected = {
+        "claim_accuracy": 0.647,
+        "modality_accuracy": 0.412,
+        "spo_exact.subject": 0.227,
+        "spo_exact.predicate": 0.364,
+        "spo_all_exact": 0.0,
+    }
+    for key, value in expected.items():
+        assert scores[key] == pytest.approx(value, abs=0.001), key
+
+
+def test_baselines_cli_rules_only(tmp_path, capsys):
+    out_file = tmp_path / "baselines.md"
+    baselines_bronze.main(["--rules-only", "--markdown", str(out_file)])
+    report = out_file.read_text(encoding="utf-8")
+    assert report == capsys.readouterr().out.rstrip("\n") + "\n"
+    assert "Analyseurs utilisés : rules." in report
+    assert "| Détection : exactitude | 0.647 | 1.000 | 34 |" in report
+    assert "| Modalité : exactitude | 0.412 | 1.000 | 34 |" in report
+    assert "| SPO : triplet exact | 0.000 | 0.909 | 22 |" in report
