@@ -67,6 +67,32 @@ _STANDARD_SH_VERBS = frozenset(
 _DIALECT_MIN_RATIO = 0.02
 
 
+# Affixes collés aux mots tunisiens ("ولقيتها" = "و" + "لقيت" + "ها").
+# Silver (EXP-A2-012) : si un mot n'est pas dans le lexique, on retire au plus un
+# préfixe et un suffixe, puis on compare de nouveau. Désactivé par défaut : le
+# réglage (silver_tuning.py) décide s'il faut l'activer.
+_PREFIXES = ("\u0648", "\u0641", "\u0628", "\u0644", "\u0643")  # و ف ب ل ك
+_SUFFIXES = (  # du plus long au plus court : "ها" est retiré avant "ه"
+    "\u0643\u0645",  # كم
+    "\u0647\u0645",  # هم
+    "\u0647\u0627",  # ها
+    "\u0646\u0627",  # نا
+    "\u0646\u064A",  # ني
+    "\u0643",  # ك
+    "\u0647",  # ه
+)
+_MIN_STEM = 3  # en dessous, des mots courts deviendraient des marques par hasard
+STRIP_AFFIXES = False
+
+
+def affix_variants(word: str) -> list[str]:
+    """Formes du mot sans un préfixe, sans un suffixe, puis sans les deux (3 lettres ou plus)."""
+    without_prefix = [word[1:] for prefix in _PREFIXES if word.startswith(prefix)]
+    without_suffix = [word[: -len(s)] for s in _SUFFIXES if word.endswith(s)][:1]
+    both = [w[: -len(s)] for w in without_prefix for s in _SUFFIXES if w.endswith(s)][:1]
+    return [v for v in (*without_prefix, *without_suffix, *both) if len(v) >= _MIN_STEM]
+
+
 def _key(word: str) -> str:
     """Forme de comparaison d'un mot : lettres étirées ramenées à une seule."""
     return _LONG_RUN.sub(r"\1", word)
@@ -84,13 +110,19 @@ def load_markers() -> frozenset[str]:
     return frozenset(markers)
 
 
-def find_dialect_markers(folded_text: str) -> list[str]:
+def find_dialect_markers(
+    folded_text: str,
+    markers: frozenset[str] | None = None,
+    strip_affixes: bool | None = None,
+) -> list[str]:
     """Renvoie les formes dialectales trouvées, dans l'ordre du texte.
 
     Renvoyer les mots (et pas seulement vrai / faux) permet d'expliquer chaque
-    décision et d'analyser les erreurs.
+    décision et d'analyser les erreurs. `markers` et `strip_affixes` servent au
+    réglage (silver_tuning.py) ; sans eux : lexique du dépôt et STRIP_AFFIXES.
     """
-    markers = load_markers()
+    markers = load_markers() if markers is None else markers
+    strip = STRIP_AFFIXES if strip_affixes is None else strip_affixes
     words = [_key(word) for word in ARABIC_WORD.findall(folded_text)]
     found = []
     for index, word in enumerate(words):
@@ -106,13 +138,22 @@ def find_dialect_markers(folded_text: str) -> list[str]:
             and word not in _STANDARD_SH_VERBS
         ):
             found.append("\u0645\u0627 " + word)
+        # Silver : mot absent du lexique, mais sa forme sans affixe y est ("ولقيتها").
+        elif strip:
+            stem = next((v for v in affix_variants(word) if v in markers), None)
+            if stem:
+                found.append(stem)
     return found
 
 
-def is_dialectal_arabic(folded_text: str) -> bool:
+def is_dialectal_arabic(
+    folded_text: str,
+    markers: frozenset[str] | None = None,
+    strip_affixes: bool | None = None,
+) -> bool:
     """Dit si le texte (lettres arabes, déjà normalisé) est dialectal."""
     n_words = len(ARABIC_WORD.findall(folded_text))
-    n_found = len(find_dialect_markers(folded_text))
+    n_found = len(find_dialect_markers(folded_text, markers, strip_affixes))
     return n_found > 0 and n_found >= math.ceil(_DIALECT_MIN_RATIO * n_words)
 
 

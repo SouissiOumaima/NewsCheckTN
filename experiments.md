@@ -59,8 +59,62 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-009 | 2026-10-26 | A2 | Adjudication de l'annotation et analyse d'erreurs (≥ 30) | 21 désaccords tranchés à deux ; règles ajoutées au guide ; erreurs classées | langue par classe sur les étiquettes de référence ; erreurs par catégorie | arabe : `a` 23/23, `t` 41/77 ; latin : `f` 12/16, `t` 65/70 ; 45 erreurs en 10 catégories | référence retenue ; suite : lexique élargi, affixes, négation contractée |
 | EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
+| EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
 
 ## Entrées
+
+### EXP-A2-012 — Silver : lexique élargi et retrait des affixes (résultat négatif)
+- **Date** : 2026-11-06
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : suite d'EXP-A2-009 (lexique plus grand, affixes). Relever le rappel
+  du tunisien en lettres arabes (0.53, EXP-A2-011) sans perdre la précision (1.00) ni créer de
+  fausse alerte sur la presse. Hypothèse : des marques plus rares et le retrait des affixes collés
+  (« ولقيتها » → « لقيت ») relèvent le rappel sans toucher la presse.
+- **Données** : référence en lettres arabes d'EXP-A2-009 (`tsac_arabic_sample_reference.tsv`,
+  100 textes, non versionnée) coupée en deux moitiés fixes selon l'empreinte SHA-256 de chaque
+  texte : « reglage » (47 textes) et « mesure » (53, non utilisée ici). Presse : PADT `dev`
+  (909 phrases) pour régler. Candidats : TSAC en lettres arabes hors textes annotés, absents de
+  PADT `train` (même critère qu'EXP-A2-004). PADT `test` et eval_30 non utilisés.
+- **Méthode / configuration** : 8 configurations = seuil `MIN_TEXTS` du lexique (12 = lexique
+  actuel ; 8, 6, 4 : ajout des mots vus dans 4 à 11 textes, d'au moins 3 lettres, hors verbes en
+  ن et mots écartés dans l'en-tête de `tn_markers.txt` ; les mots à 12 textes ou plus déjà écartés
+  ne reviennent pas) × retrait d'un préfixe (و ف ب ل ك) et d'un suffixe (ني ك ه ها نا كم هم),
+  forme restante d'au moins 3 lettres. Règle de choix fixée avant le lancement : meilleur
+  macro-F1 sur « reglage » parmi les configurations à 0 fausse alerte sur PADT `dev` ; égalité :
+  seuil le plus haut, puis sans affixes. Déterministe (aucune graine). Contrôle : la configuration
+  actuelle sur toute la référence redonne 0.63 (EXP-A2-011).
+- **Code** : `normalization/silver_tuning.py` (commande `tune`) ; `normalization/langid.py` :
+  `affix_variants`, options `markers` et `strip_affixes` (désactivées par défaut,
+  `STRIP_AFFIXES = False`) ; 8 tests dans `tests/test_langid_affixes.py` (ce commit).
+  Commande : `python -X utf8 -m normalization.silver_tuning tune` ; tableau gardé hors dépôt
+  (`data/interim/langid/silver_tuning.tsv`).
+- **Résultats** (moitié « reglage », N = 47 ; alertes = phrases de PADT `dev` classées `tn`) :
+
+  | Seuil | Affixes | Marques | Macro-F1 | Rappel tn | Précision tn | Alertes PADT dev |
+  |---|---|---|---|---|---|---|
+  | 12 | non | 78 | 0.65 | 0.56 | 1.00 | 0 |
+  | 12 | oui | 78 | 0.65 | 0.56 | 1.00 | 0 |
+  | 8 | non | 291 | 0.70 | 0.67 | 0.96 | 2 |
+  | 8 | oui | 291 | 0.72 | 0.69 | 0.96 | 2 |
+  | 6 | non | 476 | 0.70 | 0.67 | 0.96 | 7 |
+  | 6 | oui | 476 | 0.72 | 0.69 | 0.96 | 16 |
+  | 4 | non | 965 | 0.71 | 0.72 | 0.93 | 15 |
+  | 4 | oui | 965 | 0.71 | 0.72 | 0.93 | 48 |
+
+  Tests : 635 réussis ; `ruff check` sans remarque.
+- **Analyse** : l'hypothèse ne tient pas sous la contrainte de précision. Les affixes seuls
+  n'apportent rien avec 78 marques (surtout des mots-outils, rarement affixés). Un lexique plus
+  grand relève le rappel (0.56 → 0.67 à 0.72) mais crée des fausses alertes sur la presse et fait
+  baisser la précision ; avec les affixes, les nouvelles marques s'accrochent aussi à des mots de
+  presse (48 alertes au seuil 4). Cause : le filtre « absent de PADT `train` » (quelques milliers
+  de phrases) est trop petit pour écarter les mots rares d'arabe standard, qu'on trouve aussi
+  dans les commentaires. Limites : N = 47, un écart de 0.05 correspond à environ 2 textes ; la
+  négation contractée (EXP-A2-009) n'est pas traitée ici.
+- **Décision / suite** : abandonné en l'état : configuration actuelle conservée (lexique inchangé,
+  affixes désactivés) ; l'outil de réglage et l'option restent pour la suite. Pas de mesure
+  `final` : la moitié « mesure » reste intacte. Suite (EXP-A2-013) : filtrer les candidats contre
+  une référence d'arabe standard beaucoup plus grande, même protocole (réglage sur « reglage » et
+  PADT `dev`, mesure unique sur « mesure » et PADT `test`).
 
 ### EXP-B-008 — Mesure sur le pilote de 60 textes (deux annotateurs indépendants)
 - **Date** : 2026-10-28
