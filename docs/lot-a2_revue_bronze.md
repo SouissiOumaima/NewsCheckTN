@@ -14,7 +14,7 @@ Empreintes SHA-256 : EXP-A2-011.
 | Composant | Lot | Méthode Bronze | Baseline triviale | Métrique | Score baseline | Score Bronze | N test |
 |---|---|---|---|---|---|---|---|
 | Identification de langue (fr / ar / tn) | A2 | règles d'alphabet + lexique de 78 marques + n-grammes de caractères (arabizi) | classe majoritaire | macro-F1 (↑) | 0.19 | **0.94** | 34 (eval_30) |
-| Identification de langue | A2 | idem | alphabet seul (comportement d'avant le Lot A2) | macro-F1 (↑) | 0.50 | **0.94** | 34 |
+| Identification de langue | A2 | idem | alphabet seul (baseline triviale) | macro-F1 (↑) | 0.50 | **0.94** | 34 |
 | Identification de langue — dev lettres arabes | A2 | idem | classe majoritaire | macro-F1 (↑) | 0.43 | 0.63 | 100 (dev) |
 | Identification de langue — dev lettres latines | A2 | idem | classe majoritaire | macro-F1 (↑) | 0.45 | 0.83 | 86 (dev) |
 | Tunisien : fausses alertes sur la presse | A2 | lexique de marques | « toujours tunisien » | presse classée `tn` (↓) | 100 % | **0 %** | 680 (PADT test) |
