@@ -112,12 +112,26 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   abandonnés. Limites : petits effectifs (53 textes ; 1 texte pèse environ 0.02), un seul
   annotateur de référence par texte après adjudication ; eval_30 ne contient que 5 phrases en
   tunisien en lettres arabes, donc il ne peut guère montrer de gain.
+  Analyse de l'alerte de PADT `test` (faite après la mesure, sans aucun réglage) :
+  la phrase, de la presse égyptienne en arabe standard, bascule sur une seule marque
+  ajoutée, « الطحان », ici un nom
+  de famille (5 textes TSAC, 0 phrase Leipzig) : un nom propre rare passe tout filtre de
+  fréquence. Relecture des 367 marques ajoutées : 45 commencent par l'article « ال » (noms
+  communs, noms de famille ; les 3 marques d'origine en « ال » sont de vraies marques) ; la
+  liste automatique mêle aussi des injures et termes vulgaires, des fautes de frappe et des
+  mots d'arabe standard. Le critère « fréquent dans TSAC, absent de la presse » retient ce qui
+  est propre aux commentaires, pas seulement ce qui est tunisien : une liste automatique ne
+  peut pas entrer telle quelle dans le lexique (ni dans le dépôt).
 - **Décision / suite** : **non activé** : le critère d'adoption fixé avant la mesure (0 alerte sur
   PADT `test`) n'est pas rempli ; le pipeline garde le lexique actuel (78 marques, `STRIP_AFFIXES =
   False`). La moitié « mesure » et PADT `test` ont servi pour cette configuration : toute correction
   devra être mesurée sur de nouvelles données (une presse de test neuve et un échantillon TSAC neuf
   annoté à deux, déjà prévu par EXP-A2-011). Suite : analyser la phrase en cause (mot responsable),
   puis préparer ce nouveau jeu de test.
+  Suite révisée (EXP-A2-014) : relecture humaine des 367 candidats selon des critères écrits
+  avant de commencer (garder les mots-outils et formes verbales dialectales ; rejeter noms
+  propres, injures, mots d'arabe standard et fautes de frappe), sans regarder le dev ni les
+  tests ; mesure sur un jeu neuf.
 
 ### EXP-A2-012 — Silver : lexique élargi et retrait des affixes (résultat négatif)
 - **Date** : 2026-11-06
