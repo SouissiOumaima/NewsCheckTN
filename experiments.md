@@ -60,8 +60,64 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 | EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
+| EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
 
 ## Entrées
+
+### EXP-A2-013 — Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig)
+- **Date** : 2026-11-06
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : suite d'EXP-A2-012, dont les fausses alertes venaient d'un filtre trop
+  petit (« absent de PADT `train` »). Hypothèse : en n'ajoutant que des mots (presque) absents d'une
+  grande référence d'arabe standard, on relève le rappel du tunisien en lettres arabes sans fausse
+  alerte sur la presse.
+- **Données** : même découpage qu'EXP-A2-012 (référence d'EXP-A2-009, 100 textes : « reglage » 47,
+  « mesure » 53). Référence d'arabe standard : Leipzig Corpora Collection, arabe, News 2022, 300 000
+  phrases (`ara_news_2022_300K.tar.gz`, SHA-256
+  `63b50fc6756002b2896055aafc3773cf2169a41a3947bac6ec39eb0febe5215d`), CC BY, téléchargée le
+  2026-11-06, non versionnée (`data/raw/langid/leipzig/`), lue sans extraction ; citation :
+  Goldhahn, Eckart et Quasthoff, LREC 2012. Corpus de presse maghrébine écartés volontairement
+  (citations possibles en dialecte). Réglage : PADT `dev` (909 phrases). Mesure unique : moitié
+  « mesure », PADT `test` (680 phrases), eval_30 (34 phrases).
+- **Méthode / configuration** : `python -X utf8 -m normalization.silver_tuning tune --leipzig`.
+  Grille : seuil `MIN_TEXTS` 8 / 6 / 4 × nombre maximal de phrases Leipzig contenant le mot ajouté
+  (0 / 2 / 5) × retrait des affixes, plus le lexique actuel (seuil 12) ; le lexique actuel n'est
+  jamais filtré. Règle de choix fixée avant le lancement : meilleur macro-F1 sur « reglage » parmi
+  les configurations à 0 fausse alerte sur PADT `dev` ; égalité : seuil le plus haut, filtre le plus
+  strict, sans affixes. Critère d'adoption fixé avant la mesure finale : sur la moitié « mesure »,
+  macro-F1 au moins égal à l'actuel ; 0 fausse alerte sur PADT `test` ; aucune baisse sur eval_30.
+  Mesure unique : `python -X utf8 -m normalization.silver_tuning final --min-texts 4 --max-leipzig 0`.
+  Non-régression : `tune` sans option redonne le tableau d'EXP-A2-012 à l'identique.
+- **Code** : `normalization/silver_tuning.py` (`read_leipzig_sentences`, `reference_counts`,
+  option `--leipzig`, `--max-leipzig`) ; 2 tests ajoutés dans `tests/test_langid_affixes.py`
+  (10 au total) ; tableau gardé hors dépôt (`data/interim/langid/silver_tuning_leipzig.tsv`).
+- **Résultats** :
+  - réglage (moitié « reglage », N = 47) : sans affixes, 0 alerte sur PADT `dev` pour N = 0 et 2
+    à tous les seuils (contre 2 à 15 sans filtre, EXP-A2-012) ; avec affixes, 5 à 17 alertes dès le
+    seuil 6. Retenu : seuil 4, N = 0, sans affixes, 445 marques (78 + 367) : macro-F1 0.65 → 0.68,
+    rappel `tn` 0.56 → 0.64, précision 1.00 → 0.96 ;
+  - mesure unique, configuration actuelle → retenue :
+
+    | Jeu | Macro-F1 | Rappel tn | Précision tn | Fausses alertes |
+    |---|---|---|---|---|
+    | dev, moitié « mesure » (N = 53) | 0.61 → 0.68 | 0.51 → 0.61 | 1.00 → 1.00 | — |
+    | eval_30 (N = 34) | 0.94 → 0.94 | 0.86 → 0.86 | 1.00 → 1.00 | — |
+    | PADT `test` (680 phrases) | — | — | — | 0 → 1 |
+
+  - tests : 637 réussis ; `ruff check` sans remarque.
+- **Analyse** : l'hypothèse tient en grande partie. Le filtre Leipzig supprime presque toutes les
+  fausses alertes d'EXP-A2-012, et le gain se confirme sur des données jamais vues (+0.07 de
+  macro-F1, +10 points de rappel, précision intacte sur les commentaires). Il reste une fuite : une
+  phrase de presse sur 680 classée tunisienne. Les affixes n'apportent rien et recréent des alertes :
+  abandonnés. Limites : petits effectifs (53 textes ; 1 texte pèse environ 0.02), un seul
+  annotateur de référence par texte après adjudication ; eval_30 ne contient que 5 phrases en
+  tunisien en lettres arabes, donc il ne peut guère montrer de gain.
+- **Décision / suite** : **non activé** : le critère d'adoption fixé avant la mesure (0 alerte sur
+  PADT `test`) n'est pas rempli ; le pipeline garde le lexique actuel (78 marques, `STRIP_AFFIXES =
+  False`). La moitié « mesure » et PADT `test` ont servi pour cette configuration : toute correction
+  devra être mesurée sur de nouvelles données (une presse de test neuve et un échantillon TSAC neuf
+  annoté à deux, déjà prévu par EXP-A2-011). Suite : analyser la phrase en cause (mot responsable),
+  puis préparer ce nouveau jeu de test.
 
 ### EXP-A2-012 — Silver : lexique élargi et retrait des affixes (résultat négatif)
 - **Date** : 2026-11-06

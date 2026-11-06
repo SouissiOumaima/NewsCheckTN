@@ -1,4 +1,4 @@
-"""Lot A2 — Silver : retrait des affixes avant comparaison au lexique (EXP-A2-012)."""
+"""Lot A2 — Silver : affixes (EXP-A2-012), filtre par l'arabe standard de Leipzig (EXP-A2-013)."""
 
 import pytest
 
@@ -46,3 +46,36 @@ def test_macro_f1():
     assert macro_f1(["tn", "ar"], ["tn", "ar"]) == 1.0
     # tn : F1 = 2/3 ; ar : F1 = 4/5 -> moyenne 11/15
     assert macro_f1(["tn", "tn", "ar", "ar"], ["tn", "ar", "ar", "ar"]) == pytest.approx(11 / 15)
+
+
+# --- EXP-A2-013 : référence d'arabe standard (Leipzig) --------------------------------
+
+
+def test_lecture_archive_leipzig_sans_extraction(tmp_path):
+    import io
+    import tarfile
+
+    from normalization.silver_tuning import read_leipzig_sentences
+
+    content = "1\tجملة أولى\n2\tجملة ثانية\n".encode()
+    archive = tmp_path / "ara_news_2022_300K.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        info = tarfile.TarInfo("ara_news_2022_300K/ara_news_2022_300K-sentences.txt")
+        info.size = len(content)
+        tar.addfile(info, io.BytesIO(content))
+    assert read_leipzig_sentences(archive) == ["جملة أولى", "جملة ثانية"]
+
+
+def test_filtre_leipzig_ecarte_les_mots_de_presse():
+    from collections import Counter
+
+    from normalization.langid import load_markers
+    from normalization.silver_tuning import lexicon_for
+
+    rare, press = "باهي", "قالت"  # deux mots choisis pour le test
+    counts = Counter({rare: 9, press: 9})  # 9 textes TSAC : retenus au seuil 8
+    reference = Counter({press: 3})  # présent dans 3 phrases de presse
+    strict = lexicon_for(8, counts, reference, 0)
+    assert rare in strict and press not in strict
+    assert press in lexicon_for(8, counts, reference, 5)  # tolérance de 5 phrases
+    assert load_markers() <= strict  # le lexique actuel n'est jamais filtré
