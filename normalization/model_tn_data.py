@@ -25,6 +25,7 @@ import hashlib
 import random
 import sys
 from collections import Counter
+
 from normalization.annotation import (
     SAMPLES,
     candidates,
