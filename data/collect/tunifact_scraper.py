@@ -4,13 +4,15 @@ Cette première version teste la collecte sur un seul article.
 """
 
 from __future__ import annotations
+
 import json
+import re
 import time
 from pathlib import Path
 from urllib.parse import urlparse
+
 import requests
 from bs4 import BeautifulSoup
-
 
 # Attente entre les requêtes pour éviter
 # d'envoyer trop de requêtes rapidement.
@@ -62,7 +64,6 @@ def extract_doc_id(url: str) -> str:
     return "tunifact-unknown"
 
 
-import re
 
 
 def extract_verdict(soup: BeautifulSoup) -> str | None:
@@ -164,7 +165,7 @@ def parse_article(html: str, url: str) -> dict:
     # Réunir les paragraphes
     article_text = "\n".join(paragraphs)
 
-   
+
     return {
         "doc_id": extract_doc_id(url),
         "source": "Tunifact",

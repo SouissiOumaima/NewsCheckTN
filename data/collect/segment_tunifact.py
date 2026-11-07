@@ -13,7 +13,6 @@ import json
 import re
 from pathlib import Path
 
-
 INPUT_DIR = Path("data/interim/tunifact")
 OUTPUT_FILE = Path("data/processed/tunifact_sentences.jsonl")
 

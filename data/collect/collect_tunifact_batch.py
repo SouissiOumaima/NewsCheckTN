@@ -1,20 +1,16 @@
 
 """Collecte multiple d'articles Tunifact — NewsCheck TN, Lot A1."""
 
-from pathlib import Path
-from urllib.parse import urlparse
-import json
 
 from data.collect.tunifact_scraper import (
+    INTERIM_DIR,
+    RAW_DIR,
+    extract_doc_id,
     fetch_page,
     parse_article,
-    extract_doc_id,
-    save_raw_html,
     save_interim_json,
-    RAW_DIR,
-    INTERIM_DIR,
+    save_raw_html,
 )
-
 
 # Ajouter ici les URL publiques des articles à collecter.
 # Chaque URL doit correspondre à un article Tunifact.
