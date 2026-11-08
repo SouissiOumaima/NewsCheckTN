@@ -94,9 +94,13 @@ Une double annotation indépendante a été réalisée sur 100 phrases communes 
 | Accord observé | 69 % |
 | Cohen's Kappa | ≈ 0,3481 |
 
-Le coefficient de Cohen's Kappa mesure l'accord entre les deux annotateurs en tenant compte de l'accord attendu par hasard. Le résultat indique que des divergences d'interprétation subsistent et nécessitent une analyse qualitative.
+Le coefficient de Cohen's Kappa mesure l'accord entre les deux annotateurs en tenant compte de l'accord attendu par hasard. Le calcul repose exclusivement sur les annotations initiales, avant toute relecture ou décision d'arbitrage.
 
-Le calcul repose exclusivement sur les annotations initiales, avant toute relecture ou décision d'arbitrage.
+Pour permettre la reproduction du résultat, il reste à joindre les marges par annotateur, la matrice de confusion, les valeurs Po et Pe, le script de calcul ainsi que la version ou l'empreinte des 100 enregistrements alignés, dans un espace autorisé.
+
+Le Lot E signale 12 cas nécessitant une discussion selon le retour qui lui a été communiqué. La comparaison locale des 31 propositions avec les décisions de relecture d'Achref identifie, quant à elle, 7 divergences. Ces deux chiffres correspondent à des suivis dont les périmètres doivent être rapprochés avant toute conclusion.
+
+Aucun label d'arbitrage final n'est considéré comme validé à ce stade.
 
 ### 5.2. Relecture des 31 désaccords
 
@@ -131,7 +135,12 @@ La version 1.1 reste une proposition en attente de validation par l'équipe.
 
 ## 7. Contrôles techniques
 
-Les deux corpus ont été audités en lecture seule.
+Les résultats ci-dessous sont rapportés par le Lot A1 pour son audit en lecture
+seule du 07/11/2026. Les deux fichiers privés de référence ne sont pas présents
+dans cette branche ; la relecture technique du Lot E ne reproduit donc pas cet audit.
+Pour permettre sa reproduction dans un espace autorisé, joindre un manifeste
+avec version ou empreinte SHA-256 des fichiers, schémas et champs contrôlés,
+commande ou script utilisé et rapport de sortie, sans exposer les données privées.
 
 | Contrôle | A1 | NLI |
 |---|---:|---:|
@@ -188,7 +197,11 @@ Aucune provenance non vérifiée ne doit être inventée.
 
 Les conditions de réutilisation de TArC et Tunifact doivent être vérifiées séparément.
 
-La licence CC BY-NC-SA 4.0 associée à TArC impose notamment des obligations d'attribution, des restrictions d'utilisation commerciale et des conditions de partage des adaptations.
+La mention de la licence CC BY-NC-SA 4.0 pour TArC doit être confirmée sur la version exacte du corpus utilisée.
+
+Si cette licence est applicable, elle impose notamment des obligations d'attribution, des restrictions d'utilisation commerciale et des conditions de partage des adaptations.
+
+La référence officielle de la licence et les conditions de réutilisation doivent être documentées avant validation.
 
 Aucun droit général de redistribution des contenus Tunifact n'est présumé.
 
