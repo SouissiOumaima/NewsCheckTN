@@ -92,9 +92,17 @@ Une double annotation indépendante a été réalisée sur 100 phrases communes 
 | Accord observé | 69 % |
 | Cohen's Kappa | ≈ 0,34 |
 
+La valeur arrondie ne permet pas de reproduire le calcul : joindre les marges
+par annotateur, la matrice de confusion, Po, Pe, le script et la version des
+100 textes alignés. Calculer ces statistiques sur les annotations indépendantes
+initiales, avant relecture et arbitrage.
+
 Le Kappa mesure l'accord corrigé du hasard. Sa valeur indique que les divergences d'interprétation doivent être examinées.
 
-Les 31 désaccords font l'objet d'une relecture humaine dans la Pull Request #18.
+Les 31 désaccords sont suivis dans la Pull Request #18. Le retour communiqué
+par le Lot A1 après la relecture d'Achref signale 12 cas nécessitant encore une
+discussion. Leur liste par ID et le rapport local d'arbitrage restent à joindre
+dans un espace de partage autorisé ; aucun label arbitré final n'est attesté ici.
 
 Les labels proposés pour l'arbitrage ne sont pas considérés comme définitifs avant validation humaine.
 
@@ -108,7 +116,12 @@ La version 1.1 reste une proposition en attente de validation par l'équipe.
 
 ## 7. Contrôles techniques
 
-Les deux corpus ont été audités en lecture seule.
+Les résultats ci-dessous sont rapportés par le Lot A1 pour son audit en lecture
+seule du 07/11/2026. Les deux fichiers privés de référence ne sont pas présents
+dans cette branche ; la relecture technique du Lot E ne reproduit donc pas cet audit.
+Pour permettre sa reproduction dans un espace autorisé, joindre un manifeste
+avec version ou empreinte SHA-256 des fichiers, schémas et champs contrôlés,
+commande ou script utilisé et rapport de sortie, sans exposer les données privées.
 
 | Contrôle | A1 | NLI |
 |---|---:|---:|
@@ -137,7 +150,9 @@ Aucune provenance non vérifiée ne doit être inventée.
 
 Les conditions de réutilisation de TArC et Tunifact doivent être vérifiées séparément.
 
-La licence CC BY-NC-SA 4.0 associée à TArC impose notamment des conditions d'attribution et de réutilisation.
+La mention CC BY-NC-SA 4.0 pour TArC est à confirmer sur la version exacte
+utilisée ; archiver la référence de licence et les conditions applicables avant
+validation de cette section.
 
 Aucun droit général de redistribution des contenus Tunifact n'est présumé.
 

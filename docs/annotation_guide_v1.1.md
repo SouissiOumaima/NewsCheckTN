@@ -120,6 +120,13 @@ Si une phrase contient un fait et une opinion :
   différents, marquer le cas pour révision.
 - Ne pas supprimer ni modifier le texte original.
 
+**Précisions proposées pour la relecture d'équipe :** décrire dans le commentaire
+la proposition factuelle, la partie subjective ou injonctive et la raison du choix
+de l'intention dominante. Le seul fait qu'une phrase contienne un fait ne suffit
+pas à ignorer sa fonction principale. Si aucune dominante n'est justifiable,
+conserver un statut de révision dans le fichier de travail, distinct du label.
+Ne pas utiliser AUTRE comme label de remplacement pour un désaccord non résolu.
+
 ### Règle 5 — Questions rhétoriques
 
 Une question neutre est AUTRE.
@@ -128,6 +135,19 @@ Une question rhétorique exprimant clairement un jugement
 peut être OPINION.
 
 Si l'intention est ambiguë, demander une seconde annotation.
+
+### Témoignages personnels et contexte — précisions proposées
+
+Un témoignage personnel peut décrire un fait potentiellement vérifiable
+(par exemple un poids chiffré ou une fréquence de visite). La première personne
+et l'absence de preuve immédiatement disponible ne suffisent pas à classer AUTRE.
+Distinguer cette propriété de l'intérêt du fait pour une vérification publique.
+Une préférence ou une appréciation personnelle reste OPINION.
+
+Si un pronom, un référent ou une situation manque, noter le contexte nécessaire.
+Consulter uniquement le contexte source disponible et en conserver la référence ;
+ne pas reconstituer de contexte par supposition. Si la proposition reste
+indéterminable, laisser le cas en révision jusqu'à l'arbitrage humain.
 
 ### Règle 6 — Langues et écritures
 
@@ -154,7 +174,7 @@ Pour chaque phrase :
 
 1. Lire le texte complet.
 2. Identifier la langue et le groupe linguistique.
-3. Déterminer si la phrase présente un fait vérifiable.
+3. Appliquer la règle 4 aux phrases mixtes, puis déterminer si la proposition dominante présente un fait vérifiable.
 4. Sinon, déterminer si elle exprime une opinion.
 5. Sinon, utiliser AUTRE.
 6. Conserver la source et l'identifiant.
@@ -274,9 +294,8 @@ et constitue une base pour améliorer la méthode d'annotation.
 
 - Faire relire le guide par l'équipe.
 - Réviser les exemples ambigus.
-- Préparer une Data Card.
-- Étendre progressivement le corpus vers 600 phrases.
-- Construire 300 paires NLI.
+- Relire la [Data Card v0.2](data_card_v0.2.md).
+- Confirmer les audits annoncés du corpus de 600 phrases et des 300 paires NLI sur les fichiers privés correspondants.
 - Réaliser une validation humaine de qualité.
 - Documenter les licences et les conditions de diffusion.
 
@@ -300,6 +319,15 @@ dans la section 2.
 6. Examiner les désaccords en réunion, documenter leur justification et
    produire un label arbitré dans une colonne distincte.
 7. Archiver les versions originales, la comparaison et le compte rendu d'arbitrage.
+
+**Traçabilité proposée pour l'arbitrage, à approuver par l'équipe :** conserver
+les labels initiaux, la proposition assistée par IA et la relecture séparément.
+Documenter par ID le point litigieux, la règle invoquée, le contexte consulté,
+le label final, sa justification, les participants et la date de validation.
+Sans accord, maintenir le cas en attente et solliciter la personne désignée par
+l'équipe pour l'arbitrage. Aucun label final n'est appliqué au corpus officiel
+sur la seule base d'une recommandation IA. La procédure et les modalités de
+partage des fichiers privés restent à confirmer par l'équipe.
 
 **Colonnes recommandées pour la comparaison :**
 `id`, `text`, `annotation_ghofran`, `annotation_achref`, `accord`,
