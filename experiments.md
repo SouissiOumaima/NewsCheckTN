@@ -176,7 +176,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     (416 phrases, EXP-A2-003 / 008).
 - **Méthode / configuration** : `python -X utf8 -m normalization.review` (déterministe). Baselines :
   « majorité » (toujours la classe la plus fréquente du jeu) ; « alphabet seul » (lettres arabes →
-  `ar`, sinon `fr` : le comportement d'avant le Lot A2). Normaliseur : textes dont les nombres sont
+  `ar`, sinon `fr` : baseline triviale ; le normaliseur d'origine faisait mieux : exactitude 0.82, EXP-A2-001). Normaliseur : textes dont les nombres sont
   identiques avant et après `normalize` (chiffres arabes-indiens convertis comptés comme conservés),
   et mots différents avant / après, contre la baseline « copie de la source ». Erreurs du dev
   exportées avec leur catégorie d'EXP-A2-009, regroupées en 5 familles. Sortie gardée hors dépôt :
