@@ -33,10 +33,24 @@ Le pilote initial comprend 60 phrases :
 Distribution historique : 48 AFFIRMATION, 7 OPINION et 5 AUTRE.
 
 Ces chiffres concernent uniquement le pilote initial et ne doivent pas être confondus avec les statistiques du corpus étendu.
+### Provenance et statut de TunSwitch
+
+Le dépôt contient un lot de préparation de **22 phrases candidates issues de TunSwitch**, en tunisien écrit en caractères arabes.
+
+Les correspondances textuelles ont été vérifiées dans le fichier source local `TO_text.txt`. Le suivi de ces candidates est documenté dans `data/deliverables/equipe_a1_preparation/README.md` et `manifest_a1.json`.
+
+**Statut de validation :**
+
+- Provenance textuelle : correspondances vérifiées dans la source locale.
+- Licence et conditions d'utilisation : à confirmer.
+- Autorisation de redistribution : à confirmer.
+- Admissibilité et intégration dans les jeux d'évaluation : à valider.
+
+Ces 22 candidates ne doivent pas être présentées comme intégrées au corpus A1 final ou à `eval_100` sans vérification supplémentaire. Aucune redistribution des textes sources ne doit être effectuée avant confirmation des droits applicables.
 
 ## 3. Corpus A1 — 600 phrases
 
-**Fichier de référence audité :** `data/annotations/corpus_a1_600_humain_final_prive.jsonl`
+**Fichier de référence audité :** corpus A1 de 600 phrases, conservé dans un espace de travail privé hors dépôt.
 
 ### Distribution des labels
 
@@ -59,7 +73,7 @@ Le corpus présente une forte concentration de textes tunisiens. La répartition
 
 ## 4. Corpus NLI — 300 paires
 
-**Fichier de référence audité :** `data/annotations/nli_corpus_300_consolide_v4_prive.jsonl`
+**Fichier de référence audité :** corpus NLI consolidé de 300 paires, conservé dans un espace de travail privé hors dépôt.
 
 ### Relations NLI
 
@@ -112,6 +126,26 @@ Les 31 désaccords initiaux ont fait l'objet d'une relecture humaine documentée
 | Concordances entre propositions et décisions d'Achref | 24 |
 | Divergences restantes | 7 |
 | Taux de concordance après relecture | 77,42 % |
+
+**Origine et méthode de calcul des résultats 24/7 :**
+
+Les résultats ont été recalculés localement à partir de deux sources :
+
+- Le fichier privé de propositions de relecture, conservé hors dépôt public, contenant les colonnes `id` et `label_propose`.
+- Le fichier sans textes `data/annotations/a1_relecture_achref_31_sans_textes.csv` de la PR #18, contenant notamment `id` et `decision_achref`.
+
+Les deux jeux de données ont été associés par l'identifiant `id`, sans utiliser l'ordre des lignes.
+
+Pour chacun des 31 identifiants, nous avons comparé `label_propose` à `decision_achref` après suppression des espaces en début et fin de valeur.
+
+- **Concordance :** les deux labels sont identiques.
+- **Divergence :** les deux labels sont différents.
+
+Le recalcul effectué sur les 31 décisions donne 24 concordances et 7 divergences, soit un taux de concordance de 77,42 %.
+
+Cette vérification est reproductible dans un environnement autorisé disposant des deux sources. Le CSV public seul ne permet pas de reproduire le résultat 24/7, car il ne contient pas `label_propose`.
+
+Les décisions d'Achref sont des décisions de relecture et ne constituent pas un arbitrage final.
 
 Ce taux représente uniquement la concordance entre les propositions de relecture et les décisions d'Achref. Il ne constitue ni un nouveau Kappa ni une mesure d'accord inter-annotateurs indépendante.
 

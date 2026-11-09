@@ -168,6 +168,18 @@ Exemples de chiffres Arabizi :
 
 Ces conventions varient selon les personnes et les contextes.
 
+### Articulation avec les modalités du Lot B
+
+Le Lot A1 classe les énoncés en trois catégories : `AFFIRMATION`, `OPINION` et `AUTRE`.
+
+Le Lot B réalise une analyse plus détaillée à l'aide de sept modalités : `assertif`, `rapporté`, `opinion`, `interrogatif`, `souhait`, `hypothétique` et `conditionnel`.
+
+Les définitions, les exemples et les règles de priorité de ces modalités sont décrits dans le [guide d'annotation du Lot B](lot-b_guide_annotation.md).
+
+Cette distinction permet de séparer la classification des énoncés (Lot A1) de leur analyse linguistique (Lot B).
+
+**Point en attente de validation :** les règles concernant les énoncés rapportés et les témoignages personnels invérifiables seront discutées en réunion. Elles ne sont pas considérées comme définitivement validées.
+
 ## 4. Processus d'annotation
 
 Pour chaque phrase :
@@ -333,9 +345,13 @@ partage des fichiers privés restent à confirmer par l'équipe.
 `id`, `text`, `annotation_ghofran`, `annotation_achref`, `accord`,
 `annotation_arbitree`, `motif_arbitrage`.
 
-**Important :** la double annotation des 100 exemples est une tâche
-à vérifier sur les deux fichiers réels ; elle n'est pas attestée par le
-présent guide.
+**Confidentialité :** la colonne `text`, contenant les textes originaux, est conservée uniquement dans les fichiers de travail privés, hors du dépôt GitHub. Le CSV partagé dans la PR #18 ne contient que les colonnes `id`, `label_ghofran`, `label_achref` et `decision_achref`, sans texte original ni commentaire libre.
+
+**État de la double annotation :** la double annotation des 100 exemples a été réalisée par Ghofran et Achref. La comparaison des annotations initiales donne 69 accords et 31 désaccords, soit un accord observé de 69 %.
+
+La relecture des 31 désaccords a également été effectuée. Les décisions de relecture d'Achref ne constituent pas un arbitrage final. La validation des labels définitifs reste en attente de décision de l'équipe.
+
+La reproductibilité complète du calcul de Cohen's Kappa reste à documenter.
 
 ## 12. Mesure d'accord — Cohen's Kappa (ajout v1.1)
 
