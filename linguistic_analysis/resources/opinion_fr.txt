@@ -6,6 +6,7 @@
 # [intensifieurs] : intensifieurs et superlatifs (comptés seulement sans donnée chiffrée)
 # [questions]     : marqueurs interrogatifs en début de phrase
 # [souhaits]      : souhait, espoir, injonction (dont la requête polie : « merci d'avance », « svp »)
+# [salutations]   : formules de salutation, en début de phrase et sans indice factuel (→ souhait)
 # [dates]         : noms de mois (signal factuel)
 
 [verbes]
@@ -98,6 +99,14 @@ s'il te plaît
 s'il te plait
 svp
 stp
+
+[salutations]
+bonjour
+bonsoir
+salut
+coucou
+bonne journée
+bonne soirée
 
 [dates]
 janvier

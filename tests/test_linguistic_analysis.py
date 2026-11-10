@@ -2017,3 +2017,35 @@ def test_polite_request_is_wish_not_claim(text):
 def test_request_markers_do_not_fire_on_claims(text):
     claims = extract_claims_detailed(normalize(text))
     assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
+
+
+# --- Détection : formules de salutation (phatiques) ---------------------------------------
+
+SALUTATION_CASES = [
+    "Bonjour à tous les membres du groupe !",
+    "Aslema 3la el jma3a el kol.",
+    "صباح الخير على الجميع يا أصدقاء.",
+    "مساء الخير لكل المتابعين الكرام.",
+]
+
+
+@pytest.mark.parametrize("text", SALUTATION_CASES)
+def test_salutation_alone_is_not_claim(text):
+    (claim,) = extract_claims_detailed(normalize(text))
+    assert claim.modality == "souhait" and not claim.is_claim, claim.triggers
+    assert any(t.startswith("souhait:salutation:") for t in claim.triggers)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Bonjour, le ministre a annoncé 200 emplois à Gafsa.",  # indice factuel : nombre
+        "Bonjour, El Ministre Ben Salah a visité Sfax.",  # indice factuel : entité (règles)
+        "Le président a dit bonjour aux enfants de l'école.",  # salutation hors tête de phrase
+        "Aslema, el 7koma 3mlet 200 khedma jdida.",
+    ],
+)
+def test_salutation_does_not_hide_claim(text):
+    claims = extract_claims_detailed(normalize(text))
+    assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
+    assert not any(t.startswith("souhait:salutation") for c in claims for t in c.triggers)

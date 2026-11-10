@@ -71,7 +71,7 @@ Un seul label, choisi selon cet ordre de priorité :
 | Label | Quand l'utiliser | Exemples |
 |-------|------------------|----------|
 | `interrogatif` | question directe | « … ? », « هل … », « Est-ce que … » |
-| `souhait` | souhait, espoir, injonction, requête polie (« merci d'avance », « svp », « 3aychek ») | « يا ريت », « Inchallah », « J'espère que » |
+| `souhait` | souhait, espoir, injonction, requête polie (« merci d'avance », « svp », « 3aychek »), formule de salutation seule (« Bonjour à tous », « aslema ») | « يا ريت », « Inchallah », « J'espère que » |
 | `hypothétique` | condition irréelle ou éventuelle | « Si … », « إذا », « لو », « ken » |
 | `conditionnel` | conditionnel, dont journalistique | « aurait relevé », « pourraient » |
 | `rapporté` | source citée ou verbe de parole + complétive | « Selon … », « حسب », « 9alou », « a affirmé que » |

@@ -17,8 +17,13 @@ Score : chaque catégorie d'indice compte une seule fois, avec le poids ci-desso
     intensifieur / superlatif sans nombre       0.3
     question (?, ؟, « est-ce que », هل)         1.0
     souhait / impératif                         0.8
+    salutation en tête, sans indice factuel     0.8 (compte comme souhait)
 
 Décision : `is_opinion = o >= 0.5 and o > f`. Confiance : `min(1, 0.5 + |o - f| / 2)`.
+Une formule de salutation (« bonjour », « aslema », « صباح الخير ») est phatique : elle ne dit
+rien de vérifiable et prend l'étiquette `souhait` (formule de vœu). Elle n'est retenue qu'en tête
+de phrase et sans aucun indice factuel, pour ne pas écarter « Bonjour, le ministre a annoncé
+200 emplois ».
 Une phrase avec un verbe d'opinion mais des données précises (« je pense que le chômage a atteint
 16 % en 2023 ») reste donc factuelle : elle contient une affirmation vérifiable.
 
@@ -237,6 +242,10 @@ def classify_factuality(sentence: Sentence) -> tuple[bool, float, list[str]]:
     intensifier = find_marker(text, _entries(sentence, "intensifieurs"))
     if intensifier and not has_number:
         opinion.append(("intensifieur", f"opinion:intensifieur:{intensifier}"))
+
+    if not factual and not any(category == "souhait" for category, _ in opinion):
+        if marker := find_marker(text, _entries(sentence, "salutations"), anchored=True):
+            opinion.append(("souhait", f"souhait:salutation:{marker}"))
 
     o = sum(WEIGHTS[category] for category, _ in opinion)
     f = sum(WEIGHTS[category] for category, _ in factual)

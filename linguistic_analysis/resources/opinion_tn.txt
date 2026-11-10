@@ -78,6 +78,23 @@ yar7em weldik
 يعيشك
 يرحم والديك
 
+[salutations]
+aslema
+3aslema
+sbe7 el 5ir
+sba7 el 5ir
+sbe7ek
+sbe7kom
+msa el 5ir
+ahla
+marhba
+صباح الخير
+صباحك
+مساء الخير
+عسلامة
+اهلا
+مرحبا
+
 [dates]
 janvi
 fivri
