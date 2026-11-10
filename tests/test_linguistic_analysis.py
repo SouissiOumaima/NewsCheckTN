@@ -2049,3 +2049,36 @@ def test_salutation_does_not_hide_claim(text):
     claims = extract_claims_detailed(normalize(text))
     assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
     assert not any(t.startswith("souhait:salutation") for c in claims for t in c.triggers)
+
+
+# --- Détection : verbes d'appréciation à la 1re personne ----------------------------------
+
+APPRECIATION_CASES = [
+    "J'aime beaucoup l'ambiance de cette ville.",
+    "Je déteste les embouteillages du matin.",
+    "jaime pas du tout la nouvelle formule du journal",
+    "El mentalite hedhi ma3jebnich bel kol.",
+    "ما يعجبنيش الوضع في البلاد.",
+    "يعجبني هذا القرار الجديد كثيرا.",
+]
+
+
+@pytest.mark.parametrize("text", APPRECIATION_CASES)
+def test_first_person_appreciation_is_opinion(text):
+    is_opinion, _, triggers = factuality.classify_factuality(_sentence(text))
+    assert is_opinion and any(t.startswith("opinion:") for t in triggers), triggers
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Il aime le football depuis son enfance.",  # 3e personne
+        "Les supporters adorent le club de Sfax.",
+        "El jomhour 3ajbou el match mta3 el bera7.",  # 3jeb sans -ni (« me »)
+        "أعجب الجمهور بالعرض الأول في قرطاج.",
+        "J'aime rappeler que le chômage a atteint 16 % en 2023.",  # données précises
+    ],
+)
+def test_appreciation_markers_keep_claims(text):
+    claims = extract_claims_detailed(normalize(text))
+    assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]

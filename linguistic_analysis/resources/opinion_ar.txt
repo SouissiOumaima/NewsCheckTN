@@ -20,6 +20,10 @@
 للأسف
 لحسن الحظ
 من الواضح أن
+# appréciation à la 1re personne
+يعجبني
+لا يعجبني
+أعجبني
 
 [evaluatifs]
 كارثي
