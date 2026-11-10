@@ -5,7 +5,7 @@
 # [evaluatifs]    : adjectifs / noms évaluatifs (renforcés en position d'attribut : « c'est honteux »)
 # [intensifieurs] : intensifieurs et superlatifs (comptés seulement sans donnée chiffrée)
 # [questions]     : marqueurs interrogatifs en début de phrase
-# [souhaits]      : souhait, espoir, injonction
+# [souhaits]      : souhait, espoir, injonction (dont la requête polie : « merci d'avance », « svp »)
 # [dates]         : noms de mois (signal factuel)
 
 [verbes]
@@ -90,6 +90,14 @@ espérons
 il faut que
 souhaitons
 je souhaite
+# requête polie adressée au lecteur (injonction) : la phrase demande, elle n'affirme rien
+merci d'avance
+s'il vous plaît
+s'il vous plait
+s'il te plaît
+s'il te plait
+svp
+stp
 
 [dates]
 janvier

@@ -1987,3 +1987,33 @@ def test_ablation_cli_refuses_bad_options(tmp_path):
         with pytest.raises(SystemExit) as exc:
             ablation.main(argv)
         assert exc.value.code == 2
+
+
+# --- Détection : formules de requête polie (souhait / injonction) ----------------------------
+
+POLITE_REQUEST_CASES = [
+    "Pouvez-vous me conseiller une bonne voiture, merci d'avance.",
+    "Envoyez-moi le lien du communiqué s'il vous plaît.",
+    "3aychek 9olli win nal9a el formulaire mta3 el inscription.",
+    "عيشك قلي وين نلقى الاستمارة متاع التسجيل.",
+    "من فضلك أرسل لي رابط البلاغ الرسمي.",
+]
+
+
+@pytest.mark.parametrize("text", POLITE_REQUEST_CASES)
+def test_polite_request_is_wish_not_claim(text):
+    (claim,) = extract_claims_detailed(normalize(text))
+    assert claim.modality == "souhait" and not claim.is_claim, claim.triggers
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Le ministre a remercié les médecins de Sfax en 2024.",
+        "El 7koma 3mlet 200 khedma jdida fi Gafsa.",
+        "عيشة بنت محمد فازت بالجائزة الأولى سنة 2024.",  # prénom proche de la formule tunisienne
+    ],
+)
+def test_request_markers_do_not_fire_on_claims(text):
+    claims = extract_claims_detailed(normalize(text))
+    assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
