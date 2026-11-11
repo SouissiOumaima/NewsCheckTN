@@ -138,6 +138,8 @@ Si l'intention est ambiguë, demander une seconde annotation.
 
 ### Témoignages personnels et contexte — précisions proposées
 
+**Statut : en attente de validation collective.**
+
 Un témoignage personnel peut décrire un fait potentiellement vérifiable
 (par exemple un poids chiffré ou une fréquence de visite). La première personne
 et l'absence de preuve immédiatement disponible ne suffisent pas à classer AUTRE.

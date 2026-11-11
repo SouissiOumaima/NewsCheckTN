@@ -193,7 +193,7 @@ Ils ne constituent pas une validation complète des contenus, des sources ou des
 
 ### 8.1. Origine des données
 
-Le corpus pilote historique utilise notamment TArC et Tunifact.
+Le corpus pilote historique utilise notamment TArC et Tunifact. TunSwitch figure également parmi les sources considérées dans le projet ; sa provenance exacte et ses conditions de réutilisation restent à confirmer. Les données conservées dans le dépôt pour TunSwitch sont des identifiants de référence, et non les textes originaux.
 
 Les corpus étendus peuvent comprendre des extraits originaux et des reformulations. Cette distinction doit être conservée dans les métadonnées lorsque l'information est disponible.
 
@@ -229,7 +229,7 @@ Aucune provenance non vérifiée ne doit être inventée.
 
 ### 9.1. Licences et droits de réutilisation
 
-Les conditions de réutilisation de TArC et Tunifact doivent être vérifiées séparément.
+Les conditions de réutilisation de TArC, Tunifact et TunSwitch doivent être vérifiées séparément. Pour TunSwitch, la licence applicable et les droits de redistribution restent à confirmer auprès de la source officielle.
 
 La mention de la licence CC BY-NC-SA 4.0 pour TArC doit être confirmée sur la version exacte du corpus utilisée.
 
@@ -256,6 +256,8 @@ Avant de publier un jeu d'annotations, l'équipe doit vérifier les droits de re
 Une version minimale contenant uniquement les identifiants et les labels peut être envisagée, sous réserve d'une validation de l'équipe. Les identifiants eux-mêmes peuvent permettre de retrouver les textes d'origine.
 
 La suppression d'un fichier d'une branche Git ne garantit pas son effacement de l'historique.
+
+**Historique de la PR #18 :** des commits antérieurs ont contenu des textes issus des corpus d'annotation. Le dépôt GitHub est privé, mais ces contenus peuvent rester accessibles aux collaborateurs disposant des droits nécessaires. La PR #18 ne doit pas être fusionnée en l'état. La procédure de régularisation de l'historique reste à définir avec l'équipe et l'encadrant. Aucun nouveau fichier contenant ces textes n'est prévu dans les corrections documentaires de la PR #19.
 
 ### 9.4. Validation
 
