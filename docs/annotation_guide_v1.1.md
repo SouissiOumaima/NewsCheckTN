@@ -347,7 +347,7 @@ partage des fichiers privés restent à confirmer par l'équipe.
 `id`, `text`, `annotation_ghofran`, `annotation_achref`, `accord`,
 `annotation_arbitree`, `motif_arbitrage`.
 
-**Confidentialité :** la colonne `text`, contenant les textes originaux, est conservée uniquement dans les fichiers de travail privés, hors du dépôt GitHub. Le CSV partagé dans la PR #18 ne contient que les colonnes `id`, `label_ghofran`, `label_achref` et `decision_achref`, sans texte original ni commentaire libre.
+**Confidentialité :** la colonne `text`, contenant les textes originaux, est conservée uniquement dans les fichiers de travail privés, hors du dépôt GitHub. Au commit `309dd7a` de la branche `a1/relecture-achref`, la version courante `data/annotations/a1_relecture_achref_31_sans_textes.csv` contient les colonnes `id`, `label_ghofran`, `label_achref` et `decision_achref`, sans texte original ni commentaire libre. Ce constat porte uniquement sur ce fichier à cette version : des textes restent présents dans les anciens commits. Le dépôt est privé ; la minimisation du CSV ne vaut ni effacement de l’historique ni autorisation de partage. La procédure et les droits applicables restent à confirmer avec l’équipe et l’encadrant.
 
 **État de la double annotation :** la double annotation des 100 exemples a été réalisée par Ghofran et Achref. La comparaison des annotations initiales donne 69 accords et 31 désaccords, soit un accord observé de 69 %.
 

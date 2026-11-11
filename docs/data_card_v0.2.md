@@ -35,9 +35,9 @@ Distribution historique : 48 AFFIRMATION, 7 OPINION et 5 AUTRE.
 Ces chiffres concernent uniquement le pilote initial et ne doivent pas être confondus avec les statistiques du corpus étendu.
 ### Provenance et statut de TunSwitch
 
-Le dépôt contient un lot de préparation de **22 phrases candidates issues de TunSwitch**, en tunisien écrit en caractères arabes.
+Le dépôt référence un lot de préparation de **22 phrases candidates issues de TunSwitch**, décrit comme du tunisien écrit en caractères arabes ; les textes de ce lot sont conservés localement hors dépôt.
 
-Les correspondances textuelles ont été vérifiées dans le fichier source local `TO_text.txt`. Le suivi de ces candidates est documenté dans `data/deliverables/equipe_a1_preparation/README.md` et `manifest_a1.json`.
+Selon le compte rendu du Lot A1, les correspondances textuelles ont été vérifiées dans le fichier source local `TO_text.txt`. Cette vérification sur la source privée n’a pas été reproduite dans la présente relecture Lot E. Le suivi de ces candidates est documenté dans `data/deliverables/equipe_a1_preparation/README.md` et `manifest_a1.json`.
 
 **Statut de validation :**
 
@@ -112,7 +112,7 @@ Le coefficient de Cohen's Kappa mesure l'accord entre les deux annotateurs en te
 
 Pour permettre la reproduction du résultat, il reste à joindre les marges par annotateur, la matrice de confusion, les valeurs Po et Pe, le script de calcul ainsi que la version ou l'empreinte des 100 enregistrements alignés, dans un espace autorisé.
 
-Le Lot E signale 12 cas nécessitant une discussion selon le retour qui lui a été communiqué. La comparaison locale des 31 propositions avec les décisions de relecture d'Achref identifie, quant à elle, 7 divergences. Ces deux chiffres correspondent à des suivis dont les périmètres doivent être rapprochés avant toute conclusion.
+Les suivis successifs mentionnent 12 cas à discuter, puis 7 divergences lors de la comparaison propositions–relecture. Le dernier retour du Lot A1 communiqué à Achref mentionne six cas encore en attente. Ces nombres décrivent des étapes et des critères différents ; ils ne doivent pas être présentés comme un même indicateur. La liste finale par ID, datée et versionnée dans un espace autorisé, reste nécessaire pour confirmer les cas ouverts. Aucun changement de label n'est déduit de ces seuls échanges.
 
 Aucun label d'arbitrage final n'est considéré comme validé à ce stade.
 
@@ -124,14 +124,14 @@ Les 31 désaccords initiaux ont fait l'objet d'une relecture humaine documentée
 |---|---:|
 | Cas soumis à relecture | 31 |
 | Concordances entre propositions et décisions d'Achref | 24 |
-| Divergences restantes | 7 |
+| Divergences au moment de cette comparaison | 7 |
 | Taux de concordance après relecture | 77,42 % |
 
 **Origine et méthode de calcul des résultats 24/7 :**
 
 Les résultats ont été recalculés localement à partir de deux sources :
 
-- Le fichier privé de propositions de relecture, conservé hors dépôt public, contenant les colonnes `id` et `label_propose`.
+- Le fichier privé de propositions de relecture, conservé hors dépôt GitHub, contenant les colonnes `id` et `label_propose`.
 - Le fichier sans textes `data/annotations/a1_relecture_achref_31_sans_textes.csv` de la PR #18, contenant notamment `id` et `decision_achref`.
 
 Les deux jeux de données ont été associés par l'identifiant `id`, sans utiliser l'ordre des lignes.
@@ -143,7 +143,7 @@ Pour chacun des 31 identifiants, nous avons comparé `label_propose` à `decisio
 
 Le recalcul effectué sur les 31 décisions donne 24 concordances et 7 divergences, soit un taux de concordance de 77,42 %.
 
-Cette vérification est reproductible dans un environnement autorisé disposant des deux sources. Le CSV public seul ne permet pas de reproduire le résultat 24/7, car il ne contient pas `label_propose`.
+Cette vérification est reproductible dans un environnement autorisé disposant des deux sources. Le CSV sans textes partagé dans le dépôt privé, pris isolément, ne permet pas de reproduire le résultat 24/7, car il ne contient pas `label_propose`.
 
 Les décisions d'Achref sont des décisions de relecture et ne constituent pas un arbitrage final.
 
@@ -151,7 +151,7 @@ Ce taux représente uniquement la concordance entre les propositions de relectur
 
 ### 5.3. Arbitrage final
 
-Les sept cas divergents nécessitent une validation humaine complémentaire, notamment pour les phrases mixtes, les référents ambigus et les propositions dont le caractère factuel dépend du contexte.
+Les cas encore ouverts nécessitent une validation humaine complémentaire, notamment pour les phrases mixtes, les référents ambigus et les propositions dont le caractère factuel dépend du contexte. Le dernier suivi communiqué indique six cas en attente ; leur clôture doit être attestée par un compte rendu par ID, et non par le seul nombre de concordances.
 
 Les 24 cas concordants ne sont pas non plus considérés comme définitivement arbitrés tant que la procédure de validation n'est pas achevée.
 
@@ -292,3 +292,5 @@ La décision concernant la diffusion des données d'annotation privées relève 
 
 - **v0.1 :** documentation du pilote historique de 60 phrases.
 - **v0.2 — 07/11/2026 :** intégration des statistiques des corpus A1 et NLI, des résultats de double annotation et des contrôles structurels. Proposition non encore validée par l'équipe.
+
+- **Relecture Lot E du 12/11/2026 :** distinction des suivis 12/7/6, clarification du partage privé et des limites de vérification de la provenance ; aucune validation scientifique ajoutée.
