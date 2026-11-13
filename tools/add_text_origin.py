@@ -1,7 +1,7 @@
 
 import json
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 FILES = [
     Path("data/annotations/tarc_review_30.jsonl"),
