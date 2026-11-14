@@ -131,3 +131,12 @@ priori sur le dev), ablations sans seuil dense et avec e5-small. Sortie :
 `evaluation/results/lot-d_silver_retrieval_<date>.json` (non versionné). Résultat (EXP-D-008) :
 hybride 0.446 contre 0.411 en Rappel@5 sur le test (+0.035, non significatif, p = 0.17).
 Pour l'API : `RETRIEVAL_METHOD=hybrid`, `EMBEDDING_MODEL=intfloat/multilingual-e5-base`.
+
+### Verdict par LLM contraint (EXP-D-009)
+
+`rag_llm/llm_verdict.py` : le LLM reçoit l'affirmation et les passages numérotés P1…Pk et doit
+répondre en JSON (`label`, `citations`, `explication`). Le code refuse toute sortie qui ne
+respecte pas le format, cite un passage absent ou rend un verdict sans citation ; la sortie
+refusée est remplacée par le verdict du gabarit. `rag_llm/silver_verdict.py` compare le gabarit,
+le LLM (3 graines) et 4 ablations, avec bootstrap apparié. Le LLM tourne sur Colab (GPU) :
+`notebooks/lot_d_rag/02_silver_verdict_llm.ipynb`. Dev d'abord, test une seule fois.
