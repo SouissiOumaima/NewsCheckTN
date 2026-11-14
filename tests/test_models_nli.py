@@ -67,6 +67,34 @@ def test_echec_de_chargement_ne_fait_pas_tomber_l_api(monkeypatch):
     stance.set_classifier(None)
 
 
+def test_chargement_du_modele_en_float32(monkeypatch):
+    """Même chargement que train.py (float32), sans torch ni transformers réels (CI légère)."""
+    import sys
+    import types
+
+    seen = {}
+    fake_torch = types.SimpleNamespace(float32="float32")
+
+    class FakeModel:
+        config = types.SimpleNamespace(id2label={0: "entailment", 1: "neutral", 2: "contradiction"})
+
+        def eval(self):
+            return self
+
+    def load_model(name, **kwargs):
+        seen.update(kwargs)
+        return FakeModel()
+
+    fake_tf = types.SimpleNamespace(
+        AutoTokenizer=types.SimpleNamespace(from_pretrained=lambda name, **k: object()),
+        AutoModelForSequenceClassification=types.SimpleNamespace(from_pretrained=load_model),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "transformers", fake_tf)
+    stance._load_zero_shot("faux-modele")
+    assert seen.get("dtype") == "float32"
+
+
 def pair(pid, art, claim, evidence, label="supports", remarque="ok", lang="ar"):
     return {
         "pair_id": pid,

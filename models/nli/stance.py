@@ -53,12 +53,16 @@ def _model_name() -> str:
 
 
 def _load_zero_shot(model_name: str) -> Classifier:
-    """Charge le tokenizer et le modèle une seule fois (imports paresseux : CI légère)."""
+    """Charge le tokenizer et le modèle une seule fois (imports paresseux : CI légère).
+
+    Toujours en float32, comme models/nli/train.py : le modèle de base est stocké en float16 et
+    transformers 5 le chargerait en float16 (val v3 : macro-F1 0.662 au lieu de 0.692).
+    """
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, dtype=torch.float32)
     model.eval()
     id2label = {i: name.lower() for i, name in model.config.id2label.items()}
     unknown = set(id2label.values()) - set(LABEL_MAP)
