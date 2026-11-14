@@ -4,13 +4,20 @@ Contrat (utilisé par le Lot D et par l'API `/nli`) :
     predict_stance(claim, evidence) -> StanceResult
     predict_stances(claim, evidences) -> list[StanceResult]
 
-Trois moteurs, choisis par la variable d'environnement NLI_BACKEND :
-    bronze    (défaut) règles par lexique (`models/nli/bronze.py`) : composant classique du palier
-              Bronze, sans dépendance ni modèle à télécharger ; c'est lui que montre la démo ;
-    zero-shot modèle NLI multilingue déjà entraîné sur XNLI (mDeBERTa-v3), utilisé tel quel
-              (prémisse = preuve, hypothèse = affirmation ; entailment → supports,
-              contradiction → refutes) ; NLI_MODEL = autre modèle ou checkpoint affiné du Lot C ;
-    stub      toujours « neutre » (tests).
+Quatre moteurs, choisis par la variable d'environnement NLI_BACKEND :
+    bronze     (défaut) règles par lexique (`models/nli/bronze.py`) : composant classique du palier
+               Bronze, sans dépendance ni modèle à télécharger ; c'est lui que montre la démo ;
+    zero-shot  modèle NLI multilingue déjà entraîné sur XNLI (mDeBERTa-v3), utilisé tel quel
+               (prémisse = preuve, hypothèse = affirmation ; entailment → supports,
+               contradiction → refutes) ; NLI_MODEL = autre modèle ;
+    fine-tuned composant Silver (EXP-C-011) : ce modèle affiné sur le corpus A1 (lr 1e-5, époque 1,
+               graine 42), checkpoint local
+               `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42`
+               (non versionné ; CHECKPOINT_DIR pour un autre dossier, NLI_FINETUNED_MODEL pour un
+               autre checkpoint) ; statistiquement équivalent au zero-shot sur le test v3 ;
+    stub       toujours « neutre » (tests).
+
+Les modèles sont toujours chargés en float32.
 
 Si torch / transformers ne sont pas installés, ou si le modèle ne se charge pas (pas d'accès
 réseau, par exemple), la fonction répond « neutre » avec une confiance 0 : l'API ne tombe pas et
@@ -22,12 +29,16 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from common.schemas import Claim, Evidence, Stance, StanceResult
 
 log = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
+# Composant Silver (EXP-C-011) : modèle affiné choisi par la règle fixée sur la val, graine 42
+FINETUNED_RUN = "nli_mdeberta-ft_v3_lr1e-05_e6_seed42"
+ROOT = Path(__file__).resolve().parents[2]
 MAX_LENGTH = 512
 BATCH_SIZE = 16
 
@@ -50,6 +61,14 @@ _info: dict[str, str] = {"backend": "non chargé", "model": "", "status": "pendi
 
 def _model_name() -> str:
     return os.getenv("NLI_MODEL") or DEFAULT_MODEL
+
+
+def _finetuned_model_name() -> str:
+    """Checkpoint Silver : NLI_FINETUNED_MODEL, sinon CHECKPOINT_DIR/<FINETUNED_RUN>."""
+    if os.getenv("NLI_FINETUNED_MODEL"):
+        return os.environ["NLI_FINETUNED_MODEL"]
+    ck = Path(os.getenv("CHECKPOINT_DIR") or "models/checkpoints")
+    return str((ck if ck.is_absolute() else ROOT / ck) / FINETUNED_RUN)
 
 
 def _load_zero_shot(model_name: str) -> Classifier:
@@ -120,7 +139,7 @@ def _get_classifier() -> Classifier | None:
         return _classifier
     if _info["status"] == "unavailable":
         return None  # échec déjà constaté : on ne retente pas à chaque appel
-    name = _model_name()
+    name = _finetuned_model_name() if backend == "fine-tuned" else _model_name()
     try:
         _classifier = _load_zero_shot(name)
         backend = "zero-shot" if name == DEFAULT_MODEL else "fine-tuned"

@@ -25,6 +25,31 @@ def test_stage_routes():
     assert client.post("/verdict", json={"claim": TEXT}).status_code == 200
 
 
+def test_nli_et_verdict_avec_le_backend_fine_tuned(monkeypatch):
+    """API et verdict du Lot D passent par le composant Silver (faux modèle, rien à charger)."""
+    from models.nli import stance
+
+    def fake_load(name):
+        def classify(pairs):
+            return [{"entailment": 0.9, "neutral": 0.05, "contradiction": 0.05} for _ in pairs]
+
+        return classify
+
+    monkeypatch.setattr(stance, "_load_zero_shot", fake_load)
+    monkeypatch.setenv("NLI_BACKEND", "fine-tuned")
+    stance.set_classifier(None)
+    try:
+        r = client.post("/nli", json={"claim": TEXT, "evidence": TEXT})
+        assert r.status_code == 200
+        assert r.json()["stance"] == "supports" and r.json()["confidence"] == 0.9
+        assert stance.backend_info()["backend"] == "fine-tuned"
+        assert client.post("/verdict", json={"claim": TEXT}).status_code == 200
+        detail = client.post("/verdict/detail", json={"claim": TEXT, "nli": "lot-c"})
+        assert detail.status_code == 200
+    finally:
+        stance.set_classifier(None)
+
+
 def test_check_route():
     r = client.post("/check", json={"text": TEXT})
     assert r.status_code == 200 and len(r.json()["verdicts"]) == 1
