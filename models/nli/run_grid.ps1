@@ -1,11 +1,12 @@
 # Grille Silver NLI (EXP-C-011), en serie. Test jamais lu (train.py ne charge que train et val).
 # Usage, depuis la racine du depot :
-#   powershell -ExecutionPolicy Bypass -File models\nli\run_grid.ps1 -Which main|ablation [-Lrs 2e-5,5e-5] [-Py <python.exe>]
+#   powershell -ExecutionPolicy Bypass -File models\nli\run_grid.ps1 -Which main|ablation [-Lrs 2e-5,5e-5] [-Seeds 42] [-Py <python.exe>]
 # Journaux (non versionnes) : models\checkpoints\grid_v3\  (status_<Which>.txt, <Which>_lr<lr>_seed<graine>.log/.json)
 # Puis : python models\nli\analyse_grid.py main|ablation
 param(
     [ValidateSet("main", "ablation")][string]$Which = "main",
     [string[]]$Lrs = @(),
+    [int[]]$Seeds = @(42, 123, 2026),   # -Seeds 42 : relancer une seule execution (memes reglages)
     [string]$Py = "python"
 )
 $ErrorActionPreference = "Continue"
@@ -24,7 +25,6 @@ if ($Which -eq "main") {
     $Base = "microsoft/mdeberta-v3-base"; $Tag = "mdeberta-v3-base-ft"
     if (-not $Lrs) { $Lrs = @("2e-5", "3e-5", "5e-5") }
 }
-$Seeds = @(42, 123, 2026)
 
 function Say($msg) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $msg" | Out-File -Append -Encoding utf8 $Status }
 
