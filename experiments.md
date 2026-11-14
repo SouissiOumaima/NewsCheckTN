@@ -85,7 +85,20 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - l'essai du 2026-11-10 (lr 1e-5, 1 époque, graine 42) n'est pas réutilisé : son planning du taux d'apprentissage est différent ;
   - si la mémoire graphique manque (pic de 5,61 Go sur 6 Go à l'essai) : `--batch-size 2 --grad-accum 4`, même lot effectif.
 - **Code** : `models/nli/train.py` (entraînement, val seulement) ; `models/nli/run_grid.ps1` (grille en série, journaux dans `models/checkpoints/grid_v3/`, non versionné) ; `models/nli/analyse_grid.py` (moyenne ± écart-type de la val par lr et par époque, choix par la règle ; ne lit que les journaux de val et refuse tout journal contenant une clé de test).
-- **Résultats** : à compléter.
+- **Résultats — grille principale (2026-11-14, val v3 seulement, 9 exécutions sur 9)** : macro-F1 de val, moyenne ± écart-type sur les graines 42, 123 et 2026 (`python models/nli/analyse_grid.py main`) :
+
+  | lr | ép. 0 | ép. 1 | ép. 2 | ép. 3 | ép. 4 | ép. 5 | ép. 6 |
+  |---|---|---|---|---|---|---|---|
+  | 1e-5 | 0.692 ± 0.000 | **0.722 ± 0.000** | 0.722 ± 0.000 | 0.731 ± 0.016 | 0.731 ± 0.016 | 0.722 ± 0.000 | 0.722 ± 0.000 |
+  | 2e-5 | 0.692 ± 0.000 | 0.702 ± 0.034 | 0.740 ± 0.016 | 0.700 ± 0.011 | 0.730 ± 0.033 | 0.730 ± 0.033 | 0.730 ± 0.033 |
+  | 3e-5 | 0.692 ± 0.000 | 0.699 ± 0.032 | 0.718 ± 0.005 | 0.710 ± 0.026 | 0.729 ± 0.047 | 0.719 ± 0.032 | 0.709 ± 0.035 |
+
+  - **choix par la règle : lr 1e-5, époque 1 (moyenne 0.722)**. Meilleure moyenne : 0.740 (lr 2e-5, époque 2) ; 14 configurations à moins de 0.03 (moyenne > 0.710) ; l'époque 0 (0.692) est à 0.048, hors de la marge ; parmi les équivalentes, l'époque la plus ancienne est l'époque 1, et le lr le plus petit 1e-5 ;
+  - gain sur la val par rapport au zero-shot (époque 0, float32) : +0.030, soit environ **une paire sur 33** : dans le bruit de la val, seul le test dira s'il est réel ;
+  - écart-type nul : l'époque 0 est le même modèle pour toutes les graines (aucun pas d'entraînement ; la graine ne change que l'ordre des paires) ; pour lr 1e-5, les 3 graines donnent la même macro-F1 aux époques 1, 2, 5 et 6 (pour 123 et 2026, mêmes prédictions de val à l'époque gardée) alors que leurs pertes d'entraînement diffèrent (époque 1 : 0.653 / 0.687 / 0.678) : sur 33 paires, des modèles différents peuvent donner les mêmes prédictions ;
+  - relances : l'exécution lr 2e-5 / graine 42 a échoué à 13h02 (mémoire graphique pleine, `CUDA out of memory`, après l'époque 0) ; l'exécution lr 3e-5 / graine 2026 a été interrompue à 13h54 (fenêtre de la grille fermée ou Ctrl+C, après l'époque 0) ; les deux ont été refaites à l'identique (mêmes réglages, lots de 4 × 2) à 14h12 et 14h15 ; l'époque 0 des premières tentatives (0.692) est identique à celle des relances ; les journaux des tentatives sont gardés (`*.oom.log`, `*.interrompu.log`) ;
+  - durée d'une exécution de 6 époques : de 2,5 à 18 min selon l'état de la carte (bridée à 25 W au début, sans doute sur batterie ou en économie d'énergie) ; pic de mémoire graphique 5,61–5,63 Go.
+- **Résultats — ablation** : à compléter.
 - **Analyse** : à compléter.
 - **Décision / suite** : à compléter.
 
