@@ -115,3 +115,19 @@ python -m rag_llm.bronze_report --stance rules   # comparaison avec le NLI provi
   `evaluation/results/lot-d_erreurs_lot-c.csv` (avec les textes, non versionné).
 - Démo : l'API utilise BM25 par défaut (`RETRIEVAL_METHOD=bm25`) ; la recherche dense / hybride
   est neuronale et reste hors de la démo Bronze.
+
+## Palier Silver (EXP-D-008 et suivantes)
+
+Recherche dense et hybride mesurées sur le **même test gelé** que le Bronze :
+
+```bash
+pip install sentence-transformers
+python -m rag_llm.build_tunifact_eval          # corpus de test (non versionné)
+python -X utf8 -m rag_llm.silver_retrieval     # dev + test, bootstrap apparié, ablations
+```
+
+Configurations : `bm25` (baseline), `dense` (e5-base), `hybrid` (RRF BM25 + e5-base, retenue a
+priori sur le dev), ablations sans seuil dense et avec e5-small. Sortie :
+`evaluation/results/lot-d_silver_retrieval_<date>.json` (non versionné). Résultat (EXP-D-008) :
+hybride 0.446 contre 0.411 en Rappel@5 sur le test (+0.035, non significatif, p = 0.17).
+Pour l'API : `RETRIEVAL_METHOD=hybrid`, `EMBEDDING_MODEL=intfloat/multilingual-e5-base`.

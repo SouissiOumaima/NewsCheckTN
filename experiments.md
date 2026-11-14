@@ -25,6 +25,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
 | EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
@@ -64,6 +65,68 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 
 ## Entrées
+
+### EXP-D-008 — Silver : recherche dense et hybride mesurées sur le test gelé
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : la recherche « par le sens » (encodeur multilingue) corrige-t-elle la
+  première cause d'erreur du Bronze, la langue croisée (24 erreurs sur 52 dans EXP-D-007) ?
+  Hypothèse : l'hybride BM25 + e5-base, meilleur sur le dev (EXP-D-003), fait mieux que BM25 sur
+  le test réel.
+- **Données** : dev fictif (15 passages, 18 affirmations avec preuve) ; test Tunifact v1 **gelé le
+  23/10/2026** (84 passages, 21 affirmations dont 18 avec preuve : fr 7, ar 6, tunisien 5 = 2 en
+  lettres arabes + 3 en arabizi). Empreintes vérifiées par `freeze_test` avant la mesure.
+- **Méthode / configuration** :
+  - `bm25` (baseline Bronze, k1 = 1.5, b = 0.75) ; `dense` (`intfloat/multilingual-e5-base`,
+    préfixes « query: » / « passage: », seuil de similarité 0.4) ; `hybrid` = fusion RRF des deux
+    (k = 60, 20 candidats par méthode) — **configuration retenue a priori**, choisie sur le dev dans
+    EXP-D-003, avant toute mesure sur le test.
+  - Ablations : hybride sans seuil de similarité dense ; hybride avec `multilingual-e5-small`.
+  - Top 5 pour le Rappel@5, profondeur 10 pour le MRR ; moyenne globale et par langue.
+  - Bootstrap apparié contre BM25 (mêmes affirmations tirées pour les deux systèmes), 10 000
+    tirages, graine 42 ; IC 95 % par percentiles ; p unilatéral (part des tirages ≤ 0).
+  - 3 exécutions de la configuration retenue (encodeur rechargé, sans cache disque).
+  - Aucun paramètre réglé sur le test.
+- **Code** : `rag_llm/silver_retrieval.py` (branche `lot-d-silver`) ;
+  `python -X utf8 -m rag_llm.silver_retrieval`.
+- **Résultats** (test gelé, 18 affirmations avec preuve) :
+
+  | Configuration | Rappel@5 | MRR | Hit@1 | R@5 fr (7) | R@5 ar (6) | R@5 tunisien (5) |
+  |---|---|---|---|---|---|---|
+  | BM25 (baseline Bronze) | 0.411 | 0.630 | 0.611 | 0.357 | 0.650 | 0.200 |
+  | dense e5-base | 0.394 | 0.630 | 0.556 | 0.362 | 0.672 | 0.107 |
+  | **hybride e5-base (retenu)** | **0.446** | **0.646** | 0.556 | **0.429** | **0.672** | 0.200 |
+  | ablation : hybride sans seuil dense | 0.446 | 0.646 | 0.556 | 0.429 | 0.672 | 0.200 |
+  | ablation : hybride e5-small | 0.432 | 0.667 | 0.611 | 0.393 | 0.672 | 0.200 |
+
+  Bootstrap apparié contre BM25 (différence, IC 95 %, p) :
+  - hybride e5-base : Rappel@5 +0.035 [-0.022 ; 0.111], p = 0.171 ; MRR +0.016 [-0.065 ; 0.081], p = 0.323 ;
+  - dense e5-base : Rappel@5 -0.017 [-0.135 ; 0.096], p = 0.596 ; MRR -0.000 [-0.189 ; 0.176], p = 0.493 ;
+  - hybride e5-small : Rappel@5 +0.021 [-0.022 ; 0.074], p = 0.218 ; MRR +0.037 [0.006 ; 0.080], p = 0.010.
+
+  Dev : BM25 0.667 / 0.907 ; dense 0.917 / 0.956 ; hybride 0.944 / 0.956 (Rappel@5 +0.278
+  [0.167 ; 0.389], p < 0.001), identique à EXP-D-003. Les 3 exécutions de l'hybride donnent des
+  classements identiques (encodeur déterministe en inférence : variance nulle).
+- **Analyse** :
+  1. **Reproductibilité** : les chiffres du dev d'EXP-D-003 sont retrouvés exactement.
+  2. Sur le test réel, l'hybride ne fait **pas significativement mieux** que BM25 (+0.035 de
+     Rappel@5, intervalle qui contient 0). Le gain vient du français (0.357 → 0.429), c'est-à-dire
+     de la langue croisée, comme attendu, mais il reste petit.
+  3. Le dense seul n'est pas meilleur que BM25 et **recule sur le tunisien** (0.200 → 0.107) :
+     e5 a peu vu de dialecte tunisien ni d'arabizi. La fusion RRF garde le meilleur des deux.
+  4. **Écart dev / test** : +0.278 sur le dev contre +0.035 sur le test. Le dev a été écrit par
+     nous (phrases courtes, traductions directes) : il surestime nettement le dense.
+  5. Ablation du seuil : aucun effet, aucun passage candidat n'a une similarité inférieure à 0.4
+     (les cosinus d'e5 sont resserrés vers le haut). Ce seuil ne peut donc pas servir de signal
+     d'abstention pour le dense ; à revoir (règle A2 du verdict).
+  6. e5-small obtient le meilleur MRR sur le test (seul écart significatif, p = 0.010). Il **n'est
+     pas retenu** : le choisir maintenant reviendrait à régler sur le test. Résultat noté comme
+     ablation.
+  7. Puissance faible : 18 affirmations ; un écart de quelques points ne peut pas être significatif.
+- **Décision / suite** : hybride BM25 + e5-base gardé comme recherche du palier Silver (choix fait
+  sur le dev, gain non significatif sur le test, rapporté tel quel). Suite : mesurer le verdict
+  avec cette recherche et le NLI fine-tuné du Lot C (EXP-C, 0.809), puis le verdict par LLM
+  contraint (3 graines) ; relire les preuves en langue croisée encore manquées ; test élargi.
 
 ### EXP-B-009 — Réanalyse du pilote (macro-F1, bootstrap apparié) et ablation des composants
 - **Date** : 2026-11-14
