@@ -46,3 +46,43 @@ def test_resume_sans_texte():
     lines = summary(tag_rows(ROWS, ["claim"]), ["claim"])
     assert lines[0].startswith("claim (2 lignes)")
     assert "pain" not in lines[0] and "barcha" not in lines[0]  # aucun texte affiché
+
+
+
+def test_champ_absent_sur_une_ligne_suivante_refuse():
+    with pytest.raises(KeyError, match="Ligne 2"):
+        tag_rows([{"claim": "Texte fictif"}, {"id": "2"}], ["claim"])
+
+
+@pytest.mark.parametrize("column", ["claim_lang", "claim_script"])
+def test_annotation_existante_jamais_ecrasee(column):
+    row = {"claim": "Texte fictif", column: "annotation humaine"}
+    with pytest.raises(ValueError, match="déjà présent"):
+        tag_rows([row], ["claim"])
+    assert row[column] == "annotation humaine"
+
+
+@pytest.mark.parametrize("value", [42, ["texte"], {"texte": "fictif"}])
+def test_champ_non_textuel_refuse(value):
+    with pytest.raises(ValueError, match="texte ou null"):
+        tag_rows([{"claim": value}], ["claim"])
+
+
+def test_null_explicite_reste_inconnu():
+    assert tag_rows([{"claim": None}], ["claim"])[0]["claim_lang"] == "unk"
+
+
+def test_ecriture_refuse_un_fichier_existant(tmp_path):
+    path = tmp_path / "jeu.jsonl"
+    path.write_text("contenu à préserver", encoding="utf-8")
+    with pytest.raises(FileExistsError):
+        write_rows(path, ROWS)
+    assert path.read_text(encoding="utf-8") == "contenu à préserver"
+
+
+def test_csv_conserve_metadonnee_facultative(tmp_path):
+    path = tmp_path / "jeu.csv"
+    write_rows(path, [{"claim": "Texte A"}, {"claim": "Texte B", "source": "fictive"}])
+    restored = read_rows(path)
+    assert restored[1]["source"] == "fictive"
+    assert restored[0]["source"] == ""

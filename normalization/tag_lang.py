@@ -9,7 +9,8 @@ Pour chaque champ demandé (par exemple `claim`), ajoute `claim_lang` (fr / ar /
 décision que dans le pipeline. Formats : JSONL (un objet par ligne) ou CSV (avec en-tête).
 
 Confidentialité : le fichier de sortie est écrit à côté de l'entrée (suffixe « _lang ») ; si
-l'entrée est dans data/, la sortie l'est aussi (non versionnée). Le terminal n'affiche que des
+l'entrée est dans data/, la sortie l'est aussi. Vérifier séparément son exclusion Git :
+le dossier data/ n'est pas entièrement ignoré. Le terminal n'affiche que des
 comptes par langue et par écriture, jamais un texte.
 """
 
@@ -40,9 +41,20 @@ def tag_text(text: str) -> tuple[str, str]:
 
 def tag_rows(rows: list[dict], fields: list[str]) -> list[dict]:
     """Copie de chaque ligne, avec <champ>_lang et <champ>_script pour chaque champ demandé."""
-    missing = [f for f in fields if rows and f not in rows[0]]
-    if missing:
-        raise KeyError(f"champ(s) absent(s) du fichier : {', '.join(missing)}")
+    # Valider toutes les lignes avant d'ajouter des champs ; ne pas transformer
+    # silencieusement un champ absent en texte vide ou écraser une annotation.
+    if not fields or len(set(fields)) != len(fields):
+        raise ValueError("La liste des champs doit être non vide et sans doublon")
+    generated = {f"{field}_{suffix}" for field in fields for suffix in ("lang", "script")}
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise ValueError(f"Ligne {index} : objet attendu")
+        if any(field not in row for field in fields):
+            raise KeyError(f"Ligne {index} : champ demandé absent")
+        if generated.intersection(row):
+            raise ValueError(f"Ligne {index} : champ langue/écriture déjà présent")
+        if any(row[field] is not None and not isinstance(row[field], str) for field in fields):
+            raise ValueError(f"Ligne {index} : texte ou null attendu")
     tagged = []
     for row in rows:
         new = dict(row)
@@ -62,9 +74,13 @@ def read_rows(path: Path) -> list[dict]:
 
 def write_rows(path: Path, rows: list[dict]) -> None:
     """Écrit au même format que l'entrée (JSONL ou CSV)."""
-    with path.open("w", encoding="utf-8", newline="") as handle:
+    # Mode exclusif : même si le fichier apparaît après le contrôle de main(),
+    # son contenu n'est jamais remplacé.
+    with path.open("x", encoding="utf-8", newline="") as handle:
         if path.suffix.lower() == ".csv":
-            writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+            # Conserver les métadonnées facultatives présentes après la première ligne.
+            columns = list(dict.fromkeys(key for row in rows for key in row))
+            writer = csv.DictWriter(handle, fieldnames=columns)
             writer.writeheader()
             writer.writerows(rows)
         else:
@@ -93,7 +109,15 @@ def main() -> None:
     out = args.out or args.path.with_name(f"{args.path.stem}_lang{args.path.suffix}")
     if out.exists():  # on n'écrase jamais un fichier existant
         sys.exit(f"ARRÊT : {out} existe déjà ; supprimez-le ou choisissez --out.")
-    rows = tag_rows(read_rows(args.path), args.fields)
+    if args.path.suffix.lower() not in {".csv", ".jsonl"}:
+        parser.error("Format d'entrée attendu : .csv ou .jsonl")
+    if out.suffix.lower() != args.path.suffix.lower():
+        parser.error("La sortie doit conserver le format de l'entrée")
+    try:
+        rows = tag_rows(read_rows(args.path), args.fields)
+    except (ValueError, KeyError, csv.Error):
+        # Aucun contenu ni nom de champ issu d'une ligne privée dans le diagnostic CLI.
+        sys.exit("ARRÊT : structure invalide ou champs langue/écriture déjà présents.")
     if not rows:
         sys.exit("ARRÊT : fichier vide.")
     write_rows(out, rows)
