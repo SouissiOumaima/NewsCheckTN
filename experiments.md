@@ -25,7 +25,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
-| EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test) | en cours | — |
+| EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test, n = 56) | principal 0.809 ± 0.000 (3 graines) vs zero-shot float32 0.798 (+0.011, IC95 [−0.052 ; +0.071], p = 0.40), Bronze 0.471, majorité 0.194 ; fr 0.745 / ar 0.841 ; ablation sans XNLI 0.427 ± 0.044 | gain non significatif sur le zero-shot ; décision à prendre |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
 | EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
@@ -123,8 +123,34 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - comparaisons : bootstrap apparié (1000 tirages, graine 20261026) de chacun des 3 modèles principaux contre les règles Bronze, la classe majoritaire et le zero-shot float32 ;
   - sorties : `evaluation/results/lot-c_nli-silver_test_<date>.json` (chiffres seulement) ; prédictions privées dans `data/interim/lot_c/nli/silver_test/` (non versionné) pour l'analyse d'erreurs (au moins 30 erreurs classées) ; les anciennes prédictions zero-shot float16 du 26/10 ne sont pas écrasées ;
   - aucun réglage ne sera changé après la mesure.
-- **Analyse** : à compléter.
-- **Décision / suite** : à compléter.
+- **Résultats — test v3 (mesure unique, 2026-11-14, `python -m models.nli.measure_test`, n = 56 : 25 fr, 31 ar, 30 paires des articles du Lot D)** : contrôle du gel OK (découpage `59582eb7…`, 56 `pair_id`) ; fichier `evaluation/results/lot-c_nli-silver_test_20261114.json` ; prédictions privées dans `data/interim/lot_c/nli/silver_test/`.
+
+  | Modèle | macro-F1 (IC 95 %) | accuracy | fr (n = 25) | ar (n = 31) | articles Lot D (n = 30) |
+  |---|---|---|---|---|---|
+  | Zero-shot float32 | 0.798 [0.669 ; 0.891] | 0.804 | 0.779 | 0.776 | 0.767 |
+  | **Principal (lr 1e-5, ép. 1), 3 graines** | **0.809 ± 0.000** [0.689 ; 0.905] | 0.821 ± 0.000 | 0.745 ± 0.000 | 0.841 ± 0.000 | 0.759 ± 0.000 |
+  | Ablation sans XNLI (lr 5e-5, ép. 5), 3 graines | 0.427 ± 0.044 (0.378 / 0.440 / 0.463) | 0.530 ± 0.027 | 0.450 ± 0.161 | 0.325 ± 0.056 | 0.505 ± 0.050 |
+  | Règles Bronze (EXP-C-009, reconstitué) | 0.471 | 0.464 | 0.504 | 0.400 | 0.475 |
+  | Classe majoritaire (« supports ») | 0.194 | 0.411 | 0.190 | 0.197 | 0.167 |
+
+  - contrôle Bronze : la reconstitution redonne 0.4708, soit le 0.471 d'EXP-C-009 (et fr 0.50 / ar 0.40, comme dans EXP-C-009) ; les scores Bronze et majorité par langue et Lot D sont calculés à partir des prédictions sauvegardées, sans nouvelle mesure ;
+  - bootstrap apparié (1000 tirages, graine 20261026) ; les 3 graines du principal ont exactement les mêmes prédictions de test, donc les mêmes chiffres :
+
+    | Principal contre | différence de macro-F1 | IC 95 % | p |
+    |---|---|---|---|
+    | règles Bronze | +0.339 | [+0.185 ; +0.491] | 0.000 |
+    | classe majoritaire | +0.615 | [+0.484 ; +0.712] | 0.000 |
+    | zero-shot float32 | +0.011 | [−0.052 ; +0.071] | 0.398 |
+
+  - zero-shot float32 : 0.798, comme le 0.798 d'EXP-C-008 (float16 probable), qui reste dans le journal sans être modifié ; sur le test, les prédictions float32 et celles du 26/10 sont identiques (0 différence sur 56) : l'écart float16 / float32 vu sur la val (0.662 / 0.692) ne se produit pas sur le test ;
+  - principal et zero-shot ne diffèrent que sur 3 paires sur 56 : le principal en corrige 2 et en abîme 1.
+- **Analyse** :
+  - le modèle affiné dépasse nettement les règles Bronze (+0.34) et la classe majoritaire (+0.62), avec des IC 95 % loin de 0 ;
+  - en revanche, son gain sur le même modèle sans affinage (+0.011, une paire nette sur 56) n'est pas significatif (IC 95 % contenant 0, p = 0.40) : avec 174 paires d'entraînement et une seule époque à lr 1e-5, l'affinage change très peu le modèle XNLI ; cela confirme ce que montrait la val (+0.03, une paire sur 33) ;
+  - par langue, le principal gagne en arabe (0.841 contre 0.776) et perd en français (0.745 contre 0.779) par rapport au zero-shot ; effectifs très petits (25 et 31 paires), à ne pas surinterpréter ;
+  - écart-type nul : les 3 graines donnent les mêmes prédictions de test (déjà vu sur la val), ce qui ne mesure pas la variance d'un affinage plus fort ; l'ablation (même architecture sans pré-entraînement XNLI) reste à 0.43, sous les règles Bronze : le pré-entraînement NLI fait l'essentiel du travail ; l'ablation n'avait pas fini d'apprendre en 6 époques (limite déjà notée) ;
+  - aucun réglage n'a été changé après la mesure du test.
+- **Décision / suite** : à décider par le Lot C (aucune décision prise au moment de la mesure). Points à trancher : composant Silver retenu (modèle affiné ou zero-shot float32, à performance statistiquement égale) ; analyse d'au moins 30 erreurs classées à partir des prédictions privées ; question de la v4 (non disponible le 12/11 : les chiffres Silver sont ceux de la v3, selon la règle fixée le 10/11).
 
 ### EXP-A2-013 — Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig)
 - **Date** : 2026-11-06
