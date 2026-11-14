@@ -3,7 +3,9 @@
 Composant : `linguistic_analysis/claim_extraction.py`
 (`extract_claims(doc: Document) -> list[Claim]`, version détaillée `extract_claims_detailed`).
 Système à règles et lexiques, avec analyseurs syntaxiques facultatifs. Aucun apprentissage, aucun
-poids appris. Journal : EXP-B-001 à EXP-B-009.
+poids appris. Journal : EXP-B-001 à EXP-B-009. **Système gelé pour EXP-B-010** : aucune
+modification du code ni des lexiques avant cette mesure (voir `experiments.md`, « Gel du système
+pour EXP-B-010 »).
 
 ## 1. Rôle, entrées et sorties
 
@@ -31,6 +33,17 @@ Un seul label par phrase, selon cette priorité (guide `docs/lot-b_guide_annotat
 `interrogatif` > `souhait` > `hypothétique` > `conditionnel` > `rapporté` > `opinion` > `assertif`.
 `assertif` est le label par défaut. Une phrase `rapporté` ou `conditionnel` reste une affirmation.
 
+### Règles ajoutées avant le gel
+
+Elles ont été choisies sur le pilote, à partir de l'analyse des faux positifs. Elles ajoutent des
+entrées de lexique dans `opinion_<langue>.txt` et une condition dans `factuality.py`.
+
+| Règle | Effet | Garde-fou |
+| --- | --- | --- |
+| R1 Salutation conventionnelle → `souhait` (validée par le Lot A1) | « Bonjour à tous » seul n'est plus une affirmation | seulement en tête de phrase et sans aucun indice factuel (nombre, date, entité) |
+| R2 Formule de politesse ou requête → `souhait` | « merci d'avance », « svp » : la phrase demande, elle n'affirme rien | aucun |
+| R4 Appréciation à la 1re personne → `opinion` | « j'aime », « je déteste » | verbe compté seulement à la 1re personne ; « préférer » exclu |
+
 ### Deux modes
 
 | Mode | Analyse | Usage |
@@ -53,8 +66,11 @@ Le jeu de test neuf, à geler avant toute mesure, sera mesuré dans EXP-B-010
 
 ## 4. Résultats
 
-Bootstrap percentile 95 %, graine 20261015, 1000 tirages ; différences appariées : graine 42,
-2000 tirages.
+Système gelé : règles R1, R2 et R4 comprises. Bootstrap percentile 95 %, graine 20261015,
+1000 tirages ; différences appariées : graine 42, 2000 tirages. Entre parenthèses : la valeur avant
+les règles R1, R2 et R4 (EXP-B-009).
+
+**Ces règles ont été choisies sur le pilote : les chiffres du pilote sont optimistes.**
 
 | Mesure | Jeu | Règles | Parseurs | Baseline |
 | --- | --- | --- | --- | --- |
@@ -62,19 +78,21 @@ Bootstrap percentile 95 %, graine 20261015, 1000 tirages ; différences apparié
 | Modalité, exactitude | eval_30 (34) | 1.000 | 1.000 | 0.412 (classe majoritaire) |
 | Triplet exact | eval_30 (22) | 0.909 (20/22) | 0.864 (19/22) | 0.000 (positions) |
 | Coréférence exacte | eval_30 (3) | 3/3 | 3/3 | — |
-| Détection, macro-F1 | pilote, gold A (60) | 0.519 [0.394 ; 0.644] | 0.519 | 0.348 |
-| Détection, macro-F1 | pilote, gold B (60) | 0.635 [0.477 ; 0.773] | 0.635 | 0.406 |
-| Détection, macro-F1 | pilote, accord de label (47) | 0.619 [0.439 ; 0.769] | 0.619 | 0.397 |
+| Détection, macro-F1 | pilote, gold A (60) | 0.603 [0.475 ; 0.722] (0.519) | 0.603 | 0.348 |
+| Détection, macro-F1 | pilote, gold B (60) | 0.737 [0.594 ; 0.860] (0.635) | 0.737 | 0.406 |
+| Détection, macro-F1 | pilote, accord de label (47) | 0.741 [0.580 ; 0.881] (0.619) | 0.741 | 0.397 |
+| Détection, exactitude | pilote, accord de label (47) | 0.809 (0.745) | 0.809 | 0.660 |
 | Détection, rappel | pilote, chaque gold | 1.000 | 1.000 | 1.000 |
-| Modalité, exactitude | pilote, gold A / gold B | 0.567 / 0.467 | 0.600 / 0.500 | 0.533 / 0.433 |
-| Modalité, macro-F1 | pilote, accord de modalité (35) | 0.363 | 0.404 | 0.136 |
+| Modalité, exactitude | pilote, gold A / gold B | 0.600 / 0.450 (0.567 / 0.467) | 0.633 / 0.483 | 0.533 / 0.433 |
+| Modalité, macro-F1 | pilote, accord de modalité (35) | 0.408 (0.363) | 0.449 | 0.136 |
 
-- Extracteur − baseline, en macro-F1 de détection : +0.17 à +0.23, avec un IC apparié qui exclut 0
-  contre chaque gold.
-- En macro-F1 de modalité : IC qui exclut 0 contre les trois gold en mode parseurs, contre A
-  seulement en mode règles.
-- Ablation (EXP-B-009, `python -m linguistic_analysis.ablation`) :
-  - les règles de factualité portent la détection sur eval_30 (−0.324 sans elles) ;
+- **Extracteur − baseline, macro-F1 de détection** : +0.255 [+0.126 ; +0.369] (A),
+  +0.331 [+0.179 ; +0.445] (B), +0.344 [+0.174 ; +0.472] (accord).
+- **Macro-F1 de modalité** : l'IC exclut 0 contre les trois gold en mode parseurs. En mode règles,
+  il exclut 0 contre A et sur l'accord, mais pas contre B : +0.119 [−0.003 ; +0.232].
+- **Ablation** (`python -m linguistic_analysis.ablation`) :
+  - les règles de factualité portent la détection : −0.324 sur eval_30, −0.115 et −0.141 de
+    macro-F1 sur le pilote ;
   - les verbes de parole portent le triplet (−5/22) ;
   - la coréférence n'agit que sur `resolved_text`.
 
@@ -88,25 +106,39 @@ Bootstrap percentile 95 %, graine 20261015, 1000 tirages ; différences apparié
 ## 6. Limitations
 
 - **Pas de parseur pour le tunisien ni pour l'arabizi** : ces textes passent toujours par les règles,
-  dans les deux modes. Sur le pilote, le groupe tn-arabizi est le plus faible (détection 0.263 et
-  0.368 en exactitude).
+  dans les deux modes. Sur le pilote, le groupe tn-arabizi est le plus faible (détection 0.421 et
+  0.526 en exactitude).
 - **Scores eval_30 optimistes** : les règles ont été réglées sur ce jeu. Les 1.000 en détection et
-  en modalité ne se généralisent pas (pilote : 0.617 / 0.767 et 0.567 / 0.467).
-- **Pilote non adjugé** : les deux annotations divergent (kappa label 0.615, modalité 0.390). Les
-  mesures sont données contre chaque annotateur et sur les textes où ils s'accordent. Aucune n'est
-  un gold définitif. Le pilote a aussi servi à la mise au point.
+  en modalité ne se généralisent pas (pilote : 0.667 / 0.817 et 0.600 / 0.450).
+- **Pilote non adjugé et utilisé pour la mise au point** :
+  - les deux annotations divergent (kappa label 0.615, modalité 0.390) ;
+  - les mesures sont données contre chaque annotateur et sur les textes où ils s'accordent ;
+  - aucune n'est un gold définitif ;
+  - les règles R1, R2 et R4 ont été choisies sur ce pilote.
+- **Salutation suivie d'une affirmation dans la même phrase (R1)** :
+  - si la phrase n'a aucun indice factuel (nombre, date, entité), elle reçoit `souhait` et
+    l'affirmation est perdue. Exemple inventé : « Bonjour à tous, les prix du pain ont encore
+    augmenté » ;
+  - avec un indice factuel, ou si la salutation forme une phrase séparée, l'affirmation est
+    gardée ;
+  - le guide d'annotation demande la modalité de l'affirmation : c'est un écart connu, gardé tel
+    quel jusqu'à EXP-B-010.
+- **Requête polie (R2) et demande d'information** : une demande d'information formulée poliment,
+  sans point d'interrogation, reçoit `souhait` au lieu d'`interrogatif`. La détection reste juste
+  (non-affirmation), seule la modalité est en cause.
 - **Coréférence mesurée sur 3 phrases** seulement (eval_30). Aucun gold de coréférence sur le
   pilote.
 - **« Titre / corps » non traité** : un article est vu comme une suite de phrases. Un titre sans
   ponctuation peut être fusionné avec la première phrase du corps, et aucun lien titre → corps
   n'est fait.
 - **Lexiques de modalité possiblement sur-ajustés à eval_30** : sur le pilote, les retirer améliore
-  la modalité (+0.06 à +0.08 de macro-F1 sur l'accord), alors qu'ils servent sur eval_30. À
-  vérifier sur le jeu de test neuf avant toute retouche.
+  la modalité (+0.07 à +0.09 de macro-F1 sur l'accord), alors qu'ils servent sur eval_30. À
+  vérifier sur le jeu de test neuf, sans retouche avant.
 - **Unité phrase contre unité texte** : l'annotation du pilote est faite par texte. La mesure
   agrège les phrases (un texte est une affirmation si l'une de ses phrases l'est), ce qui favorise
   le rappel au détriment de la précision.
 - **Classe AUTRE** (salutations, demandes, récits personnels) : sans équivalent direct dans
-  `is_claim`, c'est la première source de faux positifs.
+  `is_claim`, c'est la première source de faux positifs. R1 et R2 n'en traitent qu'une partie :
+  20 faux positifs restent contre A et 11 contre B, sur 60 textes.
 - **Éthique** : les lexiques contiennent des mots isolés, aucun texte d'annotation. Les données
   annotées restent hors dépôt.

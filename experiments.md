@@ -65,6 +65,45 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 ## Entrées
 
+### Gel du système du Lot B pour EXP-B-010 (pas une expérience)
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Code gelé** : commit `1826244`, branche `lot-b-freeze`. Le commit de gel qui suit ne modifie
+  que la documentation.
+  - Après fusion, vérifier que
+    `git diff 1826244 <commit mesuré> -- linguistic_analysis ':!linguistic_analysis/MODEL_CARD.md'`
+    est vide.
+- **Règles ajoutées depuis EXP-B-009** (lexiques `opinion_<langue>.txt` et `factuality.py`, avec
+  tests) :
+  - **R1 Salutation conventionnelle seule → `souhait`** (`62c7a9c`), validée par le Lot A1. Elle
+    n'est retenue qu'en tête de phrase et sans indice factuel.
+  - **R2 Formules de politesse ou requête → `souhait`** (`9df1c30`) : « merci d'avance », « svp »
+    et leurs équivalents en arabe et en tunisien.
+  - **R4 Appréciation à la 1re personne → `opinion`** (`1826244`) : « j'aime », « je déteste » et
+    leurs équivalents. Le verbe n'est compté qu'à la 1re personne ; « préférer » est exclu.
+- **Chiffres sur le pilote P01–P60, mode règles, avant → après** (`evaluate_double`, mêmes réglages
+  qu'EXP-B-009) :
+  - **détection, textes d'accord (47)** :
+    - exactitude 0.745 → 0.809 ;
+    - précision 0.721 → 0.775 ;
+    - rappel 1.000 → 1.000 ;
+    - macro-F1 0.619 → 0.741 ;
+  - **détection, macro-F1** : 0.519 → 0.603 (Achraf), 0.635 → 0.737 (Ghofrane) ;
+  - **faux positifs** : 23 → 20 (Achraf), 14 → 11 (Ghofrane) ; aucun faux négatif ;
+  - **modalité, exactitude** :
+    - 0.567 → 0.600 (Achraf) ;
+    - 0.467 → 0.450 (Ghofrane) ;
+    - 0.571 → 0.600 sur les 35 textes d'accord ;
+  - **textes changés : 3** (P06 par R4, P37 par R1, P52 par R2), tous de vrai à faux en détection ;
+  - **McNemar exact sur l'accord** : détection 0 cassé et 3 corrigés, p = 0.25 ; modalité p = 1.0.
+    **Gain non établi**, et mesuré sur le jeu qui a servi à choisir les règles (optimiste).
+  - **eval_30 inchangé** : détection et modalité 1.000, triplet exact 20/22 en règles et 19/22 en
+    parseurs.
+- **Règle de gel** : aucune modification du code ni des lexiques de `linguistic_analysis/` entre ce
+  commit et la mesure EXP-B-010. Exceptions : la documentation et `MODEL_CARD.md`.
+  - L'empreinte du jeu de test est notée avant la mesure.
+  - Toute modification après avoir vu les résultats est rapportée comme un « 2ᵉ passage ».
+
 ### EXP-B-009 — Réanalyse du pilote (macro-F1, bootstrap apparié) et ablation des composants
 - **Date** : 2026-11-14
 - **Auteur / Lot** : Membre 3 / Lot B
