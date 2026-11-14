@@ -98,7 +98,19 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - écart-type nul : l'époque 0 est le même modèle pour toutes les graines (aucun pas d'entraînement ; la graine ne change que l'ordre des paires) ; pour lr 1e-5, les 3 graines donnent la même macro-F1 aux époques 1, 2, 5 et 6 (pour 123 et 2026, mêmes prédictions de val à l'époque gardée) alors que leurs pertes d'entraînement diffèrent (époque 1 : 0.653 / 0.687 / 0.678) : sur 33 paires, des modèles différents peuvent donner les mêmes prédictions ;
   - relances : l'exécution lr 2e-5 / graine 42 a échoué à 13h02 (mémoire graphique pleine, `CUDA out of memory`, après l'époque 0) ; l'exécution lr 3e-5 / graine 2026 a été interrompue à 13h54 (fenêtre de la grille fermée ou Ctrl+C, après l'époque 0) ; les deux ont été refaites à l'identique (mêmes réglages, lots de 4 × 2) à 14h12 et 14h15 ; l'époque 0 des premières tentatives (0.692) est identique à celle des relances ; les journaux des tentatives sont gardés (`*.oom.log`, `*.interrompu.log`) ;
   - durée d'une exécution de 6 époques : de 2,5 à 18 min selon l'état de la carte (bridée à 25 W au début, sans doute sur batterie ou en économie d'énergie) ; pic de mémoire graphique 5,61–5,63 Go.
-- **Résultats — ablation** : à compléter.
+- **Résultats — ablation `microsoft/mdeberta-v3-base` (2026-11-14, val v3 seulement, 9 exécutions sur 9)** : tête à 3 classes neuve, même protocole (`python models/nli/analyse_grid.py ablation`) :
+
+  | lr | ép. 0 | ép. 1 | ép. 2 | ép. 3 | ép. 4 | ép. 5 | ép. 6 |
+  |---|---|---|---|---|---|---|---|
+  | 2e-5 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.197 ± 0.052 | 0.167 ± 0.000 | 0.306 ± 0.126 | 0.330 ± 0.146 | 0.355 ± 0.163 |
+  | 3e-5 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.273 ± 0.092 | 0.259 ± 0.131 | 0.335 ± 0.084 | 0.373 ± 0.098 |
+  | 5e-5 | 0.167 ± 0.000 | 0.194 ± 0.047 | 0.265 ± 0.093 | 0.251 ± 0.116 | 0.320 ± 0.166 | **0.401 ± 0.121** | 0.426 ± 0.078 |
+
+  - **choix par la règle : lr 5e-5, époque 5 (moyenne 0.401)**. Meilleure moyenne : 0.426 (lr 5e-5, époque 6) ; 2 configurations à moins de 0.03 (époques 5 et 6 de lr 5e-5) ; on garde la plus ancienne, l'époque 5 ;
+  - 0.167 = une seule classe prédite pour toutes les paires (tête neuve tirée au hasard à l'époque 0, puis modèle qui n'a pas encore appris) ; une exécution (lr 2e-5, graine 2026) reste à 0.167 jusqu'à l'époque 6 ;
+  - l'ablation n'a pas fini d'apprendre en 6 époques : la perte d'entraînement baisse encore (lr 5e-5, époque 6 : 0.44 à 0.75 selon la graine) et la moyenne de val monte encore à l'époque 6 ; écarts-types élevés (0.08 à 0.17). Limite connue, laissée telle quelle pour respecter la grille fixée avant exécution ;
+  - même à son meilleur, l'ablation (0.43) reste très loin du modèle pré-entraîné sur XNLI, avec ou sans affinage (0.69 à 0.74) : avec 174 paires d'entraînement, le pré-entraînement NLI fait l'essentiel du travail ;
+  - relance : le PC a redémarré à 15h25 pendant l'exécution lr 3e-5 / graine 2026 (après l'époque 0) ; elle a été refaite à l'identique à 15h42 (journal de la tentative gardé : `*.redemarrage.log`), suivie des 3 exécutions lr 5e-5.
 - **Analyse** : à compléter.
 - **Décision / suite** : à compléter.
 
