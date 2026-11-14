@@ -143,10 +143,29 @@ def test_api_reessaie_et_retire_la_graine(monkeypatch):
         sent.append(payload)
         if len(sent) == 1:
             raise urllib.error.HTTPError("u", 429, "quota", {}, io.BytesIO(b""))
+        if len(sent) == 2:
+            raise TimeoutError("lent")
         if "seed" in payload:
-            raise urllib.error.HTTPError("u", 400, "seed", {}, io.BytesIO(b""))
+            raise urllib.error.HTTPError("u", 400, "seed", {}, io.BytesIO(b"bad seed field"))
         return {"choices": [{"message": {"content": '{"label": "faux"}'}}]}
 
     monkeypatch.setattr(gen, "_post", fake_post)
     assert gen.generate([{"role": "user", "content": "x"}], seed=42) == '{"label": "faux"}'
-    assert len(sent) == 3 and "seed" not in sent[-1] and sent[0]["model"] == "modele-test"
+    assert len(sent) == 4 and "seed" not in sent[-1] and sent[0]["model"] == "modele-test"
+    assert gen.dropped == ["seed"]
+
+
+def test_api_refuse_un_mauvais_nom_de_modele(monkeypatch):
+    import io
+    import urllib.error
+
+    monkeypatch.setenv("LLM_API_KEY", "cle-de-test")
+    monkeypatch.setenv("LLM_MIN_INTERVAL", "0")
+    gen = lv.OpenAICompatibleGenerator("mauvais nom", "https://exemple.invalid/v1")
+
+    def fake_post(body):
+        raise urllib.error.HTTPError("u", 400, "x", {}, io.BytesIO(b"unexpected model name format"))
+
+    monkeypatch.setattr(gen, "_post", fake_post)
+    with pytest.raises(RuntimeError, match="model name"):
+        gen.generate([{"role": "user", "content": "x"}], seed=1)

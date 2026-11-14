@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import random
 import statistics
 from collections import Counter, defaultdict
@@ -341,6 +342,7 @@ def main() -> None:
         "retrieval": args.retrieval,
         "nli": backend_info(),
         "limit": args.limit,
+        "reasoning_effort": os.getenv("LLM_REASONING_EFFORT"),
     }
     for split in args.splits:
         corpus_path, claims_path = SPLITS[split]
@@ -356,7 +358,15 @@ def main() -> None:
         out = RESULTS_DIR / f"lot-d_silver_verdict_{split}_{date.today():%Y%m%d}.json"
         out.write_text(
             json.dumps(
-                {**payload, "split": split, **res}, ensure_ascii=False, indent=2, default=str
+                {
+                    **payload,
+                    "split": split,
+                    "api_dropped": getattr(generator.inner, "dropped", []),
+                    **res,
+                },
+                ensure_ascii=False,
+                indent=2,
+                default=str,
             ),
             encoding="utf-8",
         )

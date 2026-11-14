@@ -261,8 +261,10 @@ class OpenAICompatibleGenerator:
 
     Clé lue dans `LLM_API_KEY` (jamais écrite dans un fichier). Les offres gratuites limitent le
     nombre de requêtes par minute : une pause minimale `LLM_MIN_INTERVAL` (secondes, défaut 4)
-    sépare deux appels, et une erreur 429 / 5xx est réessayée jusqu'à 6 fois avec une attente
-    croissante.
+    sépare deux appels ; une erreur 429 / 5xx ou un délai dépassé (`LLM_TIMEOUT`, défaut 300 s)
+    est réessayé jusqu'à 6 fois avec une attente croissante. `LLM_REASONING_EFFORT` (optionnel,
+    ex. `low`) limite la « réflexion » des modèles qui raisonnent avant de répondre (Gemini) ;
+    si l'API refuse ce champ ou `seed`, il est retiré.
     """
 
     MAX_TOKENS = 1024  # marge pour les modèles qui « réfléchissent » avant de répondre
@@ -272,6 +274,9 @@ class OpenAICompatibleGenerator:
         self.base_url = base_url or os.getenv("LLM_BASE_URL") or "https://api.openai.com/v1"
         self.base_url = self.base_url.rstrip("/")
         self.min_interval = float(os.getenv("LLM_MIN_INTERVAL", "4"))
+        self.timeout = float(os.getenv("LLM_TIMEOUT", "300"))
+        self.reasoning_effort = os.getenv("LLM_REASONING_EFFORT") or None
+        self.dropped: list[str] = []  # champs refusés par l'API (à noter dans le rapport)
         self._last = 0.0
 
     def _post(self, body: bytes) -> dict:
@@ -286,7 +291,7 @@ class OpenAICompatibleGenerator:
                 "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
             },
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             return json.loads(resp.read())
 
     def generate(self, messages: list[dict], seed: int) -> str:
@@ -301,6 +306,10 @@ class OpenAICompatibleGenerator:
             "seed": seed,
             "max_tokens": self.MAX_TOKENS,
         }
+        if self.reasoning_effort:
+            payload["reasoning_effort"] = self.reasoning_effort
+        for field_name in self.dropped:
+            payload.pop(field_name, None)
         for attempt in range(7):
             wait = self.min_interval - (time.monotonic() - self._last)
             if wait > 0:
@@ -310,13 +319,29 @@ class OpenAICompatibleGenerator:
                 data = self._post(json.dumps(payload).encode())
                 return data["choices"][0]["message"].get("content") or ""
             except urllib.error.HTTPError as exc:
-                if exc.code == 400 and "seed" in payload:
-                    payload.pop("seed")  # certaines API refusent `seed` : noté dans le rapport
-                    continue
+                detail = exc.read().decode("utf-8", "replace")[:300]
+                if exc.code == 400:
+                    refused = next(
+                        (
+                            f
+                            for f in ("reasoning_effort", "seed")
+                            if f in payload and f in detail.lower()
+                        ),
+                        None,
+                    )
+                    refused = refused or (
+                        "seed" if "seed" in payload and "model" not in detail.lower() else None
+                    )
+                    if refused:
+                        payload.pop(refused)
+                        self.dropped.append(refused)
+                        continue
                 if exc.code not in (429, 500, 502, 503, 504) or attempt == 6:
-                    detail = exc.read().decode("utf-8", "replace")[:300]
                     raise RuntimeError(f"API LLM : HTTP {exc.code} — {detail}") from None
-                time.sleep(min(60, 5 * 2**attempt))
+            except (TimeoutError, urllib.error.URLError, ConnectionError) as exc:
+                if attempt == 6:
+                    raise RuntimeError(f"API LLM injoignable : {exc}") from None
+            time.sleep(min(60, 5 * 2**attempt))
         raise RuntimeError("API LLM : trop d'échecs")
 
 
