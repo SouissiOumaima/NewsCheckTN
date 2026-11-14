@@ -25,6 +25,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test) | en cours | — |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
 | EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
@@ -63,6 +64,22 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
 
 ## Entrées
+
+### EXP-C-011 — NLI (Model 2), palier Silver : fine-tuning de mDeBERTa-v3 (protocole fixé avant mesure)
+- **Date** : 2026-11-10 (protocole et règle de version) ; résultats à compléter
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : affiner sur le train du corpus A1 le modèle NLI d'EXP-C-008 améliore-t-il la macro-F1 par rapport à ce modèle sans entraînement (0.798), aux règles Bronze d'EXP-C-009 (0.471) et à la classe majoritaire (0.194) ?
+- **Données** : corpus NLI du Lot A1 (privé, non versionné). Règle de version fixée le 2026-11-10, avant tout entraînement et toute mesure :
+  - si la v4 n'est pas disponible le jeudi 2026-11-12 à midi, ou si elle change le test gelé, les chiffres Silver sont ceux de la v3 (`data/splits/nli_v3_by_article_seed42.json` : train 174, val 33, test 56) ;
+  - « change le test gelé » : le test v4 n'a pas exactement les mêmes `pair_id` que le test v3, ou l'une de ces paires a une affirmation, une preuve ou un label différent ;
+  - sinon : réentraînement sur le train v4 avec les hyperparamètres choisis sur la val v3, puis une seule mesure du test v4 ;
+  - état connu le 2026-11-10 : P135, P136 et P138 ne sont pas encore validées dans la v4 (déjà écartées comme brouillons dans la v3) ; pas de paires en tunisien attendues dans la v4.
+- **Méthode / configuration** (prévue) : `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` affiné sur le train ; hyperparamètres (taux d'apprentissage, nombre d'époques, l'époque 0 sans affinage restant candidate) choisis sur la val seulement, d'après la moyenne de 3 graines (42, 123, 2026) ; test mesuré une seule fois à la fin. Ablation : `microsoft/mdeberta-v3-base` (même architecture, sans pré-entraînement XNLI), même protocole. Comparaisons par bootstrap apparié contre les règles Bronze, la classe majoritaire et le modèle sans entraînement ; résultats par langue ; au moins 30 erreurs classées.
+- **Note** : le dossier `models/checkpoints/nli_mdeberta-ft_v3_seed42` du 2026-10-26 (15:18) a des poids identiques à ceux du modèle de base (sauvegarde de l'époque 0, exécution interrompue, sans journal) et n'a jamais été évalué sur le test : il n'est pas utilisé (supprimé le 2026-11-10).
+- **Code** : à compléter (`models/nli/train.py`).
+- **Résultats** : à compléter.
+- **Analyse** : à compléter.
+- **Décision / suite** : à compléter.
 
 ### EXP-A2-013 — Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig)
 - **Date** : 2026-11-06

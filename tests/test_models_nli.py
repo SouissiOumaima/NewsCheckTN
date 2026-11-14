@@ -162,6 +162,19 @@ def test_correspondance_des_labels_et_choix_de_l_epoque():
     )
 
 
+def test_tete_neuve_noms_d_execution_et_classes_manquantes():
+    from models.nli.train import ABLATION_MODEL, label_ids, needs_new_head, run_name
+
+    assert needs_new_head({"LABEL_0": 0, "LABEL_1": 1, "LABEL_2": 2})
+    assert not needs_new_head({"entailment": 0, "neutral": 1, "contradiction": 2})
+    assert (
+        run_name(stance.DEFAULT_MODEL, "v3", 2e-5, 6, 42) == "nli_mdeberta-ft_v3_lr2e-05_e6_seed42"
+    )
+    assert run_name(ABLATION_MODEL, "v3", 3e-5, 6, 123).startswith("nli_mdeberta-v3-base-ft_v3_")
+    with pytest.raises(ValueError, match="absentes"):
+        label_ids({"LABEL_0": 0, "LABEL_1": 1, "LABEL_2": 2})
+
+
 def test_bootstrap_apparie():
     from models.nli.compare import paired_bootstrap
 
