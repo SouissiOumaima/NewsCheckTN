@@ -24,6 +24,9 @@ Usage (depuis la racine du dépôt) :
     python -m linguistic_analysis.evaluate --compare  # règles vs parseurs, bootstrap apparié
     python -m linguistic_analysis.evaluate --eval-set <fichier> --check-lock  # jeu verrouillé
     python -m linguistic_analysis.evaluate --eval-set <fichier> --sha256      # empreinte seule
+    python -m linguistic_analysis.evaluate --rules --exp-id EXP-B-012         # autre expérience
+`--exp-id` (format `EXP-B-NNN`, défaut `EXP_ID`) est l'identifiant écrit dans les résultats, les
+erreurs et la comparaison, et affiché dans le résumé ; il ne change pas le nom des fichiers.
 Le résultat est écrit dans `evaluation/results/lot-b_extraction_<mode>_<AAAAMMJJ>.json`
 (format de `evaluation/README.md` ; `_<jeu>` est ajouté avant la date pour un autre jeu
 qu'`eval_30`), les erreurs dans `lot-b_erreurs_<mode>_<AAAAMMJJ>.json`, la comparaison dans
@@ -55,6 +58,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EVAL_SET = ROOT / "tests" / "fixtures" / "linguistic_analysis" / "eval_30.jsonl"
 RESULTS_DIR = ROOT / "evaluation" / "results"
 EXP_ID = "EXP-B-005"
+_EXP_ID_FORMAT = re.compile(r"EXP-B-[0-9]{3}")  # chiffres ASCII seulement
 PROTOCOL = ROOT / "docs" / "lot-b_protocole_eval_100.md"
 ROLES = ("subject", "predicate", "obj")
 _TOKEN = re.compile(r"\w+|[^\w\s]")
@@ -439,11 +443,13 @@ def evaluate(
     split: str = EVAL_SET.stem,
     bootstrap: int = 0,
     seed: int = BOOTSTRAP_SEED,
+    exp_id: str = EXP_ID,
 ) -> dict:
     """Évalue le Lot B sur `items` ; renvoie le document de résultats (métriques + prédictions).
 
     `bootstrap` > 0 : ajoute les intervalles de confiance (global et par groupe) sous la clé
     `bootstrap` ; 0 (défaut de la fonction) les omet, la ligne de commande les calcule.
+    `exp_id` : identifiant d'expérience écrit dans le résultat (`EXP_ID` par défaut).
     """
     if rules:
         with rules_only():
@@ -462,7 +468,7 @@ def evaluate(
     metrics["by_lang"] = {group: _metrics(rs) for group, rs in sorted(by_group.items())}
     metrics["by_phenomenon"] = {ph: _metrics(rs) for ph, rs in sorted(by_phenomenon.items())}
     results = {
-        "exp_id": EXP_ID,
+        "exp_id": exp_id,
         "lot": "B",
         "task": "extraction-affirmations",
         "model": "regles" if rules else "parseurs",
@@ -620,9 +626,21 @@ def _fmt(value: float | None, width: int = 6) -> str:
     return f"{'-':>{width}}" if value is None else f"{value:>{width}.2f}"
 
 
+def exp_id_arg(value: str) -> str:
+    """Valide l'option `--exp-id` : format `EXP-B-NNN` (trois chiffres)."""
+    if not _EXP_ID_FORMAT.fullmatch(value):
+        raise argparse.ArgumentTypeError(
+            f"identifiant d'expérience invalide : {value!r} (format attendu : EXP-B-NNN, "
+            "trois chiffres, par exemple EXP-B-012)"
+        )
+    return value
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Évaluation du Lot B sur le jeu annoté.")
     parser.add_argument("--rules", action="store_true", help="règles seules (comme en CI)")
+    parser.add_argument("--exp-id", type=exp_id_arg, default=EXP_ID,
+                        help=f"identifiant d'expérience, format EXP-B-NNN (défaut {EXP_ID})")
     parser.add_argument("--eval-set", type=Path, default=EVAL_SET)
     parser.add_argument("--out-dir", type=Path, default=RESULTS_DIR)
     parser.add_argument("--errors", action="store_true", help="exporte aussi les erreurs")
@@ -660,7 +678,8 @@ def main(argv: list[str] | None = None) -> None:
     if args.validate:
         print(counts_summary(items))
         return
-    settings = {"split": args.eval_set.stem, "bootstrap": args.bootstrap, "seed": args.seed}
+    settings = {"split": args.eval_set.stem, "bootstrap": args.bootstrap, "seed": args.seed,
+                "exp_id": args.exp_id}
     if args.compare:
         _compare(items, args, settings)
         return
@@ -685,7 +704,7 @@ def _compare(items: list[dict], args: argparse.Namespace, settings: dict) -> Non
         print()
     resamples = args.bootstrap or BOOTSTRAP_RESAMPLES
     comparison = {
-        "exp_id": EXP_ID,
+        "exp_id": settings["exp_id"],
         "split": settings["split"],
         "date": date.today().isoformat(),
         "a": "regles",
