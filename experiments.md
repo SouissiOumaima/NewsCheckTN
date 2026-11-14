@@ -61,8 +61,129 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 | EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
+| EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 
 ## Entrées
+
+### EXP-B-009 — Réanalyse du pilote (macro-F1, bootstrap apparié) et ablation des composants
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : compléter EXP-B-008 avec les mesures demandées par la fiche du projet,
+  à savoir :
+  - macro-F1 de détection ;
+  - différence avec la baseline par bootstrap apparié ;
+  - ablation des composants.
+
+  Hypothèse : l'extracteur dépasse la baseline en détection, ce que l'exactitude n'établissait pas
+  dans EXP-B-008.
+- **Données** :
+  - **eval_30** (34 phrases, 5 groupes).
+  - **Pilote P01–P60 du Lot A1** :
+    - annoté par texte, indépendamment, par Achraf et Ghofrane ;
+    - non adjugé ;
+    - langue selon le Lot A2 : fr 26, ar 15, tn-arabizi 19.
+  - Fichiers hors dépôt, dans l'espace de travail du Lot A1 :
+    - `annotation_achraf.xlsx`, lignes P01–P60 seulement, SHA-256
+      `ec50eda9f0cafd810c196f98b871b66126774b670c4e2918c74a7d4e3ace2f08` ;
+    - `annotation_pilote_A1_Ghofran_utf8.csv`, SHA-256
+      `d0eb33fc2c51346dd8ed82bcfa991dc0ee5b0d3d22730cdd39bb9cdafc51dc87`.
+  - **Les deux jeux ont servi à la mise au point** :
+    - eval_30 pour les règles (EXP-B-001 à EXP-B-006) ;
+    - le pilote pour l'analyse d'erreurs d'EXP-B-008 et le choix de corrections.
+    - Les chiffres ci-dessous sont donc **optimistes**. La mesure sur un jeu de test gelé sera
+      **EXP-B-010**.
+- **Méthode / configuration** :
+  - extracteur sans aucune modification de règle ni de lexique depuis EXP-B-008 ;
+  - unité : le texte, affirmation si l'une de ses phrases l'est ;
+  - gold : label AFFIRMATION, contre chaque annotateur et sur les textes d'accord (47 pour le
+    label, 35 pour la modalité) ;
+  - baselines : « tout = affirmation » et « tout = assertif » ;
+  - IC : bootstrap percentile 95 %, graine 20261015, 1000 tirages ;
+  - extracteur − baseline : bootstrap apparié sur les textes, graine 42, 2000 tirages ;
+  - ablation : retrait en mémoire de chaque composant, sans toucher aux fichiers :
+    - lexiques de modalité ;
+    - coréférence ;
+    - règles de factualité ;
+    - verbes de parole ;
+    - parseurs.
+- **Code** : commit `88cdb36`, `linguistic_analysis/evaluate_double.py` et
+  `linguistic_analysis/ablation.py`. Le code de l'extracteur est identique à `main` (`9e19647`).
+  Commandes, depuis la racine du dépôt :
+  - `python -X utf8 -m linguistic_analysis.evaluate_double --a <annotation_achraf.xlsx> --b <annotation_pilote_A1_Ghofran_utf8.csv> --name-a Achraf --name-b Ghofrane --ids P01-P60 --exp-id EXP-B-009 --out-dir <hors dépôt>` ;
+  - `python -X utf8 -m linguistic_analysis.ablation --a <…> --b <…> --name-a Achraf --name-b Ghofrane --ids P01-P60`.
+- **Résultats** :
+  - **accord** :
+    - label : 47/60, kappa 0.615 [0.410 ; 0.785] ;
+    - oui/non : 49/60, kappa 0.624 [0.421 ; 0.799] ;
+    - modalité : 35/60, kappa 0.390 [0.207 ; 0.561].
+  - **Détection** (identique dans les deux modes) :
+
+    | Gold | Exactitude | Précision | Rappel | Macro-F1 [IC] | Baseline macro-F1 |
+    |---|---|---|---|---|---|
+    | Achraf | 0.617 | 0.582 | 1.000 | 0.519 [0.394 ; 0.644] | 0.348 |
+    | Ghofrane | 0.767 | 0.745 | 1.000 | 0.635 [0.477 ; 0.773] | 0.406 |
+    | Accord (47) | 0.745 | 0.721 | 1.000 | 0.619 [0.439 ; 0.769] | 0.397 |
+
+  - **Modalité** :
+
+    | Mode | Exactitude Achraf / Ghofrane / accord (35) | Macro-F1 Achraf / Ghofrane / accord |
+    |---|---|---|
+    | règles | 0.567 / 0.467 / 0.571 | 0.412 / 0.198 / 0.363 |
+    | parseurs | 0.600 / 0.500 / 0.629 | 0.441 / 0.217 / 0.404 |
+
+    Baseline « tout = assertif » : exactitude 0.533 / 0.433 / 0.514.
+  - **Extracteur − baseline (apparié)** :
+    - détection, macro-F1 :
+      - Achraf : +0.172 [+0.044 ; +0.288] ;
+      - Ghofrane : +0.229 [+0.067 ; +0.361] ;
+      - accord : +0.221 [+0.061 ; +0.365] ;
+    - modalité, macro-F1, mode règles :
+      - Achraf : +0.313 [+0.040 ; +0.409] ;
+      - Ghofrane : +0.097 [−0.007 ; +0.218] ;
+      - accord : +0.228 [−0.006 ; +0.419] ;
+    - modalité, macro-F1, mode parseurs :
+      - Achraf : +0.341 [+0.072 ; +0.440] ;
+      - Ghofrane : +0.117 [+0.014 ; +0.243] ;
+      - accord : +0.268 [+0.057 ; +0.473].
+  - **Ablation**, mode règles, écart au système complet :
+
+    | Variante | eval_30 : détection / modalité / triplet / coréférence | Pilote : macro-F1 de détection (A / G) / macro-F1 de modalité sur l'accord |
+    |---|---|---|
+    | sans lexiques de modalité | −0.029 / −0.118 / 0 / 0 | −0.063 / −0.081 / **+0.061** |
+    | sans coréférence | 0 / 0 / 0 / −3 (sur 3) | 0 / 0 / 0 |
+    | sans règles de factualité | −0.324 / −0.324 / 0 / 0 | −0.031 / −0.039 / −0.169 |
+    | sans verbes de parole | 0 / −0.118 / −5 (sur 22) / 0 | 0 / 0 / −0.055 |
+    | sans parseurs (contre parseurs complet) | 0 / 0 / +1 / 0 | 0 / 0 / −0.041 |
+
+  - **Non-régression eval_30** (`exp_id` EXP-B-009) : identique à EXP-B-008.
+    - Détection et modalité : 1.000 dans les deux modes.
+    - Triplet exact : 20/22 en règles, 19/22 en parseurs.
+- **Analyse** :
+  - **Macro-F1 de détection** : l'extracteur dépasse la baseline contre chaque gold. L'IC apparié
+    exclut 0, alors qu'en exactitude les IC recouvraient la baseline (EXP-B-008). La baseline n'a
+    aucune bonne réponse sur la classe non-affirmation.
+  - **Modalité** :
+    - le gain sur la baseline est établi en mode parseurs ;
+    - en mode règles, il ne l'est que contre Achraf.
+    - Le macro-F1 est très défavorable à la baseline « tout = assertif », une seule classe. Elle
+      reste plus juste en exactitude, où les écarts sont de +0.03 à +0.12 seulement.
+  - **Ablation** :
+    - la factualité porte la détection ;
+    - les verbes de parole portent le triplet et le rapporté ;
+    - la coréférence n'a d'effet que sur `resolved_text`, mesuré sur 3 phrases ;
+    - les parseurs aident la modalité en fr et ar.
+    - **Les lexiques de modalité aident sur eval_30 mais nuisent à la modalité sur le pilote** :
+      sur-ajustement probable au jeu de développement.
+  - Les écarts d'ablation portent sur 0 à 7 textes du pilote. Ils sont indicatifs, sans IC.
+- **Décision / suite** :
+  - `evaluate_double` et `ablation` sont retenus comme protocole (`docs/lot-b_protocole_eval_100.md`
+    §8).
+  - Aucune règle ni aucun lexique n'est modifié avant EXP-B-010, la mesure sur un jeu de test neuf
+    et gelé, empreinte notée avant la mesure.
+  - Vérifier sur ce jeu l'effet des lexiques de modalité.
+  - Points ouverts :
+    - adjudication du pilote ;
+    - point L5 avec le Lot C (classe AUTRE).
 
 ### EXP-A2-013 — Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig)
 - **Date** : 2026-11-06

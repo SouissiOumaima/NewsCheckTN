@@ -289,3 +289,54 @@ au gabarit et ne doit pas figurer dans `eval_100.jsonl`.
 | Date | Événement | `id` concernés | SHA-256 de `eval_100.jsonl` |
 |------|-----------|----------------|-----------------------------|
 | — | — | — | — |
+
+## 8. Mesure sur un jeu en double annotation (unité : texte) et ablation
+
+Pour un jeu annoté **par texte** par deux annotateurs (pilote du Lot A1, jeu de test neuf), sans
+adjudication. `evaluate.py` évalue une phrase par ligne d'un JSONL avec un seul gold. Il ne
+convient donc pas ici. Il sert à la non-régression sur eval_30.
+
+**Format** : un fichier par annotateur, mêmes `id` et mêmes textes, UTF-8, séparateur
+tabulation, une ligne par texte.
+
+| Colonne | Valeurs |
+|---|---|
+| `id`, `texte` | obligatoires ; `id` unique |
+| `label` | `AFFIRMATION`, `OPINION` ou `AUTRE` (obligatoire) |
+| `modalite` | une des 7 modalités du guide §4 (obligatoire) |
+| `sujet`, `predicat`, `objet` | facultatifs : triplet gold de la **première phrase affirmation** du texte, extraits exacts, vides si absents |
+| `source`, `langue`, `date` | facultatifs, informatifs |
+
+Un `.xlsx` (première feuille, mêmes colonnes) est accepté. Les fichiers restent **hors du
+dépôt**.
+
+**Commandes** (depuis la racine du dépôt ; dossier de sortie obligatoirement hors du dépôt) :
+
+1. Empreinte des deux fichiers, à noter dans l'entrée `EXP-B-NNN` avant la mesure :
+   `python -m linguistic_analysis.evaluate --eval-set <fichier> --sha256`.
+2. Mesure, dans les deux modes, avec la non-régression eval_30 :
+   `python -X utf8 -m linguistic_analysis.evaluate_double --a <A.tsv> --b <B.tsv> --name-a <A> --name-b <B> --exp-id EXP-B-NNN --out-dir <dossier hors dépôt>`.
+   Réglages par défaut :
+   - IC : graine 20261015, 1000 tirages ;
+   - bootstrap apparié extracteur − baseline : graine 42, 2000 tirages (`--paired-seed`,
+     `--paired-resamples`).
+   Option `--ids P01-P60` pour un sous-ensemble.
+3. Ablation, avec écarts au système complet du même mode :
+   `python -X utf8 -m linguistic_analysis.ablation --a <A.tsv> --b <B.tsv> --name-a <A> --name-b <B> --out-dir <dossier hors dépôt>`.
+
+**Sorties** : `<exp_id>_double.md` et `.json`, `ablation.md` et `.json`. Elles contiennent des
+identifiants et des chiffres, aucun texte.
+
+**Mesures** :
+- kappas avec IC ;
+- détection contre chaque annotateur et sur les textes d'accord de label :
+  - exactitude, précision, rappel, macro-F1 ;
+  - baseline « tout = affirmation » ;
+- modalité contre chaque annotateur et sur les textes d'accord de modalité :
+  - exactitude, macro-F1 ;
+  - baseline « tout = assertif » ;
+- triplet si les colonnes existent ;
+- découpage par langue (`normalize` du Lot A2).
+
+**Règle** : aucune règle ni aucun lexique n'est modifié entre l'empreinte et la mesure d'un jeu
+de test. Une mesure refaite après une modification est rapportée comme un « 2ᵉ passage ».
