@@ -108,6 +108,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     - parseurs.
 - **Code** : commit `88cdb36`, `linguistic_analysis/evaluate_double.py` et
   `linguistic_analysis/ablation.py`. Le code de l'extracteur est identique à `main` (`9e19647`).
+  Ce commit est sur `main` tel quel : fusion `f6eaf81` de la PR #20, par commit de fusion et sans
+  squash, donc le SHA est inchangé.
   Commandes, depuis la racine du dépôt :
   - `python -X utf8 -m linguistic_analysis.evaluate_double --a <annotation_achraf.xlsx> --b <annotation_pilote_A1_Ghofran_utf8.csv> --name-a Achraf --name-b Ghofrane --ids P01-P60 --exp-id EXP-B-009 --out-dir <hors dépôt>` ;
   - `python -X utf8 -m linguistic_analysis.ablation --a <…> --b <…> --name-a Achraf --name-b Ghofrane --ids P01-P60`.
