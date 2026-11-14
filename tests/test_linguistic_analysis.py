@@ -16,12 +16,14 @@ import pytest
 
 from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
+    ablation,
     agreement,
     baselines_bronze,
     claim_extraction,
     coreference,
     demo,
     evaluate,
+    evaluate_double,
     factuality,
     modality,
     preprocessing,
@@ -1023,6 +1025,55 @@ def test_cli_errors_export(tmp_path, capsys):
     assert "erreur(s)" in capsys.readouterr().out
 
 
+def _cli_outputs(tmp_path) -> tuple[dict, dict]:
+    """Résultats et erreurs écrits par la ligne de commande dans `tmp_path`."""
+    def load(prefix):
+        (path,) = [p for p in tmp_path.iterdir() if p.name.startswith(prefix)]
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    return load("lot-b_extraction_regles_"), load("lot-b_erreurs_regles_")
+
+
+def test_cli_exp_id_default_is_unchanged(tmp_path, capsys):
+    evaluate.main(["--rules", "--errors", "--bootstrap", "0", "--out-dir", str(tmp_path)])
+    results, errors = _cli_outputs(tmp_path)
+    assert results["exp_id"] == errors["exp_id"] == evaluate.EXP_ID
+    assert capsys.readouterr().out.startswith(f"{evaluate.EXP_ID} — mode regles")
+
+
+def test_cli_exp_id_option_replaces_default(tmp_path, capsys):
+    evaluate.main(["--rules", "--errors", "--bootstrap", "0", "--exp-id", "EXP-B-099",
+                   "--out-dir", str(tmp_path)])
+    results, errors = _cli_outputs(tmp_path)
+    assert results["exp_id"] == errors["exp_id"] == "EXP-B-099"
+    out = capsys.readouterr().out
+    assert out.startswith("EXP-B-099 — mode regles") and evaluate.EXP_ID not in out
+    # Le nom des fichiers ne dépend pas de l'identifiant.
+    assert all("EXP" not in p.name for p in tmp_path.iterdir())
+
+
+def test_cli_exp_id_reaches_comparison(tmp_path):
+    evaluate.main(["--compare", "--bootstrap", "0", "--exp-id", "EXP-B-099",
+                   "--out-dir", str(tmp_path)])
+    (path,) = list(tmp_path.glob("lot-b_comparaison_*.json"))
+    assert json.loads(path.read_text(encoding="utf-8"))["exp_id"] == "EXP-B-099"
+    for result in tmp_path.glob("lot-b_extraction_*.json"):
+        assert json.loads(result.read_text(encoding="utf-8"))["exp_id"] == "EXP-B-099"
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["EXP-B-12", "EXP-B-1234", "EXP-C-001", "exp-b-001", "EXP-B-01a", " EXP-B-001", "",
+     "EXP-B-\u0661\u0662\u0663"],
+)
+def test_cli_exp_id_invalid_format_is_refused(tmp_path, capsys, value):
+    with pytest.raises(SystemExit) as exc:
+        evaluate.main(["--rules", "--exp-id", value, "--out-dir", str(tmp_path)])
+    assert exc.value.code == 2
+    assert "EXP-B-NNN" in capsys.readouterr().err
+    assert not any(tmp_path.iterdir())
+
+
 def test_cli_output_survives_cp1252_console(tmp_path):
     # Console Windows ou sortie redirigée : encodage cp1252, sans `-X utf8`. Les erreurs listées
     # contiennent de l'arabe (ar-02), que cp1252 ne sait pas encoder.
@@ -1688,3 +1739,251 @@ def test_baselines_cli_rules_only(tmp_path, capsys):
     assert "| Détection : exactitude | 0.647 | 1.000 | 34 |" in report
     assert "| Modalité : exactitude | 0.412 | 1.000 | 34 |" in report
     assert "| SPO : triplet exact | 0.000 | 0.909 | 22 |" in report
+
+
+# ---------------------------------------------------------------------------
+# Mesure en double annotation (evaluate_double) : textes inventés
+# ---------------------------------------------------------------------------
+
+DOUBLE_HEADER = ["id", "texte", "label", "modalite", "sujet", "predicat", "objet", "source"]
+DOUBLE_ROWS_A = [
+    ["d1", "Le ministère a publié un communiqué en mars 2024.", "AFFIRMATION", "assertif",
+     "Le ministère", "a publié", "un communiqué", "test"],
+    ["d2", "Je trouve cette décision vraiment injuste.", "OPINION", "opinion", "", "", "", "test"],
+    ["d3", "Est-ce que la réunion aura lieu demain ?", "AUTRE", "interrogatif", "", "", "", "test"],
+    ["d4", "Selon l'institut, le chômage a reculé à 15 %.", "AFFIRMATION", "rapporté",
+     "le chômage", "a reculé", "à 15 %", "test"],
+    ["d5", "Bonjour à tous !", "AUTRE", "souhait", "", "", "", "test"],
+    ["d6", "La commune compte trois nouvelles écoles depuis 2023.", "AFFIRMATION", "assertif",
+     "La commune", "compte", "trois nouvelles écoles", "test"],
+]
+
+
+def _double_files(tmp_path, rows_b=None, header=DOUBLE_HEADER):
+    """Écrit a.tsv (DOUBLE_ROWS_A) et b.tsv (`rows_b`, par défaut identique) avec un BOM."""
+    rows_b = [list(r) for r in DOUBLE_ROWS_A] if rows_b is None else rows_b
+    paths = []
+    for name, rows in (("a.tsv", DOUBLE_ROWS_A), ("b.tsv", rows_b)):
+        path = tmp_path / name
+        lines = ["\t".join(header)] + ["\t".join(r[: len(header)]) for r in rows]
+        path.write_text("﻿" + "\n".join(lines) + "\n", encoding="utf-8")
+        paths.append(path)
+    return paths
+
+
+def _rows_b_with_disagreements():
+    rows = [list(r) for r in DOUBLE_ROWS_A]
+    rows[1][2] = "AUTRE"  # d2 : label différent
+    rows[3][3] = "assertif"  # d4 : modalité différente
+    return rows
+
+
+def test_double_reads_tsv_with_bom_and_triplet(tmp_path):
+    path, _ = _double_files(tmp_path)
+    items, problems = evaluate_double.read_annotation(path)
+    assert problems == []
+    assert [it["id"] for it in items] == ["d1", "d2", "d3", "d4", "d5", "d6"]
+    assert items[0]["has_triplet"] and items[0]["gold"]["subject"] == "Le ministère"
+    assert items[1]["gold"]["subject"] is None and items[1]["gold"]["is_claim"] is False
+    assert items[3]["gold"]["modality"] == "rapporté"
+    only = evaluate_double.read_annotation(path, evaluate_double.id_range("d2,d3"))[0]
+    assert [it["id"] for it in only] == ["d2", "d3"]
+
+
+def test_double_reports_format_problems(tmp_path):
+    rows = [list(r) for r in DOUBLE_ROWS_A]
+    rows[1][2] = "FAIT"
+    rows[2][3] = "certain"
+    rows[4][0] = "d1"
+    _, path = _double_files(tmp_path, rows)
+    _, problems = evaluate_double.read_annotation(path)
+    assert len(problems) == 3
+    assert any("FAIT" in p for p in problems) and any("certain" in p for p in problems)
+    assert any("id en double" in p for p in problems)
+    _, path = _double_files(tmp_path, header=["id", "texte", "label"])
+    assert "colonnes manquantes" in evaluate_double.read_annotation(path)[1][0]
+
+
+def test_double_id_range():
+    assert evaluate_double.id_range("P01-P03") == {"P01", "P02", "P03"}
+    assert evaluate_double.id_range("P098-P101") == {"P098", "P099", "P100", "P101"}
+    assert evaluate_double.id_range("a, b") == {"a", "b"}
+
+
+def test_double_detection_metrics_by_hand():
+    gold = [True, True, False, False]
+    pred = [True, True, True, False]
+    assert evaluate_double.accuracy(gold, pred) == 0.75
+    assert evaluate_double.precision(gold, pred) == pytest.approx(2 / 3)
+    assert evaluate_double.recall(gold, pred) == 1.0
+    # F1 affirmation 0.8, F1 non-affirmation 2/3.
+    assert evaluate_double.detection_macro_f1(gold, pred) == pytest.approx((0.8 + 2 / 3) / 2)
+    assert evaluate_double.precision(gold, [False] * 4) is None
+    assert evaluate_double.recall([False] * 4, pred) is None
+
+
+def test_double_paired_vs_baseline_is_deterministic():
+    gold = [True, False, True, False, True, False]
+    pred = [True, False, True, True, True, False]
+    runs = [evaluate_double.paired_vs_baseline(42, 200, evaluate_double.detection_macro_f1,
+                                               gold, pred, [True] * 6) for _ in range(2)]
+    assert runs[0] == runs[1]
+    d = runs[0]
+    assert d["difference"] == pytest.approx(d["systeme"] - d["baseline"])
+    assert d["ci"][0] <= d["difference"] <= d["ci"][1]
+    assert (d["seed"], d["resamples"], d["n"]) == (42, 200, 6)
+
+
+def test_double_measure_structure_and_agreement(tmp_path):
+    path_a, path_b = _double_files(tmp_path, _rows_b_with_disagreements())
+    a = evaluate_double.read_annotation(path_a)[0]
+    b = evaluate_double.read_annotation(path_b)[0]
+    out = evaluate_double.measure(a, b, names=("A", "B"), modes=("regles",), resamples=50,
+                                  paired_resamples=50, exp_id="EXP-B-099", eval30=False)
+    assert out["n_common"] == 6 and out["ids_only_one_file"] == []
+    label = out["accord"]["label (3 classes)"]
+    assert label["accord"] == 5
+    assert label["kappa"] == pytest.approx(agreement.cohen_kappa(
+        [r[2] for r in DOUBLE_ROWS_A], [r[2] for r in _rows_b_with_disagreements()]))
+    assert out["accord"]["modalité (7)"]["accord"] == 5
+    res = out["modes"]["regles"]
+    assert res["groupes"] == {"fr": 6}
+    det = res["par_groupe"]["tous"]["détection"]
+    assert set(det) == {"A", "B", "accord label"} and det["accord label"]["n"] == 5
+    assert det["A"]["baseline_exactitude"] == 0.5 and det["A"]["baseline_rappel"] == 1.0
+    mod = res["par_groupe"]["tous"]["modalité"]
+    assert mod["A"]["baseline_exactitude"] == pytest.approx(2 / 6)
+    assert mod["accord modalité"]["n"] == 5
+    trip = res["par_groupe"]["tous"]["triplet"]["A"]
+    assert trip["n"] == 3 and set(trip) >= {"sujet", "prédicat", "objet", "triplet exact"}
+    main_det = res["principal"]["A"]["détection macro-F1"]
+    assert main_det["baseline"] == pytest.approx(evaluate_double.detection_macro_f1(
+        [r[2] == "AFFIRMATION" for r in DOUBLE_ROWS_A], [True] * 6))
+    assert set(res["principal"]) == {"A", "B", "accord"}
+    assert set(res["predictions"]) == {f"d{k}" for k in range(1, 7)}
+
+
+def test_double_measure_flags_missing_ids_and_runs_eval30(tmp_path):
+    path_a, path_b = _double_files(tmp_path)
+    a = evaluate_double.read_annotation(path_a)[0]
+    b = evaluate_double.read_annotation(path_b)[0][:5]
+    b[0] = {**b[0], "text": "Le ministère a publié deux communiqués en mars 2024."}
+    out = evaluate_double.measure(a, b, modes=("regles",), resamples=0, paired_resamples=10,
+                                  exp_id="EXP-B-099")
+    assert out["ids_only_one_file"] == ["d6"] and out["n_common"] == 5
+    assert out["ids_text_differs"] == ["d1"]
+    e30 = out["eval_30"]["regles"]
+    assert e30["exp_id"] == "EXP-B-099"
+    assert (e30["is_claim_accuracy"], e30["spo_all_exact_count"], e30["spo_n"]) == (1.0, 20, 22)
+
+
+def test_double_cli_writes_outputs_without_text(tmp_path, capsys):
+    path_a, path_b = _double_files(tmp_path, _rows_b_with_disagreements())
+    out_dir = tmp_path / "sortie"
+    evaluate_double.main(["--a", str(path_a), "--b", str(path_b), "--exp-id", "EXP-B-099",
+                          "--modes", "regles", "--resamples", "20", "--paired-resamples", "20",
+                          "--no-eval30", "--out-dir", str(out_dir)])
+    names = sorted(p.name for p in out_dir.iterdir())
+    assert names == ["EXP-B-099_double.json", "EXP-B-099_double.md"]
+    saved = (out_dir / "EXP-B-099_double.json").read_text(encoding="utf-8")
+    printed = capsys.readouterr().out
+    assert json.loads(saved)["exp_id"] == "EXP-B-099" and "EXP-B-099" in printed
+    for row in DOUBLE_ROWS_A:  # aucun texte ni élément de triplet dans les sorties
+        assert row[1] not in saved and row[1] not in printed
+    assert "ministère" not in saved and "ministère" not in printed
+
+
+@pytest.mark.parametrize("extra", [
+    ["--out-dir", str(evaluate.ROOT / "evaluation" / "results")],
+    ["--out-dir", "OUT", "--exp-id", "EXP-B-9"],
+    ["--out-dir", "OUT", "--modes", "regles,autre"],
+])
+def test_double_cli_refuses_bad_options(tmp_path, extra):
+    path_a, path_b = _double_files(tmp_path)
+    extra = [str(tmp_path / "x") if e == "OUT" else e for e in extra]
+    before = sorted(p.name for p in (evaluate.ROOT / "evaluation" / "results").iterdir())
+    with pytest.raises(SystemExit) as exc:
+        evaluate_double.main(["--a", str(path_a), "--b", str(path_b), *extra])
+    assert exc.value.code == 2
+    after = sorted(p.name for p in (evaluate.ROOT / "evaluation" / "results").iterdir())
+    assert after == before and not (tmp_path / "x").exists()
+
+
+def test_double_cli_refuses_invalid_annotation(tmp_path, capsys):
+    rows = [list(r) for r in DOUBLE_ROWS_A]
+    rows[0][2] = "VRAI"
+    path_a, path_b = _double_files(tmp_path, rows)
+    with pytest.raises(SystemExit) as exc:
+        evaluate_double.main(["--a", str(path_a), "--b", str(path_b), "--out-dir",
+                              str(tmp_path / "x")])
+    assert exc.value.code == 2 and "VRAI" in capsys.readouterr().err
+    assert not (tmp_path / "x").exists()
+
+
+# ---------------------------------------------------------------------------
+# Ablation (retrait en mémoire des composants)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def ablation_rules_rows():
+    return ablation.run(modes=("regles",))
+
+
+def test_ablation_complete_matches_evaluate(ablation_rules_rows):
+    complete = ablation_rules_rows[0]
+    assert complete["variante"] == ablation.COMPLETE and complete["reference"]
+    m = evaluate.evaluate(evaluate.load_eval_set(), rules=True)["metrics"]
+    assert complete["metrics"] == {
+        "e30 claim": m["is_claim_accuracy"], "e30 mod.": m["modality_accuracy"],
+        "e30 triplet": round(m["spo_all_exact"] * m["spo_n"]),
+        "e30 coref": round(m["coref_accuracy"] * m["coref_n"])}
+    # Chiffres de main en mode règles : détection et modalité 34/34, triplet 20/22, coréf. 3/3.
+    assert complete["metrics"] == {"e30 claim": 1.0, "e30 mod.": 1.0, "e30 triplet": 20,
+                                   "e30 coref": 3}
+
+
+def test_ablation_each_variant_runs_and_changes_eval30(ablation_rules_rows):
+    by_name = {r["variante"]: r for r in ablation_rules_rows}
+    assert set(by_name) == set(ablation.VARIANTS)
+    for name, row in by_name.items():
+        assert set(row["metrics"]) == {"e30 claim", "e30 mod.", "e30 triplet", "e30 coref"}
+        if name != ablation.COMPLETE:  # le retrait a bien un effet mesurable
+            assert any(row["ecarts"].values()), name
+    assert by_name["sans coréférence"]["metrics"]["e30 coref"] == 0
+    assert by_name["sans règles de factualité"]["metrics"]["e30 claim"] < 1.0
+
+
+def test_ablation_restores_components():
+    originals = (modality.load_lexicon, coreference.resolve_with_log,
+                 factuality.classify_factuality, spo.speech_verbs)
+    for context in ablation.VARIANTS.values():
+        with context():
+            pass
+    with pytest.raises(RuntimeError), ablation.without_factuality():
+        raise RuntimeError("erreur pendant la mesure")
+    assert (modality.load_lexicon, coreference.resolve_with_log,
+            factuality.classify_factuality, spo.speech_verbs) == originals
+
+
+def test_ablation_with_double_annotation(tmp_path):
+    path_a, path_b = _double_files(tmp_path, _rows_b_with_disagreements())
+    pair = ablation.make_pair(evaluate_double.read_annotation(path_a)[0],
+                              evaluate_double.read_annotation(path_b)[0], ("A", "B"))
+    variants = {k: ablation.VARIANTS[k] for k in (ablation.COMPLETE, "sans règles de factualité")}
+    rows = ablation.run(pair=pair, modes=("regles", "parseurs"), variants=variants)
+    names = [(r["mode"], r["variante"]) for r in rows]
+    assert names[-1] == ("parseurs", ablation.WITHOUT_PARSERS) and len(rows) == 5
+    assert {"dét. F1 A", "mod. F1 B", "mod. F1 consensus"} <= set(rows[0]["metrics"])
+    assert set(rows[0]["preds"]) == {f"d{k}" for k in range(1, 7)}
+    table = ablation.to_markdown(rows)
+    assert "textes changés" in table and "ministère" not in table
+
+
+def test_ablation_cli_refuses_bad_options(tmp_path):
+    path_a, _ = _double_files(tmp_path)
+    for argv in (["--a", str(path_a)], ["--out-dir", str(evaluate.ROOT / "evaluation")],
+                 ["--modes", "autre"]):
+        with pytest.raises(SystemExit) as exc:
+            ablation.main(argv)
+        assert exc.value.code == 2
