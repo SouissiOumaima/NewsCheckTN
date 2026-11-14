@@ -16,6 +16,7 @@ import pytest
 
 from common.schemas import Claim, Document, Lang
 from linguistic_analysis import (
+    ablation,
     agreement,
     baselines_bronze,
     claim_extraction,
@@ -1917,3 +1918,72 @@ def test_double_cli_refuses_invalid_annotation(tmp_path, capsys):
                               str(tmp_path / "x")])
     assert exc.value.code == 2 and "VRAI" in capsys.readouterr().err
     assert not (tmp_path / "x").exists()
+
+
+# ---------------------------------------------------------------------------
+# Ablation (retrait en mémoire des composants)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def ablation_rules_rows():
+    return ablation.run(modes=("regles",))
+
+
+def test_ablation_complete_matches_evaluate(ablation_rules_rows):
+    complete = ablation_rules_rows[0]
+    assert complete["variante"] == ablation.COMPLETE and complete["reference"]
+    m = evaluate.evaluate(evaluate.load_eval_set(), rules=True)["metrics"]
+    assert complete["metrics"] == {
+        "e30 claim": m["is_claim_accuracy"], "e30 mod.": m["modality_accuracy"],
+        "e30 triplet": round(m["spo_all_exact"] * m["spo_n"]),
+        "e30 coref": round(m["coref_accuracy"] * m["coref_n"])}
+    # Chiffres de main en mode règles : détection et modalité 34/34, triplet 20/22, coréf. 3/3.
+    assert complete["metrics"] == {"e30 claim": 1.0, "e30 mod.": 1.0, "e30 triplet": 20,
+                                   "e30 coref": 3}
+
+
+def test_ablation_each_variant_runs_and_changes_eval30(ablation_rules_rows):
+    by_name = {r["variante"]: r for r in ablation_rules_rows}
+    assert set(by_name) == set(ablation.VARIANTS)
+    for name, row in by_name.items():
+        assert set(row["metrics"]) == {"e30 claim", "e30 mod.", "e30 triplet", "e30 coref"}
+        if name != ablation.COMPLETE:  # le retrait a bien un effet mesurable
+            assert any(row["ecarts"].values()), name
+    assert by_name["sans coréférence"]["metrics"]["e30 coref"] == 0
+    assert by_name["sans règles de factualité"]["metrics"]["e30 claim"] < 1.0
+
+
+def test_ablation_restores_components():
+    originals = (modality.load_lexicon, coreference.resolve_with_log,
+                 factuality.classify_factuality, spo.speech_verbs)
+    for context in ablation.VARIANTS.values():
+        with context():
+            pass
+    with pytest.raises(RuntimeError), ablation.without_factuality():
+        raise RuntimeError("erreur pendant la mesure")
+    assert (modality.load_lexicon, coreference.resolve_with_log,
+            factuality.classify_factuality, spo.speech_verbs) == originals
+
+
+def test_ablation_with_double_annotation(tmp_path):
+    path_a, path_b = _double_files(tmp_path, _rows_b_with_disagreements())
+    pair = ablation.make_pair(evaluate_double.read_annotation(path_a)[0],
+                              evaluate_double.read_annotation(path_b)[0], ("A", "B"))
+    variants = {k: ablation.VARIANTS[k] for k in (ablation.COMPLETE, "sans règles de factualité")}
+    rows = ablation.run(pair=pair, modes=("regles", "parseurs"), variants=variants)
+    names = [(r["mode"], r["variante"]) for r in rows]
+    assert names[-1] == ("parseurs", ablation.WITHOUT_PARSERS) and len(rows) == 5
+    assert {"dét. F1 A", "mod. F1 B", "mod. F1 consensus"} <= set(rows[0]["metrics"])
+    assert set(rows[0]["preds"]) == {f"d{k}" for k in range(1, 7)}
+    table = ablation.to_markdown(rows)
+    assert "textes changés" in table and "ministère" not in table
+
+
+def test_ablation_cli_refuses_bad_options(tmp_path):
+    path_a, _ = _double_files(tmp_path)
+    for argv in (["--a", str(path_a)], ["--out-dir", str(evaluate.ROOT / "evaluation")],
+                 ["--modes", "autre"]):
+        with pytest.raises(SystemExit) as exc:
+            ablation.main(argv)
+        assert exc.value.code == 2
