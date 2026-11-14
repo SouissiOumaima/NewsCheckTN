@@ -84,7 +84,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - modèle final : relance de la configuration choisie avec `--epochs 6 --keep-epoch k` (même planning du taux d'apprentissage que la grille, calculs déterministes) pour les 3 graines, avec les poids ;
   - l'essai du 2026-11-10 (lr 1e-5, 1 époque, graine 42) n'est pas réutilisé : son planning du taux d'apprentissage est différent ;
   - si la mémoire graphique manque (pic de 5,61 Go sur 6 Go à l'essai) : `--batch-size 2 --grad-accum 4`, même lot effectif.
-- **Code** : à compléter (`models/nli/train.py`).
+- **Code** : `models/nli/train.py` (entraînement, val seulement) ; `models/nli/run_grid.ps1` (grille en série, journaux dans `models/checkpoints/grid_v3/`, non versionné) ; `models/nli/analyse_grid.py` (moyenne ± écart-type de la val par lr et par époque, choix par la règle ; ne lit que les journaux de val et refuse tout journal contenant une clé de test).
 - **Résultats** : à compléter.
 - **Analyse** : à compléter.
 - **Décision / suite** : à compléter.
