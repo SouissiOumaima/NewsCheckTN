@@ -1023,6 +1023,55 @@ def test_cli_errors_export(tmp_path, capsys):
     assert "erreur(s)" in capsys.readouterr().out
 
 
+def _cli_outputs(tmp_path) -> tuple[dict, dict]:
+    """Résultats et erreurs écrits par la ligne de commande dans `tmp_path`."""
+    def load(prefix):
+        (path,) = [p for p in tmp_path.iterdir() if p.name.startswith(prefix)]
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    return load("lot-b_extraction_regles_"), load("lot-b_erreurs_regles_")
+
+
+def test_cli_exp_id_default_is_unchanged(tmp_path, capsys):
+    evaluate.main(["--rules", "--errors", "--bootstrap", "0", "--out-dir", str(tmp_path)])
+    results, errors = _cli_outputs(tmp_path)
+    assert results["exp_id"] == errors["exp_id"] == evaluate.EXP_ID
+    assert capsys.readouterr().out.startswith(f"{evaluate.EXP_ID} — mode regles")
+
+
+def test_cli_exp_id_option_replaces_default(tmp_path, capsys):
+    evaluate.main(["--rules", "--errors", "--bootstrap", "0", "--exp-id", "EXP-B-099",
+                   "--out-dir", str(tmp_path)])
+    results, errors = _cli_outputs(tmp_path)
+    assert results["exp_id"] == errors["exp_id"] == "EXP-B-099"
+    out = capsys.readouterr().out
+    assert out.startswith("EXP-B-099 — mode regles") and evaluate.EXP_ID not in out
+    # Le nom des fichiers ne dépend pas de l'identifiant.
+    assert all("EXP" not in p.name for p in tmp_path.iterdir())
+
+
+def test_cli_exp_id_reaches_comparison(tmp_path):
+    evaluate.main(["--compare", "--bootstrap", "0", "--exp-id", "EXP-B-099",
+                   "--out-dir", str(tmp_path)])
+    (path,) = list(tmp_path.glob("lot-b_comparaison_*.json"))
+    assert json.loads(path.read_text(encoding="utf-8"))["exp_id"] == "EXP-B-099"
+    for result in tmp_path.glob("lot-b_extraction_*.json"):
+        assert json.loads(result.read_text(encoding="utf-8"))["exp_id"] == "EXP-B-099"
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["EXP-B-12", "EXP-B-1234", "EXP-C-001", "exp-b-001", "EXP-B-01a", " EXP-B-001", "",
+     "EXP-B-\u0661\u0662\u0663"],
+)
+def test_cli_exp_id_invalid_format_is_refused(tmp_path, capsys, value):
+    with pytest.raises(SystemExit) as exc:
+        evaluate.main(["--rules", "--exp-id", value, "--out-dir", str(tmp_path)])
+    assert exc.value.code == 2
+    assert "EXP-B-NNN" in capsys.readouterr().err
+    assert not any(tmp_path.iterdir())
+
+
 def test_cli_output_survives_cp1252_console(tmp_path):
     # Console Windows ou sortie redirigée : encodage cp1252, sans `-X utf8`. Les erreurs listées
     # contiennent de l'arabe (ar-02), que cp1252 ne sait pas encoder.
