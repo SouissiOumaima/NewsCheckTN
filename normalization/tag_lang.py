@@ -1,0 +1,106 @@
+"""Lot A2 — Ajoute la langue et l'écriture de chaque texte d'un jeu de données (support S8).
+
+Usage (depuis la racine du dépôt) :
+    python -X utf8 -m normalization.tag_lang FICHIER --fields claim evidence
+    python -X utf8 -m normalization.tag_lang FICHIER --fields text --out autre_chemin.jsonl
+
+Pour chaque champ demandé (par exemple `claim`), ajoute `claim_lang` (fr / ar / tn / unk) et
+`claim_script` (arabic / latin / arabizi / mixed…), calculés par `normalize` (Lot A2) : la même
+décision que dans le pipeline. Formats : JSONL (un objet par ligne) ou CSV (avec en-tête).
+
+Confidentialité : le fichier de sortie est écrit à côté de l'entrée (suffixe « _lang ») ; si
+l'entrée est dans data/, la sortie l'est aussi (non versionnée). Le terminal n'affiche que des
+comptes par langue et par écriture, jamais un texte.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import sys
+from collections import Counter
+from pathlib import Path
+
+from normalization.normalize import normalize
+
+
+def label(value: object) -> str:
+    """Valeur lisible d'une énumération (Lang.TN -> « tn ») ou d'une chaîne."""
+    return str(getattr(value, "value", value))
+
+
+def tag_text(text: str) -> tuple[str, str]:
+    """(langue, écriture) d'un texte, selon le pipeline du Lot A2 ; texte vide -> unk."""
+    if not text or not text.strip():
+        return "unk", "unk"
+    document = normalize(text)
+    return label(document.lang), label(document.script)
+
+
+def tag_rows(rows: list[dict], fields: list[str]) -> list[dict]:
+    """Copie de chaque ligne, avec <champ>_lang et <champ>_script pour chaque champ demandé."""
+    missing = [f for f in fields if rows and f not in rows[0]]
+    if missing:
+        raise KeyError(f"champ(s) absent(s) du fichier : {', '.join(missing)}")
+    tagged = []
+    for row in rows:
+        new = dict(row)
+        for field in fields:
+            new[f"{field}_lang"], new[f"{field}_script"] = tag_text(str(row.get(field) or ""))
+        tagged.append(new)
+    return tagged
+
+
+def read_rows(path: Path) -> list[dict]:
+    """Lit un JSONL ou un CSV (utf-8, avec ou sans BOM)."""
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        if path.suffix.lower() == ".csv":
+            return list(csv.DictReader(handle))
+        return [json.loads(line) for line in handle if line.strip()]
+
+
+def write_rows(path: Path, rows: list[dict]) -> None:
+    """Écrit au même format que l'entrée (JSONL ou CSV)."""
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        if path.suffix.lower() == ".csv":
+            writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+        else:
+            for row in rows:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def summary(rows: list[dict], fields: list[str]) -> list[str]:
+    """Comptes par (langue, écriture) pour chaque champ : aucune donnée textuelle."""
+    lines = []
+    for field in fields:
+        counts = Counter((r[f"{field}_lang"], r[f"{field}_script"]) for r in rows)
+        detail = " ; ".join(f"{lang}/{script} {n}" for (lang, script), n in counts.most_common())
+        lines.append(f"{field} ({len(rows)} lignes) : {detail}")
+    return lines
+
+
+def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")  # accents lisibles sous Windows
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("path", type=Path, help="fichier JSONL ou CSV")
+    parser.add_argument("--fields", nargs="+", required=True, help="champs texte à étiqueter")
+    parser.add_argument("--out", type=Path, help="fichier de sortie (par défaut : *_lang)")
+    args = parser.parse_args()
+
+    out = args.out or args.path.with_name(f"{args.path.stem}_lang{args.path.suffix}")
+    if out.exists():  # on n'écrase jamais un fichier existant
+        sys.exit(f"ARRÊT : {out} existe déjà ; supprimez-le ou choisissez --out.")
+    rows = tag_rows(read_rows(args.path), args.fields)
+    if not rows:
+        sys.exit("ARRÊT : fichier vide.")
+    write_rows(out, rows)
+    for line in summary(rows, args.fields):
+        print(line)
+    print(f"écrit : {out}")
+
+
+if __name__ == "__main__":
+    main()
