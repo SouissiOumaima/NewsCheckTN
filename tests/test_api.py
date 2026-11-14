@@ -113,3 +113,16 @@ def test_corpus_stats_indique_l_origine(tmp_path, monkeypatch):
     monkeypatch.setenv("EVIDENCE_CORPUS", str(path))
     data = client.get("/corpus/stats").json()
     assert data["size"] == 1 and data["origin"] == "EVIDENCE_CORPUS" and "warning" not in data
+
+
+def test_model_c_summary_distinguishes_silver_results_from_deployment():
+    response = client.get("/model-c/model1")
+    assert response.status_code == 200
+    nli = response.json()["nli"]
+    assert nli["status"] == "silver_evaluated"
+    evaluation = nli["evaluation"]
+    assert evaluation["macro_f1"] == 0.809
+    assert sum(row["n"] for row in evaluation["by_lang"].values()) == 56
+    assert evaluation["zero_shot_comparison"]["significant"] is False
+    assert "tunisienne" in evaluation["limitations"]
+    assert "checkpoint" in nli["deployment"]

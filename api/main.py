@@ -131,8 +131,30 @@ def model1_route() -> dict:
             },
         },
         "nli": {
-            "status": "baseline",
-            "message": "Le fine-tuning NLI attend les paires claim–evidence annotées par Lot A1.",
+            "status": "silver_evaluated",
+            "message": "NLI Silver évalué : mDeBERTa-v3 affiné, checkpoint graine 42 (EXP-C-011).",
+            "evaluation": {
+                "exp_id": "EXP-C-011",
+                "split": "test gelé v3 (n=56)",
+                "macro_f1": 0.809,
+                "std": 0.0,
+                "seeds": [42, 123, 2026],
+                "by_lang": {
+                    "fr": {"n": 25, "macro_f1": 0.745},
+                    "ar": {"n": 31, "macro_f1": 0.841},
+                },
+                "baselines": {"bronze": 0.471, "majority": 0.194, "zero_shot": 0.798},
+                "zero_shot_comparison": {"p": 0.398, "significant": False},
+                "limitations": (
+                    "Aucune paire tunisienne dans le corpus v3. "
+                    "Les trois graines donnent les mêmes prédictions de test."
+                ),
+            },
+            "deployment": (
+                "NLI_BACKEND=fine-tuned requiert le code de PR #21 et le checkpoint "
+                "partagé séparément. Les scores publiés ne prouvent pas que ce moteur "
+                "est chargé dans cette session."
+            ),
         },
     }
 
