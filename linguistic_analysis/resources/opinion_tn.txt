@@ -24,6 +24,22 @@ ye7sra
 في رايي
 في رأيي
 يا حسرة
+# appréciation à la 1re personne : 3jeb (plaire) + -ni (« me »), forme positive et négative
+3jebni
+3ajebni
+ya3jebni
+y3ajebni
+3ajbetni
+ma3jebnich
+maya3jebnich
+mya3jebnich
+mete3jebnich
+mata3jebnich
+ma3ajbetnich
+عجبني
+يعجبني
+ما يعجبنيش
+عجبتني
 
 [evaluatifs]
 khayeb
@@ -68,6 +84,32 @@ inshallah
 يا ربي
 نشالله
 ان شاء الله
+# requête polie (s'il te plaît, s'il vous plaît)
+3aychek
+3ayechek
+3aychkom
+yar7em waldik
+yar7em weldik
+عيشك
+يعيشك
+يرحم والديك
+
+[salutations]
+aslema
+3aslema
+sbe7 el 5ir
+sba7 el 5ir
+sbe7ek
+sbe7kom
+msa el 5ir
+ahla
+marhba
+صباح الخير
+صباحك
+مساء الخير
+عسلامة
+اهلا
+مرحبا
 
 [dates]
 janvi
