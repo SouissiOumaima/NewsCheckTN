@@ -21,12 +21,12 @@ from pydantic import BaseModel, Field
 
 import pipeline
 from common.schemas import Claim, Evidence, Lang
+from common.verdict_runtime import resolve_verdict
 from data.loaders import CorpusError, corpus_origin, load_evidence_corpus
 from models.claim_detector import filter_checkworthy, model_status
-from models.nli.stance import predict_stance, predict_stances
+from models.nli.stance import backend_info, predict_stance, predict_stances
 from normalization.normalize import normalize
 from rag_llm.retrieval.hybrid import retrieve
-from rag_llm.verdict import generate_verdict
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "evaluation" / "results"
@@ -98,7 +98,7 @@ def nli_route(body: NLIIn) -> dict:
 def verdict_route(body: ClaimIn) -> dict:
     claim = Claim(text=body.claim, lang=body.lang)
     evidences = retrieve(claim, load_evidence_corpus(), k=body.k)
-    return asdict(generate_verdict(claim, predict_stances(claim, evidences)))
+    return asdict(resolve_verdict(claim, evidences, predict_stances(claim, evidences))[0])
 
 
 @app.post("/check")  # pipeline complet
@@ -109,6 +109,12 @@ def check_route(body: TextIn) -> dict:
 # ---------------------------------------------------------------------------
 # Plateforme web partagée (Lot E) et informations Lot C.
 # ---------------------------------------------------------------------------
+
+
+@app.post("/check/detail")
+def check_detail_route(body: TextIn) -> dict:
+    """Trace du parcours configuré, sans exposer de réponse LLM brute."""
+    return pipeline.check_text_detailed(body.text)
 
 
 @app.get("/model-c/model1")
@@ -178,8 +184,12 @@ def verdict_detail_route(body: VerdictDetailIn) -> dict:
     corpus = load_evidence_corpus()
     evidences = retrieve(claim, corpus, k=body.k)
     stances = _stance_function(body.nli)(claim, evidences)
-    verdict = generate_verdict(claim, stances)
+    verdict, engine = resolve_verdict(claim, evidences, stances)
     return {
+        "verdict_engine": engine,
+        "nli_engine": (
+            backend_info() if body.nli == "lot-c" and stances else {"backend": body.nli}
+        ),
         "corpus_size": len(corpus),
         "corpus": corpus_origin(),
         "nli": body.nli,
