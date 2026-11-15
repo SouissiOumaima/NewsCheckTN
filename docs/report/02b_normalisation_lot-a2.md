@@ -93,6 +93,30 @@ activée**. L'alerte vient d'un seul mot ajouté, un nom de famille. La liste ex
 mêle aussi des noms propres, des injures, des fautes de frappe et des mots d'arabe standard : elle doit
 être relue par un humain avant toute intégration.
 
+**EXP-A2-014 (stabilité, baseline neuronale, courbe d'apprentissage).** Le modèle arabizi est
+réentraîné avec 3 graines (13, 42, 2026), qui changent les 10 % d'arabizi mis de côté et le découpage
+du français. Le seuil est choisi sur le français de dev, et la mesure porte sur l'arabizi mis de côté
+(7 360 textes) et sur le français de test (416 phrases et leurs 5 premiers mots, soit 816 textes),
+jamais utilisés pour choisir. La baseline neuronale est un perceptron multicouche (64 neurones) sur
+les mêmes n-grammes.
+
+| Modèle (3 graines) | Macro-F1 | Rappel arabizi | Fausses alertes (sur 816) |
+|---|---|---|---|
+| Régression logistique (livrée) | **0,834 ± 0,001** | 0,911 ± 0,001 | 0 |
+| Perceptron multicouche | 0,800 ± 0,091 | 0,878 ± 0,078 | 0 |
+
+Le modèle livré est stable ; le perceptron ne fait pas mieux et dépend fortement de la graine (de 0,70
+à 0,87) : la régression logistique est conservée. Le macro-F1 est tiré vers le bas par la classe
+française, car les 9 % d'arabizi manqués sont classés français ; la précision de l'arabizi reste
+de 1,00.
+
+| Part de l'apprentissage | 10 % | 25 % | 50 % | 100 % |
+|---|---|---|---|---|
+| Macro-F1 (3 graines) | 0,755 ± 0,015 | 0,806 ± 0,028 | 0,829 ± 0,025 | 0,834 ± 0,001 |
+
+La courbe plafonne après 50 % (+0,005) : ajouter de l'arabizi apporterait peu ; la marge de progrès
+est dans les textes courts et proches du français.
+
 Ces deux expériences constituent l'**ablation** du Lot A2 : seuil du lexique, retrait des affixes et
 filtre par une référence d'arabe standard, soit 20 configurations réglées sur le dev, chacune
 consignée, y compris les configurations écartées.
