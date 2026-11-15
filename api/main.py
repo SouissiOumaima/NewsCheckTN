@@ -21,12 +21,12 @@ from pydantic import BaseModel, Field
 
 import pipeline
 from common.schemas import Claim, Evidence, Lang
+from common.verdict_runtime import resolve_verdict
 from data.loaders import CorpusError, corpus_origin, load_evidence_corpus
 from models.claim_detector import filter_checkworthy, model_status
-from models.nli.stance import predict_stance, predict_stances
+from models.nli.stance import backend_info, predict_stance, predict_stances
 from normalization.normalize import normalize
 from rag_llm.retrieval.hybrid import retrieve
-from rag_llm.verdict import generate_verdict
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "evaluation" / "results"
@@ -98,7 +98,7 @@ def nli_route(body: NLIIn) -> dict:
 def verdict_route(body: ClaimIn) -> dict:
     claim = Claim(text=body.claim, lang=body.lang)
     evidences = retrieve(claim, load_evidence_corpus(), k=body.k)
-    return asdict(generate_verdict(claim, predict_stances(claim, evidences)))
+    return asdict(resolve_verdict(claim, evidences, predict_stances(claim, evidences))[0])
 
 
 @app.post("/check")  # pipeline complet
@@ -109,6 +109,12 @@ def check_route(body: TextIn) -> dict:
 # ---------------------------------------------------------------------------
 # Plateforme web partagée (Lot E) et informations Lot C.
 # ---------------------------------------------------------------------------
+
+
+@app.post("/check/detail")
+def check_detail_route(body: TextIn) -> dict:
+    """Trace du parcours configuré, sans exposer de réponse LLM brute."""
+    return pipeline.check_text_detail(body.text)
 
 
 @app.get("/model-c/model1")
@@ -131,8 +137,30 @@ def model1_route() -> dict:
             },
         },
         "nli": {
-            "status": "baseline",
-            "message": "Le fine-tuning NLI attend les paires claim–evidence annotées par Lot A1.",
+            "status": "silver_evaluated",
+            "message": "NLI Silver évalué : mDeBERTa-v3 affiné, checkpoint graine 42 (EXP-C-011).",
+            "evaluation": {
+                "exp_id": "EXP-C-011",
+                "split": "test gelé v3 (n=56)",
+                "macro_f1": 0.809,
+                "std": 0.0,
+                "seeds": [42, 123, 2026],
+                "by_lang": {
+                    "fr": {"n": 25, "macro_f1": 0.745},
+                    "ar": {"n": 31, "macro_f1": 0.841},
+                },
+                "baselines": {"bronze": 0.471, "majority": 0.194, "zero_shot": 0.798},
+                "zero_shot_comparison": {"p": 0.398, "significant": False},
+                "limitations": (
+                    "Aucune paire tunisienne dans le corpus v3. "
+                    "Les trois graines donnent les mêmes prédictions de test."
+                ),
+            },
+            "deployment": (
+                "NLI_BACKEND=fine-tuned requiert le code de PR #21 et le checkpoint "
+                "partagé séparément. Les scores publiés ne prouvent pas que ce moteur "
+                "est chargé dans cette session."
+            ),
         },
     }
 
@@ -156,8 +184,12 @@ def verdict_detail_route(body: VerdictDetailIn) -> dict:
     corpus = load_evidence_corpus()
     evidences = retrieve(claim, corpus, k=body.k)
     stances = _stance_function(body.nli)(claim, evidences)
-    verdict = generate_verdict(claim, stances)
+    verdict, engine = resolve_verdict(claim, evidences, stances)
     return {
+        "verdict_engine": engine,
+        "nli_engine": (
+            backend_info() if body.nli == "lot-c" and stances else {"backend": body.nli}
+        ),
         "corpus_size": len(corpus),
         "corpus": corpus_origin(),
         "nli": body.nli,
