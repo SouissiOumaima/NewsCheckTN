@@ -126,6 +126,8 @@ def test_check_detail_hors_perimetre_s_abstient(monkeypatch):
 def test_check_detail_signale_les_composants_neuronaux(monkeypatch):
     import pipeline
 
+    for var in ("RETRIEVAL_METHOD", "NLI_BACKEND", "CLAIM_DETECTOR_BACKEND"):
+        monkeypatch.delenv(var, raising=False)  # configuration par défaut, pas celle du terminal
     assert pipeline.components()["classique"] is True  # configuration par défaut = Bronze
     monkeypatch.setenv("RETRIEVAL_METHOD", "hybrid")
     comps = pipeline.components()
