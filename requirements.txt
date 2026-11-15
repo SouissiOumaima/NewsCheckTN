@@ -27,7 +27,7 @@ stanza>=1.8
 # --- Modèles (Lot C) ---
 scikit-learn>=1.4
 torch>=2.2
-transformers>=4.40
+transformers>=4.56   # argument dtype= de from_pretrained (PR #39782, 4.56.0)
 datasets>=2.18
 peft>=0.10
 accelerate>=0.29
