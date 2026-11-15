@@ -60,4 +60,21 @@ Chaque score est donné avec un intervalle de confiance à 95 % (bootstrap, 1 00
 
 ## 5. Écarts au protocole
 
-(aucun pour l'instant)
+### Avenant 1 — 2026-11-15 : pré-annotation assistée par un LLM (consigne de l'enseignante)
+
+Écart au protocole, décidé avant toute annotation des jeux tirés :
+- Ordre : l'entraînement (800 textes) est annoté en premier ; le test gelé (300) attend la seconde
+  annotatrice et n'est lu par aucun modèle avant la mesure finale.
+- Entraînement, hors textes communs (640 textes, lignes 161 à 800) : un LLM (Gemini, via Google AI
+  Studio) propose une étiquette ; l'annotateur la valide ou la corrige, texte par texte. La
+  proposition et la décision humaine sont toutes deux conservées.
+- Test gelé (300 textes) et textes communs du kappa (160, lignes 1 à 160 de l'entraînement) :
+  annotation sans assistance, par les deux annotateurs, sans voir aucune proposition du LLM (évite
+  le biais d'ancrage sur la référence).
+- Étiquettes : celles du guide (`t`, `a`, `f`, `x`) ; un texte français éventuellement classé `x`
+  avant cette correction est sans effet sur l'entraînement (`f` et `x` sont tous deux exclus, §3).
+- Prompt, modèle, version et température (0) fixés avant le premier appel : modèle `gemini-4-hydrogen` (Google AI Studio, 2026-11-15), température 0,, prompt conservé hors dépôt avec les exports.
+- Les textes envoyés au LLM sont des commentaires publics de TSAC (LGPL-3.0) ; aucune donnée privée,
+  aucune clé dans Git.
+- Mesure ajoutée : accord LLM / humain sur l'entraînement assisté (part des propositions corrigées),
+  calculée après l'annotation.
