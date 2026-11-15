@@ -16,7 +16,8 @@ Le taux de sorties rejetées est mesuré (EXP-D-009).
 
 Moteurs (`LLM_PROVIDER`, voir `.env.example`) :
 - `hf` (défaut, alias `transformers`) : modèle ouvert local, `LLM_MODEL` (défaut
-  `Qwen/Qwen2.5-7B-Instruct`, chargé en 4 bits sur GPU, ex. Colab T4) ;
+  `CohereLabs/aya-expanse-8b`, 8 milliards de paramètres, chargé en 4 bits sur GPU, ex. Colab T4 ;
+  modèle à accès contrôlé : accepter la licence sur Hugging Face, jeton dans `HF_TOKEN`) ;
 - `openai` : toute API compatible OpenAI, y compris Ollama en local (`LLM_BASE_URL`, `LLM_MODEL`,
   clé dans `LLM_API_KEY`).
 Échantillonnage : température 0.3, top-p 0.9, une graine par exécution (3 graines au Silver).
@@ -37,7 +38,7 @@ from rag_llm.verdict import generate_verdict_with_reason
 PROMPT_VERSION = "v1"
 LABELS = [label.value for label in Label]
 NEI = Label.NOT_ENOUGH_INFO.value
-DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+DEFAULT_MODEL = "CohereLabs/aya-expanse-8b"  # ≤ 8 milliards de paramètres (cahier des charges)
 TEMPERATURE = 0.3
 TOP_P = 0.9
 MAX_NEW_TOKENS = 300

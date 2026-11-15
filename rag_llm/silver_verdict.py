@@ -29,9 +29,11 @@ import hashlib
 import json
 import os
 import random
+import re
 import statistics
 from collections import Counter, defaultdict
 from datetime import date
+from pathlib import Path
 
 from common.schemas import Claim, Lang
 from data.loaders import load_evidence_corpus
@@ -49,7 +51,7 @@ K = 5
 SEEDS = (13, 42, 2026)
 MAIN_SEED = 42
 REPLICATIONS = 10_000
-CACHE = RESULTS_DIR / "lot-d_llm_cache.jsonl"
+CACHE = Path(os.getenv("LLM_CACHE") or RESULTS_DIR / "lot-d_llm_cache.jsonl")
 
 # (nom, k, montrer les indices NLI, méthode de recherche ou None = celle du Silver, graines)
 LLM_SYSTEMS = [
@@ -318,7 +320,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--splits", nargs="+", default=["dev"], choices=list(SPLITS))
     p.add_argument("--retrieval", default="hybrid", choices=hybrid.METHODS)
-    p.add_argument("--model", default=None, help="LLM (défaut : LLM_MODEL ou Qwen2.5-7B-Instruct)")
+    p.add_argument("--model", default=None, help="LLM (défaut : LLM_MODEL ou aya-expanse-8b)")
     p.add_argument("--limit", type=int, default=None, help="essai rapide sur N affirmations")
     p.add_argument(
         "--main-only",
@@ -366,7 +368,8 @@ def main() -> None:
             res,
         )
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-        out = RESULTS_DIR / f"lot-d_silver_verdict_{split}_{date.today():%Y%m%d}.json"
+        slug = re.sub(r"[^A-Za-z0-9.]+", "-", generator.name.split("/")[-1]).strip("-")
+        out = RESULTS_DIR / f"lot-d_silver_verdict_{split}_{slug}_{date.today():%Y%m%d}.json"
         out.write_text(
             json.dumps(
                 {
