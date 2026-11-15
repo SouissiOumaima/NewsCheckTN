@@ -25,6 +25,11 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-D-010 | 2026-11-15 | D | Silver officiel : verdict par LLM ouvert ≤ 8 Md contraint aux preuves | CohereLabs/aya-expanse-8b (4 bits, Colab T4), même prompt v1 et mêmes contrôles qu'EXP-D-009, température 0.3, 3 graines locales (13, 42, 2026) ; recherche hybride (EXP-D-008) ; 4 ablations ; bootstrap apparié 10 000 tirages ; aucune donnée envoyée à une API | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.730 ± 0.028 / 0.410 ± 0.016 (graine 42 : 0.714 / 0.401) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.429, IC95 [0.143 ; 0.714], p = 0.004) et majorité 0.524 / 0.172 (exactitude +0.19, p = 0.055 ; macro-F1 +0.23, p = 0.004) ; couverture 1.00, abstention justifiée 0.00 ; tunisien 0.8 ; 0 citation invalide | résultat officiel du Silver ; exact mais jamais d'abstention (3 affirmations sans preuve jugées « faux ») ; suite : contrôle de pertinence avant le LLM, abstention évaluée (Gold) |
+| EXP-D-009 | 2026-11-15 | D | Comparaison (non officiel) : verdict par LLM contraint, API Gemini | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | comparaison seulement (modèle > 8 Md, données envoyées à une API) ; officiel : EXP-D-010 ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
+| EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
+
+| EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test, n = 56) | principal 0.809 ± 0.000 (3 graines) vs zero-shot float32 0.798 (+0.011, IC95 [−0.052 ; +0.071], p = 0.40), Bronze 0.471, majorité 0.194 ; fr 0.745 / ar 0.841 ; ablation sans XNLI 0.427 ± 0.044 | composant Silver : modèle affiné (graine 42), déclaré équivalent au zero-shot (gardé comme backend) ; chiffres v3 (pas de v4 au 12/11) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
 | EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
@@ -365,6 +370,370 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   commit et la mesure EXP-B-010. Exceptions : la documentation et `MODEL_CARD.md`.
   - L'empreinte du jeu de test est notée avant la mesure.
   - Toute modification après avoir vu les résultats est rapportée comme un « 2ᵉ passage ».
+
+### EXP-E-002 — Sélecteur de verdict et trace Silver C/D
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Lot E, développement et vérifications assistés par IA.
+- **Objectif** : relier les composants C (#21) et D (#25) sans modifier le contrat Verdict.
+- **Données** : exemples fictifs des tests ; aucun test scientifique relancé.
+- **Méthode** : VERDICT_BACKEND gabarit/llm partagé par pipeline et API ; repli visible ;
+  construction d'un fournisseur distant refusée sans LLM_ALLOW_EXTERNAL=1 ; cache du moteur local.
+- **Code** : common/verdict_runtime.py, pipeline.py, api/main.py ; tests/test_verdict_runtime.py.
+- **Résultats** : 657 tests passés, 1 skipped, 77 deselected, 6 xfailed (suite non slow) ;
+  Ruff et syntaxe JavaScript de l'accueil et de la page D vérifiés.
+- **Limites** : générateur fictif pendant les tests ; aucun Aya 8B, e5-base ou appel API externe
+  exécuté. Les chiffres scientifiques D-008 à D-010 et C-011 ne sont pas recalculés.
+- **Suite** : validation machine de démo avec ressources réelles ; accord collectif avant tout
+  envoi à une API externe. Le modèle Aya officiel reste distinct de la comparaison Gemini.
+
+- **Suivi de relecture Lot D** : reprise des champs input/normalized (texte, langue,
+  écriture) et du helper _claims_from_doc de lot-e-demo, dans une unique route
+  /check/detail ; normalisation exécutée une fois. Repli citation_hors_liste distinct
+  de llm_unavailable. 659 passed, 1 skipped, 77 deselected, 6 xfailed ; Ruff/JS OK.
+
+
+
+### EXP-D-010 — Silver officiel : verdict par LLM ouvert (≤ 8 Md) contraint aux preuves
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : refaire EXP-D-009 dans les conditions du cahier des charges (modèle
+  ouvert de 8 milliards de paramètres au plus en inférence) et sans envoyer de données Tunifact à
+  une API (décision de l'équipe, 15/11/2026). Le LLM ouvert fait-il mieux que le gabarit Bronze ?
+- **Données** : dev fictif (20 affirmations) ; test Tunifact v1 **gelé le 23/10/2026** (21
+  affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Calcul dans une session Colab ; aucune donnée envoyée à une API.
+- **Méthode / configuration** :
+  - LLM : `CohereLabs/aya-expanse-8b` (8 Md, 23 langues dont l'arabe et le français ; licence
+    CC-BY-NC, accès contrôlé), chargé en 4 bits (bitsandbytes) sur GPU T4. Choisi avant la mesure :
+    dans le benchmark tunisien d'EMNLP 2025, son prédécesseur Aya-23-8B est le meilleur petit
+    modèle ouvert évalué (devant Llama-3.1-8B).
+  - **Même prompt v1** et mêmes contrôles par le code qu'EXP-D-009 (JSON, citations parmi les
+    passages fournis, repli sur le gabarit) ; recherche hybride BM25 + e5-base, top 5 ; positions
+    NLI du NLI Bronze (gabarit, repli, ablation « indices NLI »).
+  - Température 0.3, top-p 0.9, **3 graines fixées localement** (13, 42, 2026) ; référence : 42.
+  - Ablations (graine 42) : indices NLI ; 3 passages ; 1 passage ; recherche BM25.
+  - Bootstrap apparié contre le gabarit (10 000 tirages, graine 42).
+- **Code** : `rag_llm/llm_verdict.py`, `rag_llm/silver_verdict.py`,
+  `notebooks/lot_d_rag/02_silver_verdict_llm.ipynb` (branche `lot-d-silver`).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (recherche hybride) | 0.286 | 0.219 | 0.381 | 0.500 | 0.444 | 0.286 | 0.000 |
+  | **LLM Aya 8B (graine 42)** | **0.714** | **0.401** | 1.000 | 0.714 | 0.667 | 0.714 | 0.800 |
+  | LLM Aya 8B, moyenne des 3 graines | 0.730 ± 0.028 | 0.410 ± 0.016 | 1.000 ± 0.000 | — | | | |
+  | ablation : + indices NLI | 0.714 | 0.408 | 1.000 | 0.714 | 0.556 | 0.714 | 1.000 |
+  | ablation : 3 passages | 0.714 | 0.401 | 1.000 | 0.714 | 0.667 | 0.714 | 0.800 |
+  | ablation : 1 passage | 0.619 | 0.438 | 0.905 | 0.632 | 0.556 | 0.714 | 0.600 |
+  | ablation : recherche BM25 | 0.667 | 0.374 | 1.000 | 0.667 | 0.556 | 0.714 | 0.800 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | |
+  | toujours s'abstenir | 0.143 | 0.062 | 0.000 | | | | |
+
+  - Par graine : 13 → 0.762 / 0.428 ; 42 → 0.714 / 0.401 ; 2026 → 0.714 / 0.401. Sorties valides
+    1.00, 0 citation invalide, **abstention justifiée 0.00** pour les 3 graines.
+  - Bootstrap (graine 42 contre le gabarit) : exactitude +0.429 [0.143 ; 0.714], p = 0.004 ;
+    macro-F1 +0.182 [0.009 ; 0.441], p = 0.020.
+  - Bootstrap (graine 42 contre la classe majoritaire « faux », mêmes prédictions, calculé après
+    coup à la demande de la relecture, sans nouvelle génération) : exactitude +0.190
+    [0.000 ; 0.429], p = 0.055 (non significatif) ; macro-F1 +0.229 [0.115 ; 0.387], p = 0.004.
+  - Erreurs (graine 42, 6) : 3 affirmations sans preuve jugées « faux » (`tf-c13`, `tf-c14`,
+    `tf-c15`) ; 2 « trompeur » jugés « vrai » (`tf-c05`, `tf-c09`) ; 1 position inversée en arabizi
+    (`tf-c11`, « faux » jugé « vrai »).
+- **Résultats — dev (20 affirmations)** : gabarit 0.50 / 0.375 ; LLM 0.75 / 0.557 (3 graines
+  identiques, écart-type 0), couverture 0.95, sorties valides 1.00 ; bootstrap +0.25 [-0.05 ; 0.50],
+  p = 0.054 ; ablations : indices NLI 0.75, 3 passages 0.75, 1 passage 0.85, BM25 0.75.
+- **Comparaison avec EXP-D-009 (Gemini, même prompt, même test)** : exactitude proche (0.730 ±
+  0.028 contre 0.762 ± 0.048), mais macro-F1 0.410 contre 0.809, précision sélective 0.714 contre
+  1.000 et abstention justifiée 0.00 contre 1.00. Le petit modèle est aussi exact, mais il ne suit
+  pas la consigne « dans le doute, preuves_insuffisantes » et ne produit jamais « trompeur ».
+- **Analyse** :
+  1. Le LLM ouvert **dépasse nettement le gabarit** (+0.43, significatif). Face à la classe
+     majoritaire, il est **significativement meilleur en macro-F1** (+0.23, p = 0.004) mais **pas
+     significativement en exactitude** (0.71 contre 0.52, p = 0.055) : la moitié des affirmations
+     du test sont « faux », ce qui rend la majorité forte en exactitude. Le Bronze restait sous elle.
+  2. **Il ne s'abstient jamais** : les 3 affirmations inventées reçoivent un verdict « faux », avec
+     des citations qui existent bien (le contrôle de format passe) mais ne parlent pas du même
+     fait. C'est l'erreur `tf-c13` du Bronze, revenue sous une autre forme : le contrôle des
+     citations vérifie qu'elles existent, pas qu'elles sont pertinentes.
+  3. « trompeur » n'est jamais produit (2 erreurs) ; une position inversée en arabizi (`tf-c11`).
+  4. Tunisien : 0.8 (4 sur 5), meilleur que le gabarit (0.0) ; échantillon très petit.
+  5. Ablations : un seul passage fait perdre 0.10 ; la recherche hybride apporte +0.05 au verdict
+     par rapport à BM25 ; les indices NLI ne changent pas l'exactitude globale.
+  6. Variabilité : 0.71 à 0.76 selon la graine sur le test (0 sur le dev : à température 0.3, le
+     modèle est presque déterministe).
+  7. **Limites** : petit test (21 affirmations ; macro-F1 très sensible aux 3 affirmations sans
+     preuve) ; modèle quantifié en 4 bits ; contamination possible (articles publics), non mesurée.
+- **Décision / suite** : **résultat officiel du palier Silver** pour le verdict (recherche hybride +
+  Aya Expanse 8B + prompt v1), EXP-D-009 restant une comparaison. Suite : refuser un verdict quand
+  la preuve citée ne parle pas du même fait (contrôle de pertinence avant le LLM, ou seuil sur la
+  recherche) ; abstention évaluée et audit des preuves citées (Gold) ; NLI fine-tuné du Lot C.
+
+### EXP-D-009 — Comparaison (non officiel) : verdict par LLM contraint, API Gemini (3 exécutions, ablations, bootstrap)
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : un LLM avec prompt contrôlé, obligé de citer les passages fournis,
+  fait-il mieux que le gabarit Bronze (règles d'abstention + NLI par lexique), en particulier sur le
+  tunisien, et sans inventer de preuves ?
+- **Données** : dev fictif (20 affirmations, 15 passages) ; test Tunifact v1 **gelé le 23/10/2026**
+  (21 affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Les affirmations et les passages ont été envoyés à l'API Gemini (offre gratuite : Google indique
+  que ce contenu peut servir à améliorer ses produits) ; à valider par l'équipe pour les données
+  Tunifact (droits de redistribution non confirmés, voir la Data Card du Lot A1).
+- **Méthode / configuration** :
+  - LLM : `gemini-3.5-flash-lite` via l'API compatible OpenAI de Google (offre gratuite : 15
+    requêtes / min, 500 / jour). `gemini-3.6-flash` et `gemini-3.8-flash` écartés avant toute mesure :
+    quota gratuit de 20 requêtes / jour (et pas de réponse pour 3.8 Flash).
+  - Prompt **v1** (`rag_llm/llm_verdict.py`), figé après le dev, inchangé pour le test : passages
+    numérotés P1…P5, réponse JSON (`label`, `citations`, `explication`), 4 labels dont « trompeur »,
+    « preuves_insuffisantes » en cas de doute. Contrôles faits par le code : JSON lisible, label
+    connu, citations parmi les passages fournis, au moins une citation pour vrai / faux / trompeur ;
+    sinon sortie rejetée et remplacée par le verdict du gabarit.
+  - Recherche : hybride BM25 + e5-base, top 5 (EXP-D-008). Positions NLI : NLI Bronze du Lot C
+    (utilisées par le gabarit, le repli et l'ablation « indices NLI »).
+  - Température 0.3, top-p 0.9, `LLM_REASONING_EFFORT=low`. **3 exécutions** étiquetées 13 / 42 /
+    2026 : l'API a refusé le champ `seed`, retiré automatiquement ; la variabilité mesurée est donc
+    celle de l'échantillonnage, et les sorties exactes sont conservées dans le cache (non versionné).
+    Exécution de référence fixée avant la mesure : 42.
+  - Ablations (exécution 42) : indices NLI dans le prompt ; 3 passages ; 1 passage ; recherche BM25.
+  - Bootstrap apparié contre le gabarit (10 000 tirages, graine 42), exactitude et macro-F1.
+- **Code** : `rag_llm/llm_verdict.py`, `rag_llm/silver_verdict.py` (branche `lot-d-silver`) ;
+  `python -X utf8 -m rag_llm.silver_verdict --splits dev`, puis `--splits test` (une fois).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (recherche hybride) | 0.286 | 0.219 | 0.381 | 0.500 | 0.444 | 0.286 | 0.000 |
+  | **LLM (exécution 42)** | **0.810** | **0.844** | 0.667 | **1.000** | 0.778 | 1.000 | 0.600 |
+  | LLM, moyenne des 3 exécutions | 0.762 ± 0.048 | 0.809 ± 0.032 | 0.619 ± 0.048 | — | | | |
+  | ablation : + indices NLI | 0.810 | 0.844 | 0.667 | 1.000 | 0.778 | 1.000 | 0.600 |
+  | ablation : 3 passages | 0.810 | 0.844 | 0.667 | 1.000 | 0.778 | 1.000 | 0.600 |
+  | ablation : 1 passage | 0.619 | 0.659 | 0.524 | 0.909 | 0.667 | 0.857 | 0.200 |
+  | ablation : recherche BM25 | 0.762 | 0.803 | 0.619 | 1.000 | 0.667 | 1.000 | 0.600 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | |
+  | toujours s'abstenir | 0.143 | 0.062 | 0.000 | | | | |
+
+  - Par exécution : 13 → 0.714 / 0.781 (3 sorties rejetées, JSON invalide) ; 42 → 0.810 / 0.844
+    (0 rejet) ; 2026 → 0.762 / 0.803 (1 rejet). Sorties valides : 0.936 ± 0.073.
+  - Toutes exécutions : abstention justifiée 1.00 (3 affirmations sans preuve, dont `tf-c13`, erreur
+    la plus grave du Bronze) ; **0 citation invalide**.
+  - Bootstrap (exécution 42 contre le gabarit) : exactitude +0.524 [0.333 ; 0.714], p < 0.001 ;
+    macro-F1 +0.626 [0.396 ; 0.779], p < 0.001. Ablations : 1 passage +0.333 [0.095 ; 0.571] ;
+    recherche BM25 +0.476 [0.286 ; 0.667].
+  - Erreurs de l'exécution 42 (4, toutes des abstentions sur des affirmations fausses) : `tf-c08`
+    (fr), `tf-c17` (fr), `tf-c11` (arabizi), `tf-c19` (arabizi).
+- **Résultats — dev (20 affirmations)** : gabarit 0.50 / 0.375 ; LLM 0.80 / 0.705 (3 exécutions :
+  0.817 ± 0.029 / 0.709 ± 0.007), sorties valides 1.00 ; majorité 0.60 / 0.187 ; ablations : indices
+  NLI 0.75 (1 sortie rejetée), 3 passages 0.80, 1 passage 0.85, BM25 0.85. Bootstrap LLM − gabarit :
+  +0.30 [0.10 ; 0.50], p < 0.001.
+- **Analyse** :
+  1. Le LLM contraint **dépasse largement le gabarit et la classe majoritaire** sur le test
+     (0.81 contre 0.29 et 0.52), écart significatif. Le Bronze restait sous la majorité (EXP-D-007).
+  2. **Aucun verdict faux** : les 14 verdicts émis sont justes (précision sélective 1.00). Les 4
+     erreurs sont des abstentions de trop, le côté le moins dangereux pour un vérificateur.
+  3. Les erreurs restantes semblent venir de la **recherche** : `tf-c17` (affirmation française,
+     preuves arabes) et `tf-c11` (arabizi) figurent déjà parmi les erreurs de recherche classées
+     dans EXP-D-007 ; `tf-c19` (arabizi) et `tf-c08` sont à vérifier dans les sorties. Le goulot
+     passe du NLI à la recherche.
+  4. Tunisien : 0.0 → 0.6 ; l'arabizi reste difficile quand la preuve n'est pas retrouvée.
+  5. Ablations : un seul passage fait perdre 0.19 (les preuves se complètent) ; la recherche
+     hybride apporte +0.05 au verdict par rapport à BM25 ; les indices du NLI Bronze n'apportent
+     rien au LLM.
+  6. Variabilité : 0.71 à 0.81 selon l'exécution ; l'exécution 42 est la meilleure des trois, la
+     moyenne (0.762 ± 0.048) est le chiffre à retenir. 4 sorties sur 63 rejetées (JSON invalide)
+     et remplacées par le gabarit : le contrôle par le code est nécessaire.
+  7. **Limites** : (a) contamination possible : les articles Tunifact sont publics, le LLM a pu les
+     voir à l'entraînement ; indices rassurants (0 citation invalide, abstention sur les 3
+     affirmations inventées), mais non mesuré ; (b) graine refusée par l'API : résultats non
+     reproductibles à l'identique (sorties gardées en cache) ; (c) modèle d'API qui peut changer ;
+     (d) petit test (21 affirmations).
+- **Décision / suite** : **comparaison seulement**, pas le résultat officiel du Silver : le cahier des
+  charges limite le système évalué à 8 Md de paramètres en inférence, et l'équipe a préféré ne pas
+  envoyer les données Tunifact à une API (15/11/2026). Résultat officiel : EXP-D-010 (Aya Expanse 8B,
+  même prompt). Ce qui a été envoyé à Google : les 21 affirmations du test et les 5 passages
+  retrouvés pour chacune (phrases d'articles publics de Tunifact), sans annotation ni label. Suite : relancer avec le NLI fine-tuné du Lot C (repli et
+  indices) ; mesurer la contamination (LLM sans passages, Gold) ; 2e LLM ouvert (Gemma) pour une
+  ablation « choix du modèle » ; corriger la recherche en langue croisée et en arabizi.
+
+### EXP-D-008 — Silver : recherche dense et hybride mesurées sur le test gelé
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : la recherche « par le sens » (encodeur multilingue) corrige-t-elle la
+  première cause d'erreur du Bronze, la langue croisée (24 erreurs sur 52 dans EXP-D-007) ?
+  Hypothèse : l'hybride BM25 + e5-base, meilleur sur le dev (EXP-D-003), fait mieux que BM25 sur
+  le test réel.
+- **Données** : dev fictif (15 passages, 18 affirmations avec preuve) ; test Tunifact v1 **gelé le
+  23/10/2026** (84 passages, 21 affirmations dont 18 avec preuve : fr 7, ar 6, tunisien 5 = 2 en
+  lettres arabes + 3 en arabizi). Empreintes vérifiées par `freeze_test` avant la mesure.
+- **Méthode / configuration** :
+  - `bm25` (baseline Bronze, k1 = 1.5, b = 0.75) ; `dense` (`intfloat/multilingual-e5-base`,
+    préfixes « query: » / « passage: », seuil de similarité 0.4) ; `hybrid` = fusion RRF des deux
+    (k = 60, 20 candidats par méthode) — **configuration retenue a priori**, choisie sur le dev dans
+    EXP-D-003, avant toute mesure sur le test.
+  - Ablations : hybride sans seuil de similarité dense ; hybride avec `multilingual-e5-small`.
+  - Top 5 pour le Rappel@5, profondeur 10 pour le MRR ; moyenne globale et par langue.
+  - Bootstrap apparié contre BM25 (mêmes affirmations tirées pour les deux systèmes), 10 000
+    tirages, graine 42 ; IC 95 % par percentiles ; p unilatéral (part des tirages ≤ 0).
+  - 3 exécutions de la configuration retenue (encodeur rechargé, sans cache disque).
+  - Aucun paramètre réglé sur le test.
+- **Code** : `rag_llm/silver_retrieval.py` (branche `lot-d-silver`) ;
+  `python -X utf8 -m rag_llm.silver_retrieval`.
+- **Résultats** (test gelé, 18 affirmations avec preuve) :
+
+  | Configuration | Rappel@5 | MRR | Hit@1 | R@5 fr (7) | R@5 ar (6) | R@5 tunisien (5) |
+  |---|---|---|---|---|---|---|
+  | BM25 (baseline Bronze) | 0.411 | 0.630 | 0.611 | 0.357 | 0.650 | 0.200 |
+  | dense e5-base | 0.394 | 0.630 | 0.556 | 0.362 | 0.672 | 0.107 |
+  | **hybride e5-base (retenu)** | **0.446** | **0.646** | 0.556 | **0.429** | **0.672** | 0.200 |
+  | ablation : hybride sans seuil dense | 0.446 | 0.646 | 0.556 | 0.429 | 0.672 | 0.200 |
+  | ablation : hybride e5-small | 0.432 | 0.667 | 0.611 | 0.393 | 0.672 | 0.200 |
+
+  Bootstrap apparié contre BM25 (différence, IC 95 %, p) :
+  - hybride e5-base : Rappel@5 +0.035 [-0.022 ; 0.111], p = 0.171 ; MRR +0.016 [-0.065 ; 0.081], p = 0.323 ;
+  - dense e5-base : Rappel@5 -0.017 [-0.135 ; 0.096], p = 0.596 ; MRR -0.000 [-0.189 ; 0.176], p = 0.493 ;
+  - hybride e5-small : Rappel@5 +0.021 [-0.022 ; 0.074], p = 0.218 ; MRR +0.037 [0.006 ; 0.080], p = 0.010.
+
+  Dev : BM25 0.667 / 0.907 ; dense 0.917 / 0.956 ; hybride 0.944 / 0.956 (Rappel@5 +0.278
+  [0.167 ; 0.389], p < 0.001), identique à EXP-D-003. Les 3 exécutions de l'hybride donnent des
+  classements identiques (encodeur déterministe en inférence : variance nulle).
+- **Analyse** :
+  1. **Reproductibilité** : les chiffres du dev d'EXP-D-003 sont retrouvés exactement.
+  2. Sur le test réel, l'hybride ne fait **pas significativement mieux** que BM25 (+0.035 de
+     Rappel@5, intervalle qui contient 0). Le gain vient du français (0.357 → 0.429), c'est-à-dire
+     de la langue croisée, comme attendu, mais il reste petit.
+  3. Le dense seul n'est pas meilleur que BM25 et **recule sur le tunisien** (0.200 → 0.107) :
+     e5 a peu vu de dialecte tunisien ni d'arabizi. La fusion RRF garde le meilleur des deux.
+  4. **Écart dev / test** : +0.278 sur le dev contre +0.035 sur le test. Le dev a été écrit par
+     nous (phrases courtes, traductions directes) : il surestime nettement le dense.
+  5. Ablation du seuil : aucun effet, aucun passage candidat n'a une similarité inférieure à 0.4
+     (les cosinus d'e5 sont resserrés vers le haut). Ce seuil ne peut donc pas servir de signal
+     d'abstention pour le dense ; à revoir (règle A2 du verdict).
+  6. e5-small obtient le meilleur MRR sur le test (seul écart significatif, p = 0.010). Il **n'est
+     pas retenu** : le choisir maintenant reviendrait à régler sur le test. Résultat noté comme
+     ablation.
+  7. Puissance faible : 18 affirmations ; un écart de quelques points ne peut pas être significatif.
+- **Décision / suite** : hybride BM25 + e5-base gardé comme recherche du palier Silver (choix fait
+  sur le dev, gain non significatif sur le test, rapporté tel quel). Suite : mesurer le verdict
+  avec cette recherche et le NLI fine-tuné du Lot C (EXP-C, 0.809), puis le verdict par LLM
+  contraint (3 graines) ; relire les preuves en langue croisée encore manquées ; test élargi.
+
+### EXP-C-011 — NLI (Model 2), palier Silver : fine-tuning de mDeBERTa-v3 (protocole fixé avant mesure)
+- **Date** : 2026-11-10 (protocole et règle de version) ; résultats à compléter
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : affiner sur le train du corpus A1 le modèle NLI d'EXP-C-008 améliore-t-il la macro-F1 par rapport à ce modèle sans entraînement (0.798), aux règles Bronze d'EXP-C-009 (0.471) et à la classe majoritaire (0.194) ?
+- **Données** : corpus NLI du Lot A1 (privé, non versionné). Règle de version fixée le 2026-11-10, avant tout entraînement et toute mesure :
+  - si la v4 n'est pas disponible le jeudi 2026-11-12 à midi, ou si elle change le test gelé, les chiffres Silver sont ceux de la v3 (`data/splits/nli_v3_by_article_seed42.json` : train 174, val 33, test 56) ;
+  - « change le test gelé » : le test v4 n'a pas exactement les mêmes `pair_id` que le test v3, ou l'une de ces paires a une affirmation, une preuve ou un label différent ;
+  - sinon : réentraînement sur le train v4 avec les hyperparamètres choisis sur la val v3, puis une seule mesure du test v4 ;
+  - état connu le 2026-11-10 : P135, P136 et P138 ne sont pas encore validées dans la v4 (déjà écartées comme brouillons dans la v3) ; pas de paires en tunisien attendues dans la v4.
+- **Méthode / configuration** (prévue) : `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` affiné sur le train ; hyperparamètres (taux d'apprentissage, nombre d'époques, l'époque 0 sans affinage restant candidate) choisis sur la val seulement, d'après la moyenne de 3 graines (42, 123, 2026) ; test mesuré une seule fois à la fin. Ablation : `microsoft/mdeberta-v3-base` (même architecture, sans pré-entraînement XNLI), même protocole. Comparaisons par bootstrap apparié contre les règles Bronze, la classe majoritaire et le modèle sans entraînement ; résultats par langue ; au moins 30 erreurs classées.
+- **Note** : le dossier `models/checkpoints/nli_mdeberta-ft_v3_seed42` du 2026-10-26 (15:18) a des poids identiques à ceux du modèle de base (sauvegarde de l'époque 0, exécution interrompue, sans journal) et n'a jamais été évalué sur le test : il n'est pas utilisé (supprimé le 2026-11-10).
+- **Zero-shot re-mesuré en float32 (décidé le 2026-11-14, avant toute mesure Silver du test)** : sur la val v3, le même modèle zero-shot donne une macro-F1 de 0.662 chargé en float16 (format dans lequel il est stocké, chargé tel quel par `stance.py` avec transformers 5) et de 0.692 en float32 (comme `train.py`) ; la taille des lots (4 ou 16) ne change rien. `stance.py` charge désormais en float32. Le zero-shot sera donc re-mesuré une seule fois sur le test, en float32, au moment de la mesure finale du Silver, et c'est ce chiffre qui servira aux comparaisons ; l'ancien 0.798 d'EXP-C-008 reste dans le journal, sans être modifié.
+- **Grille et règle de choix (fixées le 2026-11-14, avant toute exécution de la grille)** :
+  - modèle principal : lr ∈ {1e-5, 2e-5, 3e-5} × graines {42, 123, 2026} = 9 exécutions ; ablation `microsoft/mdeberta-v3-base` (tête neuve) : lr ∈ {2e-5, 3e-5, 5e-5} × les mêmes graines = 9 exécutions (réduite à {2e-5, 5e-5} si le temps manque) ;
+  - chaque exécution : 6 époques, `--no-save`, lot effectif 8 (4 × 2), embeddings gelés ; la val est notée aux époques 0 à 6 ; le journal de chaque exécution est copié dans `models/checkpoints/grid_v3/` (non versionné) ;
+  - choix : la configuration (lr, époque k) de meilleure macro-F1 moyenne sur les 3 graines ; la val n'ayant que 33 paires (une paire ≈ 3 points), toute configuration dont la moyenne est à moins de 0.03 de la meilleure est jugée équivalente, et on garde alors d'abord l'époque la plus ancienne (l'époque 0, sans affinage, si elle est dans cette marge), puis le lr le plus petit ;
+  - modèle final : relance de la configuration choisie avec `--epochs 6 --keep-epoch k` (même planning du taux d'apprentissage que la grille, calculs déterministes) pour les 3 graines, avec les poids ;
+  - l'essai du 2026-11-10 (lr 1e-5, 1 époque, graine 42) n'est pas réutilisé : son planning du taux d'apprentissage est différent ;
+  - si la mémoire graphique manque (pic de 5,61 Go sur 6 Go à l'essai) : `--batch-size 2 --grad-accum 4`, même lot effectif.
+- **Code** : `models/nli/train.py` (entraînement, val seulement) ; `models/nli/run_grid.ps1` (grille en série, journaux dans `models/checkpoints/grid_v3/`, non versionné) ; `models/nli/analyse_grid.py` (moyenne ± écart-type de la val par lr et par époque, choix par la règle ; ne lit que les journaux de val et refuse tout journal contenant une clé de test).
+- **Résultats — grille principale (2026-11-14, val v3 seulement, 9 exécutions sur 9)** : macro-F1 de val, moyenne ± écart-type sur les graines 42, 123 et 2026 (`python models/nli/analyse_grid.py main`) :
+
+  | lr | ép. 0 | ép. 1 | ép. 2 | ép. 3 | ép. 4 | ép. 5 | ép. 6 |
+  |---|---|---|---|---|---|---|---|
+  | 1e-5 | 0.692 ± 0.000 | **0.722 ± 0.000** | 0.722 ± 0.000 | 0.731 ± 0.016 | 0.731 ± 0.016 | 0.722 ± 0.000 | 0.722 ± 0.000 |
+  | 2e-5 | 0.692 ± 0.000 | 0.702 ± 0.034 | 0.740 ± 0.016 | 0.700 ± 0.011 | 0.730 ± 0.033 | 0.730 ± 0.033 | 0.730 ± 0.033 |
+  | 3e-5 | 0.692 ± 0.000 | 0.699 ± 0.032 | 0.718 ± 0.005 | 0.710 ± 0.026 | 0.729 ± 0.047 | 0.719 ± 0.032 | 0.709 ± 0.035 |
+
+  - **choix par la règle : lr 1e-5, époque 1 (moyenne 0.722)**. Meilleure moyenne : 0.740 (lr 2e-5, époque 2) ; 14 configurations à moins de 0.03 (moyenne > 0.710) ; l'époque 0 (0.692) est à 0.048, hors de la marge ; parmi les équivalentes, l'époque la plus ancienne est l'époque 1, et le lr le plus petit 1e-5 ;
+  - gain sur la val par rapport au zero-shot (époque 0, float32) : +0.030, soit environ **une paire sur 33** : dans le bruit de la val, seul le test dira s'il est réel ;
+  - écart-type nul : l'époque 0 est le même modèle pour toutes les graines (aucun pas d'entraînement ; la graine ne change que l'ordre des paires) ; pour lr 1e-5, les 3 graines donnent la même macro-F1 aux époques 1, 2, 5 et 6 (pour 123 et 2026, mêmes prédictions de val à l'époque gardée) alors que leurs pertes d'entraînement diffèrent (époque 1 : 0.653 / 0.687 / 0.678) : sur 33 paires, des modèles différents peuvent donner les mêmes prédictions ;
+  - relances : l'exécution lr 2e-5 / graine 42 a échoué à 13h02 (mémoire graphique pleine, `CUDA out of memory`, après l'époque 0) ; l'exécution lr 3e-5 / graine 2026 a été interrompue à 13h54 (fenêtre de la grille fermée ou Ctrl+C, après l'époque 0) ; les deux ont été refaites à l'identique (mêmes réglages, lots de 4 × 2) à 14h12 et 14h15 ; l'époque 0 des premières tentatives (0.692) est identique à celle des relances ; les journaux des tentatives sont gardés (`*.oom.log`, `*.interrompu.log`) ;
+  - durée d'une exécution de 6 époques : de 2,5 à 18 min selon l'état de la carte (bridée à 25 W au début, sans doute sur batterie ou en économie d'énergie) ; pic de mémoire graphique 5,61–5,63 Go.
+- **Résultats — ablation `microsoft/mdeberta-v3-base` (2026-11-14, val v3 seulement, 9 exécutions sur 9)** : tête à 3 classes neuve, même protocole (`python models/nli/analyse_grid.py ablation`) :
+
+  | lr | ép. 0 | ép. 1 | ép. 2 | ép. 3 | ép. 4 | ép. 5 | ép. 6 |
+  |---|---|---|---|---|---|---|---|
+  | 2e-5 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.197 ± 0.052 | 0.167 ± 0.000 | 0.306 ± 0.126 | 0.330 ± 0.146 | 0.355 ± 0.163 |
+  | 3e-5 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.273 ± 0.092 | 0.259 ± 0.131 | 0.335 ± 0.084 | 0.373 ± 0.098 |
+  | 5e-5 | 0.167 ± 0.000 | 0.194 ± 0.047 | 0.265 ± 0.093 | 0.251 ± 0.116 | 0.320 ± 0.166 | **0.401 ± 0.121** | 0.426 ± 0.078 |
+
+  - **choix par la règle : lr 5e-5, époque 5 (moyenne 0.401)**. Meilleure moyenne : 0.426 (lr 5e-5, époque 6) ; 2 configurations à moins de 0.03 (époques 5 et 6 de lr 5e-5) ; on garde la plus ancienne, l'époque 5 ;
+  - 0.167 = une seule classe prédite pour toutes les paires (tête neuve tirée au hasard à l'époque 0, puis modèle qui n'a pas encore appris) ; une exécution (lr 2e-5, graine 2026) reste à 0.167 jusqu'à l'époque 6 ;
+  - l'ablation n'a pas fini d'apprendre en 6 époques : la perte d'entraînement baisse encore (lr 5e-5, époque 6 : 0.44 à 0.75 selon la graine) et la moyenne de val monte encore à l'époque 6 ; écarts-types élevés (0.08 à 0.17). Limite connue, laissée telle quelle pour respecter la grille fixée avant exécution ;
+  - même à son meilleur, l'ablation (0.43) reste très loin du modèle pré-entraîné sur XNLI, avec ou sans affinage (0.69 à 0.74) : avec 174 paires d'entraînement, le pré-entraînement NLI fait l'essentiel du travail ;
+  - relance : le PC a redémarré à 15h25 pendant l'exécution lr 3e-5 / graine 2026 (après l'époque 0) ; elle a été refaite à l'identique à 15h42 (journal de la tentative gardé : `*.redemarrage.log`), suivie des 3 exécutions lr 5e-5.
+- **Relance finale avec les poids (2026-11-14, 15h58–18h42, `models/nli/run_final.ps1`)** : modèle principal lr 1e-5, `--epochs 6 --keep-epoch 1` ; ablation lr 5e-5, `--epochs 6 --keep-epoch 5` ; graines 42, 123, 2026 ; 6 exécutions sur 6 OK (pause probable du PC en veille entre 16h17 et 18h37 pendant la dernière, sans effet sur le résultat). Contrôles, sur la val seulement :
+  - pour chacune des 6 relances, la macro-F1 de val aux époques 0 à 6 et la perte d'entraînement de chaque époque sont identiques à celles de la grille (calculs déterministes) ; val à l'époque gardée : principal 0.722 / 0.722 / 0.722, ablation 0.290 / 0.530 / 0.382 ;
+  - poids écrits (`model.safetensors`, 1,12 Go, avec config et tokenizer) dans `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed<graine>/` et `nli_mdeberta-v3-base-ft_v3_lr5e-05_e6_seed<graine>/` (non versionnés) ;
+  - rechargés par `stance.py` (même chemin que l'API, float32, sur processeur), les 6 modèles redonnent exactement les prédictions de val de l'époque gardée notées dans leur journal (0 différence sur 33 pour chacun).
+- **Mesure du test prévue (fixée le 2026-11-14, avant toute lecture des labels du test par un modèle Silver)** — une seule fois, par `python -m models.nli.measure_test` (vérifications seules : `--dry-run` ; le script refuse une seconde exécution) :
+  - contrôle du gel : SHA-256 de `data/splits/nli_v3_by_article_seed42.json` = `59582eb7…3552c` (valeur gelée le 26/10, vérifiée le 14/11) et mêmes 56 `pair_id` dans `nli_v3_test.jsonl` (vérifié le 14/11 ; ce fichier privé n'avait pas de SHA-256 noté : `f8f12d7f…5cb869`, noté ici avant la mesure) ;
+  - modèles mesurés, avec `predict_stances` (même code que l'API et le Lot D, chargement en float32) : (1) le zero-shot `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` en float32 ; (2) les 3 modèles principaux (graines 42, 123, 2026) ; (3) les 3 modèles d'ablation (mêmes graines) ;
+  - baselines déjà mesurées, non re-mesurées : règles Bronze (prédictions d'EXP-C-009 reconstituées à partir de `erreurs_bronze_v3_test.csv`, les autres paires étant justes ; contrôle : macro-F1 0.471) et classe majoritaire du train (« supports ») ;
+  - métriques : macro-F1 (et accuracy) de chaque modèle ; pour le principal et l'ablation, moyenne ± écart-type sur les 3 graines, globale, par langue de l'affirmation (fr / ar) et sur les paires des articles du test du Lot D ; IC 95 % par bootstrap pour chaque modèle ;
+  - comparaisons : bootstrap apparié (1000 tirages, graine 20261026) de chacun des 3 modèles principaux contre les règles Bronze, la classe majoritaire et le zero-shot float32 ;
+  - sorties : `evaluation/results/lot-c_nli-silver_test_<date>.json` (chiffres seulement) ; prédictions privées dans `data/interim/lot_c/nli/silver_test/` (non versionné) pour l'analyse d'erreurs (au moins 30 erreurs classées) ; les anciennes prédictions zero-shot float16 du 26/10 ne sont pas écrasées ;
+  - aucun réglage ne sera changé après la mesure.
+- **Résultats — test v3 (mesure unique, 2026-11-14, `python -m models.nli.measure_test`, n = 56 : 25 fr, 31 ar, 30 paires des articles du Lot D)** : contrôle du gel OK (découpage `59582eb7…`, 56 `pair_id`) ; fichier `evaluation/results/lot-c_nli-silver_test_20261114.json` ; prédictions privées dans `data/interim/lot_c/nli/silver_test/`.
+
+  | Modèle | macro-F1 (IC 95 %) | accuracy | fr (n = 25) | ar (n = 31) | articles Lot D (n = 30) |
+  |---|---|---|---|---|---|
+  | Zero-shot float32 | 0.798 [0.669 ; 0.891] | 0.804 | 0.779 | 0.776 | 0.767 |
+  | **Principal (lr 1e-5, ép. 1), 3 graines** | **0.809 ± 0.000** [0.689 ; 0.905] | 0.821 ± 0.000 | 0.745 ± 0.000 | 0.841 ± 0.000 | 0.759 ± 0.000 |
+  | Ablation sans XNLI (lr 5e-5, ép. 5), 3 graines | 0.427 ± 0.044 (0.378 / 0.440 / 0.463) | 0.530 ± 0.027 | 0.450 ± 0.161 | 0.325 ± 0.056 | 0.505 ± 0.050 |
+  | Règles Bronze (EXP-C-009, reconstitué) | 0.471 | 0.464 | 0.504 | 0.400 | 0.475 |
+  | Classe majoritaire (« supports ») | 0.194 | 0.411 | 0.190 | 0.197 | 0.167 |
+
+  - contrôle Bronze : la reconstitution redonne 0.4708, soit le 0.471 d'EXP-C-009 (et fr 0.50 / ar 0.40, comme dans EXP-C-009) ; les scores Bronze et majorité par langue et Lot D sont calculés à partir des prédictions sauvegardées, sans nouvelle mesure ;
+  - bootstrap apparié (1000 tirages, graine 20261026) ; les 3 graines du principal ont exactement les mêmes prédictions de test, donc les mêmes chiffres :
+
+    | Principal contre | différence de macro-F1 | IC 95 % | p |
+    |---|---|---|---|
+    | règles Bronze | +0.339 | [+0.185 ; +0.491] | 0.000 |
+    | classe majoritaire | +0.615 | [+0.484 ; +0.712] | 0.000 |
+    | zero-shot float32 | +0.011 | [−0.052 ; +0.071] | 0.398 |
+
+  - zero-shot float32 : 0.798, comme le 0.798 d'EXP-C-008 (float16 probable), qui reste dans le journal sans être modifié ; sur le test, les prédictions float32 et celles du 26/10 sont identiques (0 différence sur 56) : l'écart float16 / float32 vu sur la val (0.662 / 0.692) ne se produit pas sur le test ;
+  - principal et zero-shot ne diffèrent que sur 3 paires sur 56 : le principal en corrige 2 et en abîme 1.
+- **Analyse** :
+  - le modèle affiné dépasse nettement les règles Bronze (+0.34) et la classe majoritaire (+0.62), avec des IC 95 % loin de 0 ;
+  - en revanche, son gain sur le même modèle sans affinage (+0.011, une paire nette sur 56) n'est pas significatif (IC 95 % contenant 0, p = 0.40) : avec 174 paires d'entraînement et une seule époque à lr 1e-5, l'affinage change très peu le modèle XNLI ; cela confirme ce que montrait la val (+0.03, une paire sur 33) ;
+  - par langue, le principal gagne en arabe (0.841 contre 0.776) et perd en français (0.745 contre 0.779) par rapport au zero-shot ; effectifs très petits (25 et 31 paires), à ne pas surinterpréter ;
+  - écart-type nul : les 3 graines donnent les mêmes prédictions de test (déjà vu sur la val), ce qui ne mesure pas la variance d'un affinage plus fort ; l'ablation (même architecture sans pré-entraînement XNLI) reste à 0.43, sous les règles Bronze : le pré-entraînement NLI fait l'essentiel du travail ; l'ablation n'avait pas fini d'apprendre en 6 époques (limite déjà notée) ;
+  - aucun réglage n'a été changé après la mesure du test.
+- **Décision / suite (2026-11-14, prise après la mesure du test, sans changer aucun réglage)** :
+  - **composant Silver retenu : le modèle affiné choisi par la règle fixée sur la val (lr 1e-5, époque 1), checkpoint de la graine 42** (`models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/`, non versionné). Raison : c'est la configuration désignée à l'avance par le protocole (choix sur la val seulement, règle fixée avant exécution), pas un choix fait d'après le test ; les 3 graines donnant exactement les mêmes prédictions (val et test), la graine 42 les représente toutes ;
+  - il est déclaré **statistiquement équivalent au zero-shot float32** (+0.011, IC 95 % [−0.052 ; +0.071], p = 0.40) : on ne revendique pas de gain de l'affinage sur le zero-shot ; le zero-shot reste disponible comme backend (`NLI_BACKEND=zero-shot`) ;
+  - données : la v4 n'étant pas arrivée le jeudi 2026-11-12 à midi, les chiffres Silver sont ceux de la v3, selon la règle fixée le 2026-11-10 ;
+  - suite : analyse d'erreurs (CSV privé, catégories proposées, validation manuelle par Membre 4) ; intégration du modèle affiné comme nouveau backend (`NLI_BACKEND`), avec tests et vérification de l'API et du verdict du Lot D.
+- **Analyse d'erreurs (préparée le 2026-11-14, catégories proposées, à valider par Membre 4)** : `python -m models.nli.silver_errors` écrit `data/interim/lot_c/nli/erreurs_silver_v3.csv` (privé), avec une colonne `categorie_validee` vide. Le test ne compte que **12 erreurs** distinctes (principal 10, dont 9 communes avec le zero-shot ; zero-shot 11) : l'objectif de 30 erreurs ne peut pas être atteint sur le test avec ces deux modèles ; on y ajoute les **10 erreurs de la val** (principal et zero-shot float32), soit 22 erreurs, analysées en entier ; pour dépasser 30, une section séparée (colonne `modele`) ajoute les **28 erreurs de l'ablation (graine 42) sur le test**, soit **50 erreurs** en tout. L'ablation prédit « supports » pour 48 paires sur 56 ; catégories proposées pour elle : recouvrement trompeur 11, négation 6, démenti implicite 4, nombres 4, méta-affirmation 2, marqueur de démenti trompeur 1. Paires « annotation à vérifier » (toutes dans la val, signalées au Lot A1, aucun label modifié) : NLI-P035, NLI-P037, P297. Catégories : celles du Bronze quand c'est possible, plus « confirmation implicite non détectée », « méta-affirmation », « preuve dans l'autre langue » et « annotation à vérifier ». Proposition initiale (principal / zero-shot) sur le test : nombres mal comparés 3, démenti implicite non détecté 3, paraphrase non reconnue 2, recouvrement trompeur 1, confirmation implicite 1, méta-affirmation 1, négation 1 ; sur la val : annotation à vérifier 3, recouvrement trompeur 2, et 1 pour chacune des autres. Chiffres finaux : paragraphe suivant.
+- **Analyse d'erreurs — catégories finales (2026-11-14)** : colonne `categorie_finale` du CSV, remplie par relecture de chacune des 50 lignes par Claude (Membre 4 n'a pas encore rempli `categorie_validee`, qui reste vide) ; catégorie proposée gardée pour 49 lignes, une seule correction (P236 de l'ablation : chiffre absent de la preuve → recouvrement trompeur, comme P278 et P293, et non nombres mal comparés). Une erreur commune au principal et au zero-shot compte une fois dans chacune des deux colonnes.
+
+  | Catégorie finale | principal (19 : 10 test, 9 val) | zero-shot float32 (21 : 11 test, 10 val) | exemples typiques |
+  |---|---|---|---|
+  | nombres mal comparés | 4 (3 test) | 3 (2 test) | NLI-P004, P255, NLI-P012 |
+  | démenti implicite non détecté | 4 (3 test) | 4 (3 test) | NLI-P006, NLI-P007, P140 |
+  | recouvrement trompeur (même sujet, autre fait) | 3 (1 test) | 3 (1 test) | NLI-P010, NLI-P053, P145 |
+  | annotation à vérifier | 3 (0 test) | 3 (0 test) | NLI-P035, NLI-P037, P297 |
+  | négation mal interprétée | 2 (1 test) | 2 (1 test) | P277, P300 |
+  | paraphrase non reconnue (recouvrement faible) | 1 (1 test) | 2 (2 test) | P276, P207 |
+  | méta-affirmation (« selon X », « X a vérifié ») | 0 | 2 (1 test) | P188, P279 |
+  | confirmation implicite non détectée | 1 (1 test) | 1 (1 test) | NLI-P057 |
+  | preuve dans l'autre langue (fr / ar) | 1 (0 test) | 1 (0 test) | P299 |
+
+  Sur 22 paires en erreur, 18 sont communes aux deux modèles ; le principal corrige les 2 méta-affirmations et P207, et se trompe seul sur NLI-P004 (nombres).
+
+  | Catégorie finale | ablation graine 42 (28, test) | exemples typiques |
+  |---|---|---|
+  | recouvrement trompeur (même sujet, autre fait) | 12 | NLI-P011, P231, P278 |
+  | négation mal interprétée | 6 | NLI-P074, P209, P232 |
+  | démenti implicite non détecté | 4 | NLI-P001, P234, P290 |
+  | nombres mal comparés | 3 | NLI-P004, NLI-P012, P255 |
+  | méta-affirmation (« selon X », « X a vérifié ») | 2 | P189, P252 |
+  | marqueur de démenti trompeur | 1 | NLI-P005 |
+
+  Lecture : les erreurs du principal et du zero-shot viennent surtout de ce qu'il faut **comparer** (nombres, dates) ou **déduire** (démenti d'une rumeur sans reprendre son contenu, confirmation implicite) ; 3 des 9 erreurs de val tiennent sans doute au label (signalées au Lot A1). L'ablation, qui prédit « supports » pour 48 paires sur 56, échoue surtout dès que la preuve parle du même sujet (recouvrement trompeur, 12) ou contient une négation (6) : sans pré-entraînement NLI, 174 paires ne suffisent pas à apprendre la négation. Effectifs petits : ces chiffres décrivent des cas, pas des taux.
+- **Intégration (2026-11-14)** : nouveau moteur `NLI_BACKEND=fine-tuned` dans `models/nli/stance.py` (checkpoint Silver graine 42 par défaut ; `CHECKPOINT_DIR` / `NLI_FINETUNED_MODEL` pour un autre chemin ; float32 ; checkpoint absent → « neutre », confiance 0) ; le moteur par défaut reste `bronze` et `zero-shot` reste disponible. L'API (`/nli`, `/verdict`, `/verdict/detail`, `/check`), le pipeline et le verdict du Lot D passent tous par `predict_stances` : aucun changement de leur code. Tests : sélection du checkpoint, surcharge par variable, repli « neutre », passage par l'API (faux modèle, CI légère) ; suite complète 641 passés. Vérification avec le vrai checkpoint : routes de l'API en 200, `backend_info` = `fine-tuned` ; verdict du Lot D sur le jeu de développement **fictif** (n = 20, pas le test gelé du Lot D, aucun fichier écrit) : macro-F1 0.503 avec le modèle affiné, 0.530 avec le zero-shot, 0.524 avec les règles du Lot D (écarts d'une ou deux affirmations sur 20 : non interprétables).
 
 ### EXP-B-009 — Réanalyse du pilote (macro-F1, bootstrap apparié) et ablation des composants
 - **Date** : 2026-11-14

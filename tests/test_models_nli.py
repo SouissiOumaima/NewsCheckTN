@@ -67,6 +67,78 @@ def test_echec_de_chargement_ne_fait_pas_tomber_l_api(monkeypatch):
     stance.set_classifier(None)
 
 
+def test_backend_fine_tuned_charge_le_checkpoint_silver(monkeypatch):
+    """NLI_BACKEND=fine-tuned : checkpoint Silver (graine 42) par défaut, ou NLI_FINETUNED_MODEL."""
+    loaded = []
+
+    def fake_load(name):
+        loaded.append(name)
+        return fake_classifier
+
+    monkeypatch.setattr(stance, "_load_zero_shot", fake_load)
+    monkeypatch.setenv("NLI_BACKEND", "fine-tuned")
+    monkeypatch.delenv("NLI_FINETUNED_MODEL", raising=False)
+    monkeypatch.delenv("CHECKPOINT_DIR", raising=False)
+    monkeypatch.setenv("NLI_MODEL", stance.DEFAULT_MODEL)  # comme .env.example : sans effet ici
+    stance.set_classifier(None)
+    res = stance.predict_stance(CLAIM, ev("c'est faux"))
+    assert res.stance == Stance.REFUTES
+    expected = stance.ROOT / "models" / "checkpoints" / "nli_mdeberta-ft_v3_lr1e-05_e6_seed42"
+    assert loaded == [str(expected)]
+    assert stance.backend_info() == {
+        "backend": "fine-tuned",
+        "model": str(expected),
+        "status": "loaded",
+    }
+
+    monkeypatch.setenv("NLI_FINETUNED_MODEL", "autre/checkpoint")
+    stance.set_classifier(None)
+    stance.predict_stance(CLAIM, ev("x"))
+    assert loaded[-1] == "autre/checkpoint"
+    stance.set_classifier(None)
+
+
+def test_backend_fine_tuned_sans_checkpoint_reponse_neutre(monkeypatch):
+    def boom(name):
+        raise OSError(f"{name} introuvable")
+
+    monkeypatch.setattr(stance, "_load_zero_shot", boom)
+    monkeypatch.setenv("NLI_BACKEND", "fine-tuned")
+    stance.set_classifier(None)
+    res = stance.predict_stance(CLAIM, ev("Tunis capitale"))
+    assert res.stance == Stance.NEUTRAL and res.confidence == 0.0
+    assert stance.backend_info()["status"] == "unavailable"
+    stance.set_classifier(None)
+
+
+def test_chargement_du_modele_en_float32(monkeypatch):
+    """Même chargement que train.py (float32), sans torch ni transformers réels (CI légère)."""
+    import sys
+    import types
+
+    seen = {}
+    fake_torch = types.SimpleNamespace(float32="float32")
+
+    class FakeModel:
+        config = types.SimpleNamespace(id2label={0: "entailment", 1: "neutral", 2: "contradiction"})
+
+        def eval(self):
+            return self
+
+    def load_model(name, **kwargs):
+        seen.update(kwargs)
+        return FakeModel()
+
+    fake_tf = types.SimpleNamespace(
+        AutoTokenizer=types.SimpleNamespace(from_pretrained=lambda name, **k: object()),
+        AutoModelForSequenceClassification=types.SimpleNamespace(from_pretrained=load_model),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "transformers", fake_tf)
+    stance._load_zero_shot("faux-modele")
+    assert seen.get("dtype") == "float32"
+
+
 def pair(pid, art, claim, evidence, label="supports", remarque="ok", lang="ar"):
     return {
         "pair_id": pid,
@@ -160,6 +232,19 @@ def test_correspondance_des_labels_et_choix_de_l_epoque():
         best_epoch([{"epoch": 0, "val_macro_f1": 0.8}, {"epoch": 1, "val_macro_f1": 0.6}])["epoch"]
         == 0
     )
+
+
+def test_tete_neuve_noms_d_execution_et_classes_manquantes():
+    from models.nli.train import ABLATION_MODEL, label_ids, needs_new_head, run_name
+
+    assert needs_new_head({"LABEL_0": 0, "LABEL_1": 1, "LABEL_2": 2})
+    assert not needs_new_head({"entailment": 0, "neutral": 1, "contradiction": 2})
+    assert (
+        run_name(stance.DEFAULT_MODEL, "v3", 2e-5, 6, 42) == "nli_mdeberta-ft_v3_lr2e-05_e6_seed42"
+    )
+    assert run_name(ABLATION_MODEL, "v3", 3e-5, 6, 123).startswith("nli_mdeberta-v3-base-ft_v3_")
+    with pytest.raises(ValueError, match="absentes"):
+        label_ids({"LABEL_0": 0, "LABEL_1": 1, "LABEL_2": 2})
 
 
 def test_bootstrap_apparie():

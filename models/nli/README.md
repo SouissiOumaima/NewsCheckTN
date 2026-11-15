@@ -13,6 +13,10 @@ Le Lot D s'en sert pour rendre le verdict.
 | `evaluate.py` | macro-F1, par classe, confusion, par langue, IC 95 % (bootstrap) |
 | `train.py` | affinage du modèle de la baseline sur `train`, meilleure époque choisie sur `val` |
 | `compare.py` | bootstrap apparié : différence de macro-F1 entre deux modèles, moyenne ± écart-type |
+| `run_grid.ps1`, `analyse_grid.py` | grille Silver sur la val (EXP-C-011) et choix par la règle fixée |
+| `run_final.ps1` | relance finale avec les poids (configurations choisies) |
+| `measure_test.py` | mesure unique du test Silver (refuse une seconde exécution) |
+| `silver_errors.py` | CSV privé des erreurs Silver à relire |
 
 ## Palier Bronze (revue) : position par lexique
 
@@ -29,8 +33,27 @@ python -m models.nli.bronze_eval --version v3 --split test --exp-id EXP-C-009 # 
 Modèle NLI multilingue déjà entraîné sur XNLI (arabe et français inclus), utilisé tel quel :
 `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` (environ 1 Go au premier lancement).
 Prémisse = la preuve, hypothèse = l'affirmation ; entailment → supports,
-contradiction → refutes. Variables : `NLI_BACKEND=zero-shot` et
-`NLI_MODEL` (autre modèle, ou plus tard le checkpoint fine-tuné du Lot C).
+contradiction → refutes. Variables : `NLI_BACKEND=zero-shot` et `NLI_MODEL` (autre modèle).
+Chargement toujours en float32.
+
+## Palier Silver : modèle affiné (`NLI_BACKEND=fine-tuned`)
+
+Composant Silver (EXP-C-011) : le modèle ci-dessus affiné sur le train du corpus A1 v3
+(lr 1e-5, époque 1, choisis sur la val ; checkpoint de la graine 42, les 3 graines donnant les
+mêmes prédictions). Test v3 (n = 56) : macro-F1 0.809, contre 0.798 sans affinage (différence
+non significative : IC 95 % [−0.052 ; +0.071]), 0.471 pour les règles Bronze.
+
+```bash
+NLI_BACKEND=fine-tuned uvicorn api.main:app     # ou python pipeline.py, évaluations du Lot D…
+```
+
+Le checkpoint (1,1 Go) n'est pas versionné : par défaut
+`models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/` (`CHECKPOINT_DIR` pour un autre
+dossier, `NLI_FINETUNED_MODEL` pour un autre chemin). Pour le recréer :
+`powershell -File models
+liun_final.ps1` (ou `python -m models.nli.train --version v3
+--seed 42 --lr 1e-5 --epochs 6 --keep-epoch 1`). S'il est absent, la réponse est « neutre »
+avec une confiance 0, comme pour les autres moteurs.
 
 Sans torch / transformers, ou si le modèle ne se charge pas, la réponse est « neutre » avec une
 confiance 0 : l'API ne tombe jamais. Les tests forcent `NLI_BACKEND=stub` (`tests/conftest.py`) et
