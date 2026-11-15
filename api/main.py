@@ -106,6 +106,11 @@ def check_route(body: TextIn) -> dict:
     return {"verdicts": [asdict(v) for v in pipeline.check_text(body.text)]}
 
 
+@app.post("/check/detail")  # pipeline complet, chaque étape visible (mode détail, démo)
+def check_detail_route(body: TextIn) -> dict:
+    return pipeline.check_text_detail(body.text)
+
+
 # ---------------------------------------------------------------------------
 # Plateforme web partagée (Lot E) et informations Lot C.
 # ---------------------------------------------------------------------------

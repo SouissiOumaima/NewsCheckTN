@@ -21,6 +21,7 @@ Documentation interactive : http://localhost:8000/docs
 | POST | `/nli` | C | `{"claim", "evidence", "lang"}` | `StanceResult` |
 | POST | `/verdict` | D | `{"claim", "lang", "k"}` | `Verdict` |
 | POST | `/check` | tous | `{"text"}` | `{"verdicts": [Verdict]}` |
+| POST | `/check/detail` | tous | `{"text"}` | chaque étape : `normalized`, `claims` (+ `kept`), `results` (passages, positions, verdict), `components` (moteurs, `classique`), `out_of_scope`, `timings_ms` |
 | POST | `/verdict/detail` | D | `{"claim", "lang", "k", "nli": "lot-c"\|"regles"}` | `{"corpus_size", "nli", "evidences": [Evidence + rank, stance, confidence], "verdict"}` |
 | GET  | `/corpus/stats` | A1 | — | `{"size", "by_source", "sample"}` |
 | GET  | `/results` | tous | — | `{"results": [...]}` : fichiers de `evaluation/results/`, allégés |

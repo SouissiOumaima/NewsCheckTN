@@ -12,7 +12,7 @@
     <div class="page-head">
       <div class="eyebrow">Plateforme · pipeline complet</div>
       <h1>Vérifier un texte</h1>
-      <p class="lede">Colle un article, une publication ou une déclaration (français, arabe standard ou tunisien). Le système en extrait les affirmations vérifiables, cherche des preuves et rend pour chacune un verdict cité, ou s'abstient quand les preuves manquent.</p>
+      <p class="lede">Colle un article, une publication ou une déclaration (français, arabe standard ou tunisien). Le système en extrait les affirmations vérifiables, cherche des preuves et rend pour chacune un verdict cité, ou s'abstient quand les preuves manquent. Le mode détail montre chaque étape et son temps de calcul.</p>
     </div>
 
     <form class="card" id="form">
@@ -24,14 +24,19 @@
         <button type="button" class="chip" data-ex="1">arabe</button>
         <button type="button" class="chip" data-ex="2">tunisien</button>
         <button type="button" class="chip" data-ex="3">arabizi</button>
+        <button type="button" class="chip" data-ex="4">hors sujet</button>
       </div>
-      <div class="row"><button class="btn" type="submit" id="go">Vérifier</button><span class="empty" id="status"></span></div>
+      <div class="row" style="align-items:center">
+        <button class="btn" type="submit" id="go">Vérifier</button>
+        <label class="switch"><input type="checkbox" id="detail" checked> Mode détail (chaque étape)</label>
+        <span class="empty" id="status"></span>
+      </div>
     </form>
 
     <section aria-labelledby="h-res">
       <h2 id="h-res">Résultats</h2>
       <div class="error" id="err" hidden></div>
-      <div class="stack" id="out"><p class="empty">Les affirmations détectées et leurs verdicts s'afficheront ici.</p></div>
+      <div class="stack" id="out"><p class="empty">Les étapes, les affirmations détectées et leurs verdicts s'afficheront ici.</p></div>
     </section>
 
     <section>
@@ -62,13 +67,82 @@
     NC.init("accueil");
     NC.tiles(document.getElementById("tiles"), "accueil");
     const EXAMPLES = [
-      "Le chômage en Tunisie a atteint 25 % en 2025. Le gouvernement a annoncé de nouvelles mesures pour l'emploi.",
+      "39 000 ingénieurs et 3 000 médecins ont quitté la Tunisie entre 2015 et 2020. C'est une vraie catastrophe pour le pays.",
       "أعلنت الوزارة أن نسبة البطالة في تونس بلغت 25 بالمائة سنة 2025.",
       "الحكومة باش تزيد في سوم الخبز المدعم الشهر الجاي.",
-      "soum zit zitouna tla3 dhe3f el 3am hedha",
+      "fi fransa 13000 dar mazelt bla dhaw 5ater s5ana",
+      "Je pense que l'équipe nationale jouera mieux l'an prochain. Bonne journée à tous !",
     ];
+    const STEPS = { normalisation: "Normalisation", extraction: "Extraction", filtrage: "Filtrage",
+      corpus: "Corpus", recherche: "Recherche", nli: "NLI", verdict: "Verdict" };
+    const SCRIPTS = { latin: "latin", arabic: "lettres arabes", arabizi: "arabizi", mixed: "mixte" };
+    const ms = (v) => `${NC.fmt(v, v < 10 ? 1 : 0)} ms`;
     document.querySelectorAll("[data-ex]").forEach((b) =>
       b.addEventListener("click", () => { document.getElementById("text").value = EXAMPLES[+b.dataset.ex]; }));
+    const detailBox = document.getElementById("detail");
+    detailBox.addEventListener("change", () => document.getElementById("out").classList.toggle("compact", !detailBox.checked));
+
+    function stepHead(n, title, lot, time) {
+      return `<div class="step-h"><span class="step-n">${n}</span><h3>${title}</h3><span class="tag">${lot}</span>${time !== undefined ? `<span class="lat">${ms(time)}</span>` : ""}</div>`;
+    }
+
+    function render(d, roundTrip) {
+      const t = d.timings_ms, c = d.components;
+      const lat = Object.keys(STEPS).filter((k) => k in t).map((k) => `<span class="lat">${STEPS[k]} ${ms(t[k])}</span>`).join("");
+      const comps = `détecteur <b>${NC.esc(c.detecteur)}</b> · recherche <b>${NC.esc(c.recherche)}</b> · NLI <b>${NC.esc(c.nli)}</b> · verdict <b>gabarit</b>`;
+      let html = `<div class="card latency">
+          <div class="row" style="align-items:center;justify-content:space-between">
+            <div><div class="k">Latence totale</div><div class="big num">${ms(t.total)}</div>
+              <div class="empty">calcul côté serveur · ${ms(roundTrip)} aller-retour navigateur</div></div>
+            ${c.classique ? '<span class="badge ok">100 % classique (Bronze)</span>' : `<span class="badge ko">Composant neuronal actif : ${NC.esc(c.neuronal.join(", "))}</span>`}
+          </div>
+          <div class="examples detail-only">${lat}</div>
+          <div class="empty detail-only">Moteurs : ${comps}${d.corpus ? ` · corpus <b>${d.corpus.size}</b> passages (${NC.esc(d.corpus.origin)})` : ""}</div>
+        </div>`;
+      if (d.corpus && d.corpus.warning) html += `<p class="notice">${NC.esc(d.corpus.warning)} Pour les vrais articles : relancer l'API avec <code>EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl</code>.</p>`;
+      if (c.detecteur === "heuristic-fallback") html += `<p class="notice">Le détecteur TF-IDF du Lot C n'est pas chargé (fichier <code>models/checkpoints/claim_detection_tfidf_seed42.joblib</code> absent) : un score de repli simple est utilisé.</p>`;
+
+      html += `<article class="card detail-only">${stepHead(1, "Texte normalisé et langue", "A2", t.normalisation)}
+          <div class="tx-box">${NC.text(d.normalized.text)}</div>
+          <div class="examples">langue <span class="tag">${NC.esc(d.normalized.lang)}</span> écriture <span class="tag">${NC.esc(SCRIPTS[d.normalized.script] || d.normalized.script)}</span>
+          ${d.normalized.text !== d.input ? "" : '<span class="empty">(texte inchangé par la normalisation)</span>'}</div>
+        </article>`;
+
+      html += `<article class="card detail-only">${stepHead(2, "Affirmations candidates et filtrage", "B + C", t.extraction + t.filtrage)}
+        ${d.claims.length ? `<div class="table-wrap"><table class="t"><thead><tr><th>#</th><th>Segment</th><th>Modalité</th><th class="n">Score vérifiable</th><th>Décision</th></tr></thead><tbody>
+          ${d.claims.map((cl, i) => `<tr><td class="num">${i + 1}</td><td>${NC.text(cl.text)}</td><td>${NC.esc(cl.modality || "—")}</td><td class="n">${NC.fmt(cl.checkworthiness)}</td>
+            <td>${cl.kept ? '<span class="st st-supports">vérifiée</span>' : '<span class="st">écartée</span>'}</td></tr>`).join("")}
+          </tbody></table></div>` : '<p class="empty">Aucun segment extrait.</p>'}
+        </article>`;
+
+      if (d.out_of_scope) {
+        html += `<div class="verdict"><div class="row" style="align-items:center">${NC.verdictChip("preuves_insuffisantes")}<span class="tag">hors périmètre</span><span class="tag">abstention</span></div><pre>${NC.esc(d.message)}</pre></div>`;
+        return html;
+      }
+      d.results.forEach((r, i) => {
+        const cited = new Set(r.verdict.citations);
+        const evs = r.evidences.length ? r.evidences.map((ev) => `
+          <div class="ev${cited.has(ev.doc_id) ? " cited" : ""}">
+            <div class="h"><span class="num">#${ev.rank}</span><span class="doc">${NC.esc(ev.doc_id)}</span>
+              <span class="num">BM25 ${NC.fmt(ev.score)}</span>${NC.stanceChip(ev.stance, ev.confidence)}
+              ${cited.has(ev.doc_id) ? '<span class="tag">citée</span>' : ""}<span>${NC.esc(ev.source)}</span>
+              ${ev.url ? `<a href="${NC.esc(ev.url)}" target="_blank" rel="noopener">lien</a>` : ""}</div>
+            <div class="tx">${NC.text(ev.text)}</div>
+          </div>`).join("") : '<p class="empty">Aucun passage retrouvé : aucun mot en commun avec le corpus.</p>';
+        html += `<article class="card">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <span class="eyebrow">Affirmation ${i + 1}</span>
+            <span class="examples"><span class="tag">${NC.esc(r.claim.lang)}</span>${r.claim.modality ? `<span class="tag">${NC.esc(r.claim.modality)}</span>` : ""}</span>
+          </div>
+          <div style="font-size:1.08rem">${NC.text(r.claim.text)}</div>
+          <div class="detail-only">${stepHead(3, "Passages retrouvés et position (NLI)", "D + C")}</div>
+          <div class="stack detail-only">${evs}</div>
+          <div class="detail-only">${stepHead(4, "Verdict", "D")}</div>
+          ${NC.verdictBox(r.verdict)}
+        </article>`;
+      });
+      return html;
+    }
 
     document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -76,20 +150,9 @@
       err.hidden = true; go.disabled = true;
       document.getElementById("status").textContent = "Analyse en cours…";
       try {
-        const { verdicts } = await NC.api("/check", { text: document.getElementById("text").value });
-        out.innerHTML = verdicts.length ? verdicts.map((v, i) => `
-          <article class="card">
-            <div class="row" style="justify-content:space-between;align-items:center">
-              <span class="eyebrow">Affirmation ${i + 1}</span>
-              <span class="examples"><span class="tag">${NC.esc(v.claim.lang)}</span>${v.claim.modality ? `<span class="tag">${NC.esc(v.claim.modality)}</span>` : ""}</span>
-            </div>
-            <div style="font-size:1.08rem">${NC.text(v.claim.text)}</div>
-            ${NC.verdictBox(v)}
-          </article>`).join("")
-          : `<p class="empty">Aucune affirmation vérifiable détectée dans ce texte.</p>`;
-        if (verdicts.length && verdicts.every((v) => v.abstained)) {
-          out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention. C'est normal tant que le modèle NLI du Lot C n'est pas branché (le module actuel répond toujours « neutre ») ou que le corpus de preuves n'est pas installé : voir la page « D · Preuves et verdict ».</p>`);
-        }
+        const t0 = performance.now();
+        const d = await NC.api("/check/detail", { text: document.getElementById("text").value });
+        out.innerHTML = render(d, performance.now() - t0);
       } catch (ex) {
         err.hidden = false; err.textContent = ex.message;
       } finally {

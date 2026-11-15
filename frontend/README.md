@@ -45,7 +45,7 @@ erreur un corpus dont les droits ne sont pas confirmés.
 
 | Page | Fichier | Responsable | Route(s) API |
 |---|---|---|---|
-| Vérifier un texte | `index.html` | base commune | `POST /check` |
+| Vérifier un texte | `index.html` | base commune | `POST /check/detail` |
 | A1 · Données | `lot-a1.html` | Lot A1 | `GET /corpus/stats` |
 | A2 · Normalisation | `lot-a2.html` | Lot A2 | `POST /normalize` |
 | B · Affirmations | `lot-b.html` | Lot B | `POST /extract` |
@@ -93,3 +93,13 @@ L'adresse de l'API se change dans l'en-tête (« changer ») ; le choix est gard
 - Tout texte venant des données passe par `NC.text` ou `NC.esc` (arabe, et sécurité).
 - Ne jamais afficher un verdict sans ses citations ; afficher clairement les abstentions.
 - Aucune donnée réelle dans `frontend/` : les exemples des pages sont fictifs ou très courts.
+
+## Mode détail (démo de la Revue Bronze)
+
+La page d'accueil appelle `POST /check/detail` : même chaîne que `/check`, mais chaque étape est
+affichée avec son temps de calcul : texte normalisé, langue et écriture (A2), segments extraits et
+décision du détecteur (B + C), passages retrouvés avec leur position NLI (D + C), verdict cité ou
+abstention (D). Un texte sans affirmation vérifiable est marqué « hors périmètre » et aucun verdict
+n'est émis. Un bandeau indique si tous les moteurs actifs sont classiques (BM25, TF-IDF, règles) ou si
+un composant neuronal est branché (`RETRIEVAL_METHOD`, `CLAIM_DETECTOR_BACKEND`, `NLI_BACKEND`).
+La case « Mode détail » permet de n'afficher que les verdicts.

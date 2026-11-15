@@ -88,3 +88,45 @@ def test_corpus_stats_indique_l_origine(tmp_path, monkeypatch):
     monkeypatch.setenv("EVIDENCE_CORPUS", str(path))
     data = client.get("/corpus/stats").json()
     assert data["size"] == 1 and data["origin"] == "EVIDENCE_CORPUS" and "warning" not in data
+
+
+# --- Mode détail (démo : chaque étape visible, latence, hors périmètre) ---------------
+
+
+def test_check_detail_montre_chaque_etape():
+    d = client.post("/check/detail", json={"text": TEXT}).json()
+    assert d["normalized"]["lang"] == "fr" and d["normalized"]["text"]
+    assert [c["kept"] for c in d["claims"]] == [True]
+    (result,) = d["results"]
+    assert result["claim"]["text"] == TEXT
+    assert all({"rank", "stance", "confidence", "doc_id"} <= set(e) for e in result["evidences"])
+    assert result["verdict"]["label"] in {"vrai", "faux", "trompeur", "preuves_insuffisantes"}
+    timings = d["timings_ms"]
+    for step in ("normalisation", "extraction", "filtrage", "recherche", "nli", "verdict", "total"):
+        assert timings[step] >= 0
+    assert d["out_of_scope"] is False and d["corpus"]["size"] >= 1
+
+
+def test_check_detail_meme_verdict_que_check():
+    detail = client.post("/check/detail", json={"text": TEXT}).json()
+    (verdict,) = client.post("/check", json={"text": TEXT}).json()["verdicts"]
+    assert detail["results"][0]["verdict"] == verdict
+
+
+def test_check_detail_hors_perimetre_s_abstient(monkeypatch):
+    import pipeline
+
+    monkeypatch.setattr(pipeline, "filter_checkworthy", lambda claims, **_: [])
+    d = client.post("/check/detail", json={"text": "J'adore le couscous !"}).json()
+    assert d["out_of_scope"] is True and d["results"] == [] and d["message"]
+    assert d["claims"] and not any(c["kept"] for c in d["claims"])
+    assert "recherche" not in d["timings_ms"] and d["timings_ms"]["total"] >= 0
+
+
+def test_check_detail_signale_les_composants_neuronaux(monkeypatch):
+    import pipeline
+
+    assert pipeline.components()["classique"] is True  # configuration par défaut = Bronze
+    monkeypatch.setenv("RETRIEVAL_METHOD", "hybrid")
+    comps = pipeline.components()
+    assert comps["classique"] is False and comps["neuronal"] == ["recherche hybrid"]
