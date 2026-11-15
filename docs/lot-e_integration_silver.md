@@ -2,8 +2,8 @@
 
 ## Périmètre
 
-Les composants de PR #21 et #25 sont réunis sur cette branche d'intégration.
-La fusion dans main reste une opération distincte. Aucune mesure sur le test
+Les composants des PR #21 et #25 sont fusionnés dans main. Cette branche
+reprend uniquement les changements du Lot E au-dessus de ces composants. Aucune mesure sur le test
 scientifique n'est relancée par ce travail d'intégration.
 
 ## Sélection explicite
