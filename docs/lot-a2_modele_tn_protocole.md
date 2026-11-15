@@ -73,8 +73,20 @@ Chaque score est donné avec un intervalle de confiance à 95 % (bootstrap, 1 00
   le biais d'ancrage sur la référence).
 - Étiquettes : celles du guide (`t`, `a`, `f`, `x`) ; un texte français éventuellement classé `x`
   avant cette correction est sans effet sur l'entraînement (`f` et `x` sont tous deux exclus, §3).
-- Prompt, modèle, version et température (0) fixés avant le premier appel : modèle `gemini-4-hydrogen` (Google AI Studio, 2026-11-15), température 0,, prompt conservé hors dépôt avec les exports.
+- Prompt, modèle, version et température (0) fixés avant le premier appel : modèle `gemini-4-hydrogen` (Google AI Studio, 2026-11-15), température 0, prompt conservé hors dépôt avec les exports.
 - Les textes envoyés au LLM sont des commentaires publics de TSAC (LGPL-3.0) ; aucune donnée privée,
   aucune clé dans Git.
 - Mesure ajoutée : accord LLM / humain sur l'entraînement assisté (part des propositions corrigées),
   calculée après l'annotation.
+
+### Note d'exécution — 2026-11-15 : assistance du LLM presque absente
+
+- Entraînement, lignes 161 à 800 (640 textes) : la proposition du LLM n'a été obtenue et affichée
+  que pour 20 textes ; pour les 620 autres, les appels ont échoué (probablement le quota) et
+  aucune proposition n'a été affichée. Ces 620 textes ont donc été annotés sans assistance,
+  comme les 160 textes communs.
+- Conséquence : l'accord LLM / humain ne peut pas être mesuré sur l'annotation elle-même
+  (20 textes seulement, trop peu pour conclure). Aucun effet sur les étiquettes : chaque étiquette
+  est une décision humaine, et l'absence de proposition exclut tout biais d'ancrage.
+- Entraînement (annotateur 1) : 800 / 800 ; colonne `mode` de l'export « assisté » pour les 640,
+  proposition présente pour 20 seulement (trace dans `*_llm.tsv`).
