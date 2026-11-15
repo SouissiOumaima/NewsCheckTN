@@ -62,8 +62,118 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
+| EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (540 textes, P061–P600, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
 
 ## Entrées
+
+### EXP-B-010 — Mesure du système gelé sur un jeu de test jamais vu (P061–P600)
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : obtenir une première mesure non optimiste de l'extracteur, sur un jeu
+  qui n'a servi ni à écrire ni à régler les règles. Hypothèse : l'écart à la baseline mesuré sur
+  le pilote (EXP-B-009) se confirme.
+- **Données** :
+  - Lignes P061 à P600 du jeu de 600 phrases du Lot A1 : **540 textes**, extraits de
+    `claim_detection_600.xlsx` vers un fichier tabulé hors dépôt (`id`, `texte`, `label`,
+    `modalite`, `doute`, `source`, `langue`, `script`).
+  - **SHA-256 du fichier mesuré** :
+    `5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b`. L'empreinte a été notée
+    avant la mesure, et le fichier est en lecture seule depuis.
+  - **Un seul annotateur** : pas d'accord inter-annotateurs ni de consensus. 47 textes sont
+    marqués « doute ».
+  - Labels : AFFIRMATION 284, AUTRE 175, OPINION 81.
+  - Modalités : assertif 208, rapporté 92, opinion 84, interrogatif 50, souhait 47,
+    hypothétique 39, conditionnel 20.
+  - Langue et écriture déclarées par le jeu : fr 140, ar 135, tn en arabizi 135, tn en lettres
+    arabes 81, tn mixte 49.
+  - **Indépendance** : jeu vierge pour le Lot B.
+    - Aucun fichier du Lot B, sur aucune branche, ne cite ces identifiants. La seule occurrence
+      est un test synthétique de plage d'identifiants.
+    - Les mesures précédentes (EXP-B-008, B-009) excluaient explicitement ces lignes.
+    - Aucun texte n'est identique à un texte du pilote, d'eval_30 ou des tests.
+- **Méthode / configuration** :
+  - **Système gelé avant la mesure** (entrée « Gel du système du Lot B pour EXP-B-010 »).
+  - Unité : le texte. Un texte est une affirmation si l'une de ses phrases candidates l'est ; sa
+    modalité est celle de la première affirmation, sinon de la première candidate.
+  - **Convention de détection, comme EXP-B-008** : AFFIRMATION → affirmation ; OPINION et AUTRE →
+    non-affirmation. Ces deux labels n'ont pas d'équivalent direct dans `is_claim`.
+  - Baselines : « tout = affirmation » et « tout = assertif ».
+  - IC : bootstrap percentile 95 %, graine 20261015, 1000 tirages.
+  - Extracteur − baseline : bootstrap apparié, graine 42, 2000 tirages.
+  - Parseurs − règles : bootstrap apparié, graine 20261015, 1000 tirages.
+  - Groupes : langue et écriture déclarées par le jeu ; contrôle avec la langue donnée par le
+    Lot A2.
+- **Code** : extracteur du commit `1826244`. Mesure faite sur `c6ed6ad` (branche `lot-b-freeze`,
+  `main` `5d93800` fusionné). `git diff 1826244 c6ed6ad -- linguistic_analysis` ne touche que
+  `MODEL_CARD.md`. Fonctions de mesure : `linguistic_analysis/evaluate_double.py` (lecture,
+  prédiction par texte, métriques, bootstrap), avec un seul fichier d'annotation.
+- **Résultats** :
+
+  | Mesure (540 textes) | Règles [IC 95 %] | Parseurs [IC 95 %] | Baseline |
+  |---|---|---|---|
+  | Détection, exactitude | 0.785 [0.750 ; 0.820] | 0.789 [0.754 ; 0.824] | 0.526 |
+  | Détection, précision | 0.714 [0.670 ; 0.757] | 0.718 [0.674 ; 0.761] | 0.526 |
+  | Détection, rappel | 0.986 [0.972 ; 0.997] | 0.986 [0.972 ; 0.997] | 1.000 |
+  | Détection, macro-F1 | 0.771 [0.733 ; 0.806] | 0.775 [0.737 ; 0.810] | 0.345 |
+  | Modalité, exactitude | 0.733 [0.696 ; 0.769] | 0.731 [0.696 ; 0.767] | 0.385 |
+  | Modalité, macro-F1 | 0.734 [0.690 ; 0.772] | 0.729 [0.686 ; 0.767] | 0.079 |
+
+  - **Extracteur − baseline (macro-F1, mode règles)** :
+    - détection : +0.426 [+0.391 ; +0.460] ;
+    - modalité : +0.655 [+0.613 ; +0.691].
+  - **Parseurs − règles** : aucune différence établie.
+    - Détection, macro-F1 : +0.004 [−0.004 ; +0.013].
+    - Modalité, exactitude : −0.002 [−0.013 ; +0.009].
+    - Seuls 4 textes diffèrent en détection et 10 en modalité.
+  - **Par langue / écriture déclarée** (mode règles) :
+
+    | Groupe | N | Macro-F1 de détection | Exactitude de modalité | Macro-F1 de modalité |
+    |---|---|---|---|---|
+    | fr | 140 | 0.731 | 0.750 | 0.705 |
+    | ar | 135 | 0.794 | 0.748 | 0.738 |
+    | tn, lettres arabes | 81 | 0.713 | 0.667 | 0.573 |
+    | tn, arabizi | 135 | 0.780 | 0.704 | 0.703 |
+    | tn, mixte | 49 | 0.868 | 0.837 | 0.757 |
+
+  - **Doute** (mode règles) :
+    - 47 textes « doute » : macro-F1 de détection 0.668, exactitude de modalité 0.660 ;
+    - 493 autres : 0.780 et 0.740.
+  - **Faux positifs** (mode règles) :
+    - 54 OPINION sur 81 et 58 AUTRE sur 175 sont prédits comme affirmations ;
+    - 4 AFFIRMATION sur 284 sont manquées.
+  - **Confusions principales de modalité** (mode règles, gold → prédit) :
+    - opinion → assertif : 55 sur 84 ;
+    - rapporté → assertif : 33 sur 92 ;
+    - souhait → assertif : 30 sur 47 ;
+    - hypothétique → assertif : 17 sur 39.
+    - En revanche, interrogatif 50/50 et conditionnel 20/20.
+- **Analyse** :
+  - Sur un jeu jamais vu, l'extracteur dépasse nettement les deux baselines. L'écart sur la
+    baseline est **établi**, avec un IC loin de 0.
+  - Les scores sont plus élevés que sur le pilote (macro-F1 de détection 0.60–0.74), surtout en
+    tunisien arabizi. Ce jeu semble formé de phrases plus courtes et plus nettes que les messages
+    du pilote. Ce point reste à vérifier : nombre de phrases par texte.
+  - L'erreur dominante reste **le défaut `assertif`** pour les opinions, les souhaits et une partie
+    du discours rapporté. C'est cohérent avec l'ablation d'EXP-B-009.
+  - Le tunisien en lettres arabes est le groupe le plus faible. Le Lot A2 en classe 41 sur 81 comme
+    arabe standard, et aucun parseur ne le couvre.
+  - Les parseurs n'apportent rien de mesurable sur ce jeu.
+  - **Limites** :
+    - un seul annotateur (pas de kappa, pas de gold adjugé) ;
+    - même annotateur que le gold « A » du pilote ;
+    - pas de gold de triplet, de source ni de coréférence sur ce jeu.
+- **Décision / suite** :
+  - Ces chiffres sont **la référence Silver du Lot B**. Toute modification ultérieure des règles
+    rend une nouvelle mesure sur ce jeu optimiste : elle sera rapportée comme un « 2ᵉ passage ».
+  - Pistes, à mesurer sur un autre jeu :
+    - opinions évaluatives sans marqueur à la 1re personne ;
+    - souhaits et injonctions ;
+    - discours rapporté sans verbe de parole connu ;
+    - tunisien en lettres arabes.
+  - Comparaison avec l'encodeur du Lot C (question de recherche 1) : ce jeu a servi à entraîner
+    et à tester le Model 1 du Lot C. Son test gelé
+    (`data/splits/claim_detection_multiclass_600_seed42.json`, 120 identifiants) en a **112 dans
+    P061–P600**. La comparaison équitable se fera sur ces 112 textes, vierges pour les deux lots.
 
 ### Gel du système du Lot B pour EXP-B-010 (pas une expérience)
 - **Date** : 2026-11-14
