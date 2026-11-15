@@ -25,7 +25,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
-| EXP-D-009 | 2026-11-15 | D | Silver : verdict par LLM contraint aux preuves | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | LLM retenu pour le Silver ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
+| EXP-D-010 | 2026-11-15 | D | Silver officiel : verdict par LLM ouvert ≤ 8 Md contraint aux preuves | CohereLabs/aya-expanse-8b (4 bits, Colab T4), même prompt v1 et mêmes contrôles qu'EXP-D-009, température 0.3, 3 graines locales (13, 42, 2026) ; recherche hybride (EXP-D-008) ; 4 ablations ; bootstrap apparié 10 000 tirages ; aucune donnée envoyée à une API | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.730 ± 0.028 / 0.410 ± 0.016 (graine 42 : 0.714 / 0.401) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.429, IC95 [0.143 ; 0.714], p = 0.004) et majorité 0.524 / 0.172 ; couverture 1.00, abstention justifiée 0.00 ; tunisien 0.8 ; 0 citation invalide | résultat officiel du Silver ; exact mais jamais d'abstention (3 affirmations sans preuve jugées « faux ») ; suite : contrôle de pertinence avant le LLM, abstention évaluée (Gold) |
+| EXP-D-009 | 2026-11-15 | D | Comparaison (non officiel) : verdict par LLM contraint, API Gemini | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | comparaison seulement (modèle > 8 Md, données envoyées à une API) ; officiel : EXP-D-010 ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
 | EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
@@ -67,7 +68,77 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 ## Entrées
 
-### EXP-D-009 — Silver : verdict par LLM contraint aux preuves (3 exécutions, ablations, bootstrap)
+### EXP-D-010 — Silver officiel : verdict par LLM ouvert (≤ 8 Md) contraint aux preuves
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : refaire EXP-D-009 dans les conditions du cahier des charges (modèle
+  ouvert de 8 milliards de paramètres au plus en inférence) et sans envoyer de données Tunifact à
+  une API (décision de l'équipe, 15/11/2026). Le LLM ouvert fait-il mieux que le gabarit Bronze ?
+- **Données** : dev fictif (20 affirmations) ; test Tunifact v1 **gelé le 23/10/2026** (21
+  affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Calcul dans une session Colab ; aucune donnée envoyée à une API.
+- **Méthode / configuration** :
+  - LLM : `CohereLabs/aya-expanse-8b` (8 Md, 23 langues dont l'arabe et le français ; licence
+    CC-BY-NC, accès contrôlé), chargé en 4 bits (bitsandbytes) sur GPU T4. Choisi avant la mesure :
+    dans le benchmark tunisien d'EMNLP 2025, son prédécesseur Aya-23-8B est le meilleur petit
+    modèle ouvert évalué (devant Llama-3.1-8B).
+  - **Même prompt v1** et mêmes contrôles par le code qu'EXP-D-009 (JSON, citations parmi les
+    passages fournis, repli sur le gabarit) ; recherche hybride BM25 + e5-base, top 5 ; positions
+    NLI du NLI Bronze (gabarit, repli, ablation « indices NLI »).
+  - Température 0.3, top-p 0.9, **3 graines fixées localement** (13, 42, 2026) ; référence : 42.
+  - Ablations (graine 42) : indices NLI ; 3 passages ; 1 passage ; recherche BM25.
+  - Bootstrap apparié contre le gabarit (10 000 tirages, graine 42).
+- **Code** : `rag_llm/llm_verdict.py`, `rag_llm/silver_verdict.py`,
+  `notebooks/lot_d_rag/02_silver_verdict_llm.ipynb` (branche `lot-d-silver`).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (recherche hybride) | 0.286 | 0.219 | 0.381 | 0.500 | 0.444 | 0.286 | 0.000 |
+  | **LLM Aya 8B (graine 42)** | **0.714** | **0.401** | 1.000 | 0.714 | 0.667 | 0.714 | 0.800 |
+  | LLM Aya 8B, moyenne des 3 graines | 0.730 ± 0.028 | 0.410 ± 0.016 | 1.000 ± 0.000 | — | | | |
+  | ablation : + indices NLI | 0.714 | 0.408 | 1.000 | 0.714 | 0.556 | 0.714 | 1.000 |
+  | ablation : 3 passages | 0.714 | 0.401 | 1.000 | 0.714 | 0.667 | 0.714 | 0.800 |
+  | ablation : 1 passage | 0.619 | 0.438 | 0.905 | 0.632 | 0.556 | 0.714 | 0.600 |
+  | ablation : recherche BM25 | 0.667 | 0.374 | 1.000 | 0.667 | 0.556 | 0.714 | 0.800 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | |
+  | toujours s'abstenir | 0.143 | 0.062 | 0.000 | | | | |
+
+  - Par graine : 13 → 0.762 / 0.428 ; 42 → 0.714 / 0.401 ; 2026 → 0.714 / 0.401. Sorties valides
+    1.00, 0 citation invalide, **abstention justifiée 0.00** pour les 3 graines.
+  - Bootstrap (graine 42 contre le gabarit) : exactitude +0.429 [0.143 ; 0.714], p = 0.004 ;
+    macro-F1 +0.182 [0.009 ; 0.441], p = 0.020.
+  - Erreurs (graine 42, 6) : 3 affirmations sans preuve jugées « faux » (`tf-c13`, `tf-c14`,
+    `tf-c15`) ; 2 « trompeur » jugés « vrai » (`tf-c05`, `tf-c09`) ; 1 position inversée en arabizi
+    (`tf-c11`, « faux » jugé « vrai »).
+- **Résultats — dev (20 affirmations)** : gabarit 0.50 / 0.375 ; LLM 0.75 / 0.557 (3 graines
+  identiques, écart-type 0), couverture 0.95, sorties valides 1.00 ; bootstrap +0.25 [-0.05 ; 0.50],
+  p = 0.054 ; ablations : indices NLI 0.75, 3 passages 0.75, 1 passage 0.85, BM25 0.75.
+- **Comparaison avec EXP-D-009 (Gemini, même prompt, même test)** : exactitude proche (0.730 ±
+  0.028 contre 0.762 ± 0.048), mais macro-F1 0.410 contre 0.809, précision sélective 0.714 contre
+  1.000 et abstention justifiée 0.00 contre 1.00. Le petit modèle est aussi exact, mais il ne suit
+  pas la consigne « dans le doute, preuves_insuffisantes » et ne produit jamais « trompeur ».
+- **Analyse** :
+  1. Le LLM ouvert **dépasse nettement le gabarit** (+0.43, significatif) **et la classe
+     majoritaire** (0.71 contre 0.52), ce que le Bronze ne faisait pas.
+  2. **Il ne s'abstient jamais** : les 3 affirmations inventées reçoivent un verdict « faux », avec
+     des citations qui existent bien (le contrôle de format passe) mais ne parlent pas du même
+     fait. C'est l'erreur `tf-c13` du Bronze, revenue sous une autre forme : le contrôle des
+     citations vérifie qu'elles existent, pas qu'elles sont pertinentes.
+  3. « trompeur » n'est jamais produit (2 erreurs) ; une position inversée en arabizi (`tf-c11`).
+  4. Tunisien : 0.8 (4 sur 5), meilleur que le gabarit (0.0) ; échantillon très petit.
+  5. Ablations : un seul passage fait perdre 0.10 ; la recherche hybride apporte +0.05 au verdict
+     par rapport à BM25 ; les indices NLI ne changent pas l'exactitude globale.
+  6. Variabilité : 0.71 à 0.76 selon la graine sur le test (0 sur le dev : à température 0.3, le
+     modèle est presque déterministe).
+  7. **Limites** : petit test (21 affirmations ; macro-F1 très sensible aux 3 affirmations sans
+     preuve) ; modèle quantifié en 4 bits ; contamination possible (articles publics), non mesurée.
+- **Décision / suite** : **résultat officiel du palier Silver** pour le verdict (recherche hybride +
+  Aya Expanse 8B + prompt v1), EXP-D-009 restant une comparaison. Suite : refuser un verdict quand
+  la preuve citée ne parle pas du même fait (contrôle de pertinence avant le LLM, ou seuil sur la
+  recherche) ; abstention évaluée et audit des preuves citées (Gold) ; NLI fine-tuné du Lot C.
+
+### EXP-D-009 — Comparaison (non officiel) : verdict par LLM contraint, API Gemini (3 exécutions, ablations, bootstrap)
 - **Date** : 2026-11-15
 - **Auteur / Lot** : Membre 5 (Hadil) / Lot D
 - **Objectif / hypothèse** : un LLM avec prompt contrôlé, obligé de citer les passages fournis,
@@ -145,8 +216,11 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
      affirmations inventées), mais non mesuré ; (b) graine refusée par l'API : résultats non
      reproductibles à l'identique (sorties gardées en cache) ; (c) modèle d'API qui peut changer ;
      (d) petit test (21 affirmations).
-- **Décision / suite** : verdict par LLM contraint retenu pour le palier Silver (recherche hybride +
-  `gemini-3.5-flash-lite` + prompt v1). Suite : relancer avec le NLI fine-tuné du Lot C (repli et
+- **Décision / suite** : **comparaison seulement**, pas le résultat officiel du Silver : le cahier des
+  charges limite le système évalué à 8 Md de paramètres en inférence, et l'équipe a préféré ne pas
+  envoyer les données Tunifact à une API (15/11/2026). Résultat officiel : EXP-D-010 (Aya Expanse 8B,
+  même prompt). Ce qui a été envoyé à Google : les 21 affirmations du test et les 5 passages
+  retrouvés pour chacune (phrases d'articles publics de Tunifact), sans annotation ni label. Suite : relancer avec le NLI fine-tuné du Lot C (repli et
   indices) ; mesurer la contamination (LLM sans passages, Gold) ; 2e LLM ouvert (Gemma) pour une
   ablation « choix du modèle » ; corriger la recherche en langue croisée et en arabizi.
 
