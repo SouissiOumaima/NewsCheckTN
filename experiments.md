@@ -63,8 +63,160 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 | EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (540 textes, P061–P600, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
+| EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
 
 ## Entrées
+
+### EXP-B-011 — Mesure exploratoire sur silver_40 (détection, modalité, SPO, coréférence)
+- **Statut** : **exploratoire, n = 40, une annotation indépendante non garantie, SPO n = 10 dont
+  3 réserves ouvertes, aucun texte tn en lettres arabes**.
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : mesurer le système gelé sur le jeu silver_40 livré par le Lot A1
+  (livraison provisoire), pour la détection, la modalité, le triplet SPO et la coréférence. Pas
+  d'hypothèse chiffrée : il s'agit d'une première lecture, sur un petit jeu.
+- **Données** (hors dépôt ; aucun texte reproduit ici) :
+  - Textes de référence : `silver_40_ghofran_livraison_provisoire.tsv` (40 textes corrigés).
+    - Par rapport aux fichiers d'annotation, 5 textes ont des corrections mineures (encodage,
+      apostrophes ; similarité ≥ 0.989).
+    - 2 textes ont été remplacés : `tarc-forum-0424` → `tarc-forum-0169` et `tarc-forum-0333` →
+      `tarc-forum-0152`.
+  - Annotations :
+    - Achraf : `silver_40_achraf.tsv`, 38 textes communs (pas de label pour 0152 et 0169).
+    - Ghofrane : `silver_40_ghofran.tsv` pour 38 textes ; livraison provisoire pour 0152 et 0169.
+      Sur les 38 textes communs, les labels de la livraison et du fichier initial sont identiques.
+    - Modalités normalisées sur une copie de travail (`rapport?` → `rapporté`, `hypoth?tique` →
+      `hypothétique`).
+  - Provenance : TArC 30, Tunifact fr 5, Tunifact ar 5 (langue Tunifact : fichier de métadonnées
+    de la livraison).
+  - Labels (Ghofrane, 40) : AUTRE 21, OPINION 9, AFFIRMATION 10. Les 10 affirmations sont toutes
+    Tunifact : **label et provenance sont confondus**.
+  - Aucun texte tunisien en lettres arabes ; groupes linguistiques de la livraison provisoires
+    (2 textes TArC « à vérifier »).
+  - SPO : `silver_40_spo_ghofran_propositions_v2.jsonl`, 10 propositions (5 fr, 5 ar, toutes
+    Tunifact), converties au format JSONL d'eval_30.
+    - 7 sans réserve ; 3 avec réserve ouverte : `tunifact-797-003`, `tunifact-698-s0004`,
+      `tunifact-933-s0022`.
+    - `resolved_text` présent pour 1 proposition seulement (`tunifact-698-s0004`, avec réserve).
+    - `phenomena`, champ obligatoire du format : repris de la livraison quand il existe, sinon
+      rempli mécaniquement (`rapporté` d'après la modalité ; `coréférence_affixe` pour
+      `tunifact-933-s0022` d'après l'addendum ; valeur technique pour 2 propositions). Les
+      métriques globales sont identiques sans ce champ (vérifié) ; les résultats par phénomène
+      ne sont pas utilisés.
+    - SHA-256 de la conversion (10 propositions) :
+      `54ab22cdfb7d15c120364922a016056d4b10164b067a3badef5437d2b198fe07`.
+- **Vérifications avant la mesure** :
+  - **CSV de relecture de #18** (`data/annotations/a1_relecture_achref_31_sans_textes.csv`,
+    branche `a1/relecture-achref`, même contenu sur `lot-a1-data`) :
+    - seuls **8 des 30** identifiants TArC de silver_40 y figurent (22 n'y sont pas ; 23
+      identifiants du CSV ne sont pas dans silver_40) ;
+    - sur ces 8, les labels d'Achraf sont égaux à `label_achref` (8/8), **pas** à
+      `decision_achref` (6/8 ; écarts : `tarc-forum-0210`, `tarc-forum-0353`).
+    - L'hypothèse « mêmes 30 identifiants, labels = `decision_achref` » n'est donc pas vérifiée.
+      Cela ne prouve pas l'indépendance : la livraison indique qu'elle n'est pas confirmée.
+      L'accord ci-dessous est donc rapporté **sans garantie d'indépendance**.
+  - **Recouvrements de textes** (comparaison après repli : casse, ponctuation, diacritiques) :
+    - eval_30, fixtures et tests du Lot B : aucun ;
+    - P061–P600 (test d'EXP-B-010) : aucun ;
+    - **P01–P60 (pilote, jeu de mise au point d'EXP-B-008 / B-009) : 5 textes identiques**,
+      tous Tunifact et tous parmi les propositions SPO : `tunifact-797-001` (P17),
+      `tunifact-937-s0004` (P36), `tunifact-890-001` (P48), `tunifact-797-003` (P56),
+      `tunifact-698-s0001` (P58). Sur ces 5 textes, les modalités silver diffèrent de celles du
+      pilote pour 3 textes chez Achraf et 3 chez Ghofrane (rapporté au lieu d'assertif).
+    - Les mesures sont donc aussi données **hors pilote (35 textes)**.
+- **Méthode / configuration** :
+  - Système gelé, aucune modification : extracteur du commit `1826244`, mesure sur `ae1c142`
+    (branche `lot-b-silver40-exp`, issue de `lot-b-freeze`). `git diff 1826244 ae1c142 --
+    linguistic_analysis` ne touche que `MODEL_CARD.md`.
+  - Détection et modalité : `linguistic_analysis/evaluate_double.py` (unité texte, convention
+    d'EXP-B-008 : AFFIRMATION → affirmation), puis découpage par provenance avec les mêmes
+    fonctions (`detection_block`, `modality_block`, `agreement.cohen_kappa`).
+  - SPO et coréférence : `python -X utf8 -m linguistic_analysis.evaluate --eval-set <copie>
+    [--rules] --exp-id EXP-B-011 --out-dir <hors dépôt>`, sur 10, 7 et 3 propositions.
+  - IC : bootstrap percentile 95 %, graine 20261015, 1000 tirages ; extracteur − baseline :
+    apparié, graine 42, 2000 tirages.
+  - **Avertissement d'effectif** : 5 textes par groupe Tunifact, 28 à 30 TArC. Aucune mesure par
+    langue n'est fiable ; les groupes sont des provenances, pas des langues.
+- **Résultats** :
+  - **Accord entre annotateurs** (38 textes communs, indépendance non garantie) :
+
+    | Sous-ensemble | N | Kappa label (3 classes) | Kappa affirmation | Kappa modalité |
+    |---|---|---|---|---|
+    | tous | 38 | 0.660 [0.434 ; 0.858] (30/38) | 0.934 [0.782 ; 1.000] | 0.900 [0.768 ; 1.000] |
+    | TArC | 28 | 0.347 [−0.029 ; 0.674] (20/28) | 0.000 (27/28, une seule affirmation) | 0.862 [0.690 ; 1.000] |
+    | Tunifact fr | 5 | accord 5/5 | accord 5/5 | accord 5/5 |
+    | Tunifact ar | 5 | accord 5/5 | accord 5/5 | accord 5/5 |
+    | hors pilote | 33 | 0.573 [0.267 ; 0.806] | 0.891 [0.602 ; 1.000] | 0.884 [0.730 ; 1.000] |
+
+    Le kappa global est tiré vers le haut par les 10 textes Tunifact, tous AFFIRMATION chez les
+    deux annotateurs.
+  - **Détection et modalité, mode règles** (macro-F1 de détection ; exactitude de modalité ;
+    baseline entre parenthèses) :
+
+    | Sous-ensemble | Gold | N | Détection macro-F1 | Modalité exactitude |
+    |---|---|---|---|---|
+    | tous | Achraf | 38 | 0.438 [0.282 ; 0.603] (0.224) | 0.395 [0.237 ; 0.553] (0.289) |
+    | tous | Ghofrane | 40 | 0.394 [0.242 ; 0.545] (0.200) | 0.375 [0.225 ; 0.525] (0.225) |
+    | tous | accord | 30 / 35 | 0.486 [0.299 ; 0.667] (0.250) | 0.400 [0.257 ; 0.571] (0.257) |
+    | TArC | Ghofrane | 30 | 0.167 [0.062 ; 0.268] (0.000) | 0.267 [0.133 ; 0.433] (0.133) |
+    | Tunifact fr | les deux | 5 | 1.000 (1.000) | 0.800 [0.400 ; 1.000] (0.600) |
+    | Tunifact ar | les deux | 5 | 1.000 (1.000) | 0.600 [0.200 ; 1.000] (0.400) |
+    | hors pilote | Ghofrane | 35 | 0.314 [0.160 ; 0.457] (0.125) | 0.371 [0.229 ; 0.543] (0.229) |
+
+    - Extracteur − baseline, macro-F1 de détection (38 textes) : +0.213 [+0.084 ; +0.347]
+      (Achraf), +0.206 [+0.081 ; +0.338] (Ghofrane), +0.236 [+0.087 ; +0.388] (accord).
+    - Mode parseurs : détection identique (aucun texte ne change) ; modalité : un seul texte
+      change (`tarc-forum-0097`). Le macro-F1 de modalité varie pourtant de 0.399 à 0.544
+      (Ghofrane, 38) : sur ce jeu, cette mesure est instable (classes à 1–3 exemples).
+    - Rappel 1.000 partout où il est défini. **TArC : 24 textes sur 30 prédits affirmation**, alors que le gold
+      n'en compte aucune (Ghofrane) ou une (Achraf).
+    - Modalité (Ghofrane, 40, règles) : 25 erreurs, dont 24 vers `assertif` (opinion 11,
+      rapporté 6, interrogatif 4, conditionnel, hypothétique, souhait 1 chacun).
+    - Tunifact : détection triviale (que des affirmations ; la baseline fait aussi 1.000).
+  - **SPO et coréférence** (`evaluate.py`, triplet exact ; F1 de jetons par rôle) :
+
+    | Jeu | Mode | N | Triplet exact | Sujet / prédicat / objet exacts | F1 de jetons S / P / O | Coréférence |
+    |---|---|---|---|---|---|---|
+    | 7 sans réserve | règles | 7 | 1/7 (0.14 [0.00 ; 0.43]) | 0.29 / 0.14 / 0.14 | 0.50 / 0.23 / 0.43 | — (0) |
+    | 7 sans réserve | parseurs | 7 | 2/7 (0.29 [0.00 ; 0.71]) | 0.71 / 0.29 / 0.29 | 0.71 / 0.33 / 0.59 | — (0) |
+    | 3 avec réserve | règles | 3 | 0/3 | 0.33 / 0.33 / 0.00 | 0.33 / 0.33 / 0.27 | 0/1 |
+    | 3 avec réserve | parseurs | 3 | 0/3 | 0.33 / 0.67 / 0.33 | 0.33 / 0.67 / 0.38 | 0/1 |
+    | 10 (ensemble) | règles | 10 | 1/10 | 0.30 / 0.20 / 0.10 | 0.45 / 0.26 / 0.39 | 0/1 |
+    | 10 (ensemble) | parseurs | 10 | 2/10 | 0.60 / 0.40 / 0.30 | 0.60 / 0.43 / 0.53 | 0/1 |
+
+    - Par écriture (10 propositions) : règles, triplet exact 0/5 en arabe, 1/5 en français ;
+      parseurs, 1/5 et 1/5.
+    - Les triplets exacts (`tunifact-797-001` dans les deux modes, `tunifact-890-001` en
+      parseurs) portent sur des textes du pilote.
+    - Coréférence : la seule annotation (`tunifact-698-s0004`, réserve ouverte) porte sur un
+      « Nous » qui renvoie à l'unité de vérification. Le système ne produit aucune résolution
+      (journal vide) ; en mode règles, il ne trouve pas non plus de sujet ni de prédicat.
+  - Non-régression eval_30 (`exp_id` EXP-B-011) : détection 1.000, modalité 1.000, triplet exact
+    20/22 (règles) et 19/22 (parseurs), comme EXP-B-010.
+- **Analyse** :
+  - Sur les textes de forum TArC, l'extracteur considère presque tout comme une affirmation. Les
+    annotateurs n'y voient pas d'affirmation. C'est la même erreur qu'en EXP-B-010 (opinions et
+    autres textes prédits affirmations), en plus marqué sur des messages de forum.
+  - La modalité reste dominée par le défaut `assertif`, comme en EXP-B-009 et B-010.
+  - Sur Tunifact, la détection ne mesure rien (une seule classe). La modalité et le SPO y portent
+    sur 5 textes par écriture, dont 5 au total déjà vus dans le pilote.
+  - SPO : les parseurs semblent meilleurs que les règles sur le sujet, mais avec 7 propositions
+    sans réserve, l'écart n'est pas établi.
+  - Ces chiffres ne remplacent pas EXP-B-010 (540 textes) et ne permettent aucune conclusion par
+    langue.
+- **Limites** :
+  - n = 40 (38 en double annotation) ; une annotation indépendante non garantie ;
+  - label confondu avec la provenance ; aucune affirmation TArC ; aucun texte tn en lettres
+    arabes ; aucune affirmation tunisienne pour le SPO ;
+  - SPO n = 10, dont 3 réserves ouvertes ; coréférence n = 1, avec réserve ;
+  - 5 textes déjà dans le pilote de mise au point ; livraison provisoire (classification
+    linguistique et triplets non validés).
+- **Décision / suite** :
+  - Résultat exploratoire, à ne pas citer comme mesure Silver de référence.
+  - Après arbitrage des 3 réserves et confirmation de l'indépendance : refaire la mesure avec les
+    mêmes commandes (2ᵉ passage, système toujours gelé).
+  - Demander, pour eval_100 : des affirmations tunisiennes (arabizi, mixte, lettres arabes) et
+    des triplets sur des textes jamais vus par le Lot B.
 
 ### EXP-B-010 — Mesure du système gelé sur un jeu de test jamais vu (P061–P600)
 - **Date** : 2026-11-15
