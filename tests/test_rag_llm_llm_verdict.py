@@ -169,3 +169,13 @@ def test_api_refuse_un_mauvais_nom_de_modele(monkeypatch):
     monkeypatch.setattr(gen, "_post", fake_post)
     with pytest.raises(RuntimeError, match="model name"):
         gen.generate([{"role": "user", "content": "x"}], seed=1)
+
+
+def test_evaluation_sans_ablations(tmp_path):
+    corpus = load_evidence_corpus(FIXTURES / "evidence_dev.jsonl")
+    claims = load_claims(FIXTURES / "claims_dev.jsonl")[:4]
+    llm = FakeLLM('{"label": "preuves_insuffisantes", "citations": []}')
+    gen = sv.CachedGenerator(llm, tmp_path / "c.jsonl")
+    res = sv.evaluate_split(corpus, claims, gen, predict_stances, "bm25", main_only=True)
+    assert set(res["systems"]) == {"gabarit + NLI", "LLM"}
+    assert llm.calls == 4 * len(sv.SEEDS)

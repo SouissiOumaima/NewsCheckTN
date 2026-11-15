@@ -319,7 +319,7 @@ class OpenAICompatibleGenerator:
                 data = self._post(json.dumps(payload).encode())
                 return data["choices"][0]["message"].get("content") or ""
             except urllib.error.HTTPError as exc:
-                detail = exc.read().decode("utf-8", "replace")[:300]
+                detail = exc.read().decode("utf-8", "replace")[:1500]
                 if exc.code == 400:
                     refused = next(
                         (

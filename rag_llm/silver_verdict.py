@@ -240,15 +240,18 @@ def compare(base_rows: list[dict], cand_rows: list[dict]) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def evaluate_split(corpus, claims, generator, predict_stances, method: str = "hybrid") -> dict:
+def evaluate_split(
+    corpus, claims, generator, predict_stances, method: str = "hybrid", main_only: bool = False
+) -> dict:
+    llm_systems = LLM_SYSTEMS[:1] if main_only else LLM_SYSTEMS
     prepared = {method: prepare(corpus, claims, method, predict_stances)}
-    for *_, other, _ in LLM_SYSTEMS:
+    for *_, other, _ in llm_systems:
         if other and other not in prepared:
             prepared[other] = prepare(corpus, claims, other, predict_stances)
 
     template = run_template(claims, prepared[method], method)
     systems = {"gabarit + NLI": {"metrics": metrics(template), "per_claim": template}}
-    for name, k, show_nli, other, seeds in LLM_SYSTEMS:
+    for name, k, show_nli, other, seeds in llm_systems:
         m = other or method
         per_seed_rows = {
             s: run_llm(claims, prepared[m], generator, k, show_nli, s, m) for s in seeds
@@ -317,6 +320,11 @@ def main() -> None:
     p.add_argument("--retrieval", default="hybrid", choices=hybrid.METHODS)
     p.add_argument("--model", default=None, help="LLM (défaut : LLM_MODEL ou Qwen2.5-7B-Instruct)")
     p.add_argument("--limit", type=int, default=None, help="essai rapide sur N affirmations")
+    p.add_argument(
+        "--main-only",
+        action="store_true",
+        help="gabarit + LLM (3 graines) seulement, sans les ablations (quota d'API limité)",
+    )
     args = p.parse_args()
 
     if "test" in args.splits:
@@ -343,12 +351,15 @@ def main() -> None:
         "nli": backend_info(),
         "limit": args.limit,
         "reasoning_effort": os.getenv("LLM_REASONING_EFFORT"),
+        "main_only": args.main_only,
     }
     for split in args.splits:
         corpus_path, claims_path = SPLITS[split]
         corpus, claims = load_evidence_corpus(corpus_path), load_claims(claims_path)
         claims = claims[: args.limit] if args.limit else claims
-        res = evaluate_split(corpus, claims, generator, predict_stances, args.retrieval)
+        res = evaluate_split(
+            corpus, claims, generator, predict_stances, args.retrieval, args.main_only
+        )
         print_split(
             f"{split} — {len(claims)} affirmations, LLM {generator.name}, "
             f"NLI {payload['nli'].get('backend')}",
