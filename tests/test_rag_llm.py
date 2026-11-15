@@ -32,6 +32,15 @@ from rag_llm.verdict import (
 
 FIXTURES = Path(__file__).parent / "fixtures" / "rag_llm"
 
+
+@pytest.fixture(autouse=True)
+def _config_par_defaut(monkeypatch):
+    """Ces tests vérifient le comportement par défaut (BM25, seuils du code) : on ignore les
+    variables posées dans le terminal pour lancer le Silver (ex. RETRIEVAL_METHOD=hybrid)."""
+    for var in ("RETRIEVAL_METHOD", "MIN_DENSE_SIMILARITY", "EMBEDDING_MODEL"):
+        monkeypatch.delenv(var, raising=False)
+
+
 CORPUS = [
     Evidence(doc_id="a", text="Tunis est la capitale de la Tunisie.", source="t"),
     Evidence(doc_id="b", text="Le couscous est un plat maghrébin.", source="t"),
@@ -56,6 +65,7 @@ def test_verdict_cites_evidence():
 
 
 # --- Retrieval BM25 (S1) ---------------------------------------------------------------
+
 
 def test_tokenize_normalise_arabe():
     # harakat, hamza, ة, article et chiffres arabes unifiés
@@ -100,6 +110,7 @@ def test_evaluation_jeu_dev():
 
 
 # --- Baseline NLI par règles (S2) ------------------------------------------------------
+
 
 def _ev(doc_id, text, score=5.0):
     return Evidence(doc_id=doc_id, text=text, source="t", score=score)
@@ -199,8 +210,19 @@ def test_evaluation_verdict_jeu_dev():
 # concept, ce qui imite ce que fait un encodeur multilingue (même sens → vecteurs proches).
 
 _CONCEPTS = {
-    "chomage": 0, "بطاله": 0, "tunisie": 1, "تونس": 1, "huile": 2, "زيت": 2,
-    "olive": 3, "زيتون": 3, "prix": 4, "سعر": 4, "pain": 5, "خبز": 5, "baguette": 5,
+    "chomage": 0,
+    "بطاله": 0,
+    "tunisie": 1,
+    "تونس": 1,
+    "huile": 2,
+    "زيت": 2,
+    "olive": 3,
+    "زيتون": 3,
+    "prix": 4,
+    "سعر": 4,
+    "pain": 5,
+    "خبز": 5,
+    "baguette": 5,
 }
 
 
