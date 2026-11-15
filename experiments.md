@@ -70,6 +70,28 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 ## Entrées
 
+### EXP-E-002 — Sélecteur de verdict et trace Silver C/D
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Lot E, développement et vérifications assistés par IA.
+- **Objectif** : relier les composants C (#21) et D (#25) sans modifier le contrat Verdict.
+- **Données** : exemples fictifs des tests ; aucun test scientifique relancé.
+- **Méthode** : VERDICT_BACKEND gabarit/llm partagé par pipeline et API ; repli visible ;
+  construction d'un fournisseur distant refusée sans LLM_ALLOW_EXTERNAL=1 ; cache du moteur local.
+- **Code** : common/verdict_runtime.py, pipeline.py, api/main.py ; tests/test_verdict_runtime.py.
+- **Résultats** : 657 tests passés, 1 skipped, 77 deselected, 6 xfailed (suite non slow) ;
+  Ruff et syntaxe JavaScript de l'accueil et de la page D vérifiés.
+- **Limites** : générateur fictif pendant les tests ; aucun Aya 8B, e5-base ou appel API externe
+  exécuté. Les chiffres scientifiques D-008 à D-010 et C-011 ne sont pas recalculés.
+- **Suite** : validation machine de démo avec ressources réelles ; accord collectif avant tout
+  envoi à une API externe. Le modèle Aya officiel reste distinct de la comparaison Gemini.
+
+- **Suivi de relecture Lot D** : reprise des champs input/normalized (texte, langue,
+  écriture) et du helper _claims_from_doc de lot-e-demo, dans une unique route
+  /check/detail ; normalisation exécutée une fois. Repli citation_hors_liste distinct
+  de llm_unavailable. 659 passed, 1 skipped, 77 deselected, 6 xfailed ; Ruff/JS OK.
+
+
+
 ### EXP-D-010 — Silver officiel : verdict par LLM ouvert (≤ 8 Md) contraint aux preuves
 - **Date** : 2026-11-15
 - **Auteur / Lot** : Membre 5 (Hadil) / Lot D
