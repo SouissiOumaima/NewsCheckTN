@@ -117,3 +117,47 @@ def test_explicitly_permitted_provider_reaches_only_fake_generator(
     verdict, info = runtime.resolve_verdict(*case)
     assert generator.calls == 1 and verdict.abstained and not verdict.citations
     assert info["used"] == "llm"
+
+
+
+def test_last_citation_guard_has_a_dedicated_reason(case, monkeypatch):
+    from dataclasses import replace
+
+    from rag_llm import llm_verdict as module
+
+    verdict = runtime.generate_verdict(case[0], case[2])
+    invalid = replace(verdict, citations=["not-retrieved"])
+    monkeypatch.setattr(runtime, "_generator", lambda *args: FakeGenerator(""))
+    monkeypatch.setattr(
+        module, "llm_verdict", lambda *args, **kwargs: module.LLMResult(invalid, True)
+    )
+    actual, info = runtime.resolve_verdict(*case)
+    assert actual.citations == ["demo-1"]
+    assert info["used"] == "gabarit" and info["fallback_reason"] == "citation_hors_liste"
+
+
+def test_detail_uses_one_normalization_and_exposes_its_result(monkeypatch):
+    import pipeline
+
+    text = "  Le taux de chômage en Tunisie est de 16,4 % en 2023.  "
+    original = pipeline.normalize
+    expected = original(text)
+    calls = []
+
+    def recorded(value):
+        calls.append(value)
+        return original(value)
+
+    monkeypatch.setattr(pipeline, "normalize", recorded)
+    monkeypatch.setenv("VERDICT_BACKEND", "gabarit")
+    response = TestClient(app).post("/check/detail", json={"text": text})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["input"] == text
+    assert data["normalized"] == {
+        "text": expected.text, "lang": expected.lang.value, "script": expected.script
+    }
+    assert calls == [text]
+    assert data["timings_ms"]["normalisation"] >= 0
+    routes = [r for r in app.routes if r.path == "/check/detail" and "POST" in r.methods]
+    assert len(routes) == 1

@@ -85,6 +85,11 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Suite** : validation machine de démo avec ressources réelles ; accord collectif avant tout
   envoi à une API externe. Le modèle Aya officiel reste distinct de la comparaison Gemini.
 
+- **Suivi de relecture Lot D** : reprise des champs input/normalized (texte, langue,
+  écriture) et du helper _claims_from_doc de lot-e-demo, dans une unique route
+  /check/detail ; normalisation exécutée une fois. Repli citation_hors_liste distinct
+  de llm_unavailable. 659 passed, 1 skipped, 77 deselected, 6 xfailed ; Ruff/JS OK.
+
 
 
 ### EXP-D-010 — Silver officiel : verdict par LLM ouvert (≤ 8 Md) contraint aux preuves

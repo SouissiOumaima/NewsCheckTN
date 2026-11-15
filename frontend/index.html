@@ -89,6 +89,7 @@
             <p class="sub">Verdict : ${NC.esc(detail.claims[i].verdict_engine.used)}${detail.claims[i].verdict_engine.fallback_reason ? ` · repli : ${NC.esc(detail.claims[i].verdict_engine.fallback_reason)}` : ""} · recherche ${NC.fmt(detail.claims[i].timings_ms.retrieval, 1)} ms · NLI ${NC.fmt(detail.claims[i].timings_ms.nli, 1)} ms · verdict ${NC.fmt(detail.claims[i].timings_ms.verdict, 1)} ms</p>
           </article>`).join("")
           : `<p class="empty">Aucune affirmation vérifiable détectée dans ce texte.</p>`;
+        out.insertAdjacentHTML("afterbegin", `<section class="card"><h2>Texte normalisé</h2><p>${NC.text(detail.normalized.text)}</p><p class="sub">Langue détectée : ${NC.esc(detail.normalized.lang)} · écriture : ${NC.esc(detail.normalized.script)}</p></section>`);
         out.insertAdjacentHTML("afterbegin", `<p class="notice">Recherche : ${NC.esc(detail.engines.retrieval)} · NLI : ${NC.esc(detail.engines.nli.backend || detail.engines.nli.status)} · ${detail.candidates} candidat(s), ${detail.retained} retenu(s) · total ${NC.fmt(detail.timings_ms.total, 1)} ms.</p>`);
         if (verdicts.length && verdicts.every((v) => v.abstained)) {
           out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention. Vérifiez la pertinence des preuves, le moteur NLI actif et les éventuels replis affichés : voir la page « D · Preuves et verdict ».</p>`);

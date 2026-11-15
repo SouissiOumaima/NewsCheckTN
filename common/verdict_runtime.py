@@ -53,7 +53,12 @@ def resolve_verdict(
         result = llm_verdict(claim, evidences, generator, stances=stances)
         allowed = {item.doc_id for item in evidences}
         if not set(result.verdict.citations) <= allowed:
-            raise ValueError("Citation hors des preuves retrouvées")
+            info.update(
+                fallback_reason="citation_hors_liste",
+                model=generator.name,
+                provider=provider,
+            )
+            return generate_verdict(claim, stances), info
         info.update(
             used="llm" if result.valid else (result.fallback or "gabarit"),
             fallback_reason=result.error,

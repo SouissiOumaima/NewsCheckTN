@@ -38,7 +38,9 @@ comme conservant les fichiers exclusivement sur le poste de l'équipe.
 
 `/check` et `/verdict` gardent leur contrat historique et utilisent le même sélecteur.
 `/verdict/detail` expose verdict_engine et nli_engine en plus des preuves.
-`/check/detail` expose candidats, affirmations retenues, preuves/positions, verdict,
+`/check/detail` appelle pipeline.check_text_detail et expose input, normalized
+(texte, langue et écriture du document réellement utilisé), candidats, affirmations retenues,
+preuves/positions, verdict,
 moteurs et timings_ms. L'accueil utilise cette trace ; la page Lot D montre le
 moteur demandé, le moteur utilisé et la raison d'un repli.
 Le client ne peut pas autoriser une API distante via le corps de sa requête.
@@ -59,3 +61,12 @@ La vérification du vrai NLI est séparée ; les tests n'exécutent pas Aya 8B n
 Le verdict LLM et le retrieval hybride réels nécessitent encore leurs ressources
 sur la machine de démo. Comparaison Gemini EXP-D-009 distincte d'Aya officiel
 EXP-D-010 ; aucun nouveau score scientifique n'est déduit de ces tests.
+
+
+## Relecture Lot D
+
+Les champs input/normalized et le helper _claims_from_doc sont repris de la
+proposition lot-e-demo, sans importer sa seconde déclaration de /check/detail.
+Une seule route et une seule normalisation sont exécutées par requête détaillée.
+Une citation hors des preuves retrouvées, détectée au dernier contrôle Lot E,
+produit citation_hors_liste, distinct de llm_unavailable.

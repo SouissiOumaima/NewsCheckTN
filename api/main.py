@@ -114,7 +114,7 @@ def check_route(body: TextIn) -> dict:
 @app.post("/check/detail")
 def check_detail_route(body: TextIn) -> dict:
     """Trace du parcours configuré, sans exposer de réponse LLM brute."""
-    return pipeline.check_text_detailed(body.text)
+    return pipeline.check_text_detail(body.text)
 
 
 @app.get("/model-c/model1")

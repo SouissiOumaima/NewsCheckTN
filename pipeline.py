@@ -41,7 +41,11 @@ def _claims_for_model1(text: str):
     document brut parallèle. Si les segmentations diffèrent, on retombe sans
     risque sur le texte normalisé plutôt que d'associer deux phrases fausses.
     """
-    doc = normalize(text)
+    return _claims_from_doc(text, normalize(text))
+
+
+def _claims_from_doc(text: str, doc: Document):
+    """Réutilise le document normalisé, comme dans la branche lot-e-demo."""
     claims = extract_claims(doc)
     raw_doc = Document(raw_text=text, text=text, lang=doc.lang, script=doc.script)
     raw_claims = extract_claims(raw_doc)
@@ -49,11 +53,14 @@ def _claims_for_model1(text: str):
     return claims, raw_texts
 
 
-def check_text_detailed(text: str, k: int = 5) -> dict:
+def check_text_detail(text: str, k: int = 5) -> dict:
     """Trace Silver : mêmes fonctions que /check, avec moteurs et temps mesurés."""
     started = time.perf_counter()
-    claims, raw_texts = _claims_for_model1(text)
-    extraction_ms = (time.perf_counter() - started) * 1000
+    doc = normalize(text)
+    normalization_ms = (time.perf_counter() - started) * 1000
+    stage = time.perf_counter()
+    claims, raw_texts = _claims_from_doc(text, doc)
+    extraction_ms = (time.perf_counter() - stage) * 1000
     candidates = len(claims)
     stage = time.perf_counter()
     claims = filter_checkworthy(claims, classification_texts=raw_texts)
@@ -78,6 +85,12 @@ def check_text_detailed(text: str, k: int = 5) -> dict:
             "timings_ms": {"retrieval": retrieval_ms, "nli": nli_ms, "verdict": verdict_ms},
         })
     return {
+        "input": text,
+        "normalized": {
+            "text": doc.text,
+            "lang": getattr(doc.lang, "value", doc.lang),
+            "script": getattr(doc.script, "value", doc.script),
+        },
         "engines": {
             "model1": model_status(),
             "retrieval": get_method(),
@@ -87,6 +100,7 @@ def check_text_detailed(text: str, k: int = 5) -> dict:
         "retained": len(claims),
         "claims": traces,
         "timings_ms": {
+            "normalisation": normalization_ms,
             "extraction": extraction_ms,
             "filter": filter_ms,
             "total": (time.perf_counter() - started) * 1000,
