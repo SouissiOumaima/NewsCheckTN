@@ -25,6 +25,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-D-009 | 2026-11-15 | D | Silver : verdict par LLM contraint aux preuves | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | LLM retenu pour le Silver ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
 | EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
@@ -65,6 +66,89 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 
 ## Entrées
+
+### EXP-D-009 — Silver : verdict par LLM contraint aux preuves (3 exécutions, ablations, bootstrap)
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : un LLM avec prompt contrôlé, obligé de citer les passages fournis,
+  fait-il mieux que le gabarit Bronze (règles d'abstention + NLI par lexique), en particulier sur le
+  tunisien, et sans inventer de preuves ?
+- **Données** : dev fictif (20 affirmations, 15 passages) ; test Tunifact v1 **gelé le 23/10/2026**
+  (21 affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Les affirmations et les passages ont été envoyés à l'API Gemini (offre gratuite : Google indique
+  que ce contenu peut servir à améliorer ses produits) ; à valider par l'équipe pour les données
+  Tunifact (droits de redistribution non confirmés, voir la Data Card du Lot A1).
+- **Méthode / configuration** :
+  - LLM : `gemini-3.5-flash-lite` via l'API compatible OpenAI de Google (offre gratuite : 15
+    requêtes / min, 500 / jour). `gemini-3.6-flash` et `gemini-3.8-flash` écartés avant toute mesure :
+    quota gratuit de 20 requêtes / jour (et pas de réponse pour 3.8 Flash).
+  - Prompt **v1** (`rag_llm/llm_verdict.py`), figé après le dev, inchangé pour le test : passages
+    numérotés P1…P5, réponse JSON (`label`, `citations`, `explication`), 4 labels dont « trompeur »,
+    « preuves_insuffisantes » en cas de doute. Contrôles faits par le code : JSON lisible, label
+    connu, citations parmi les passages fournis, au moins une citation pour vrai / faux / trompeur ;
+    sinon sortie rejetée et remplacée par le verdict du gabarit.
+  - Recherche : hybride BM25 + e5-base, top 5 (EXP-D-008). Positions NLI : NLI Bronze du Lot C
+    (utilisées par le gabarit, le repli et l'ablation « indices NLI »).
+  - Température 0.3, top-p 0.9, `LLM_REASONING_EFFORT=low`. **3 exécutions** étiquetées 13 / 42 /
+    2026 : l'API a refusé le champ `seed`, retiré automatiquement ; la variabilité mesurée est donc
+    celle de l'échantillonnage, et les sorties exactes sont conservées dans le cache (non versionné).
+    Exécution de référence fixée avant la mesure : 42.
+  - Ablations (exécution 42) : indices NLI dans le prompt ; 3 passages ; 1 passage ; recherche BM25.
+  - Bootstrap apparié contre le gabarit (10 000 tirages, graine 42), exactitude et macro-F1.
+- **Code** : `rag_llm/llm_verdict.py`, `rag_llm/silver_verdict.py` (branche `lot-d-silver`) ;
+  `python -X utf8 -m rag_llm.silver_verdict --splits dev`, puis `--splits test` (une fois).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (recherche hybride) | 0.286 | 0.219 | 0.381 | 0.500 | 0.444 | 0.286 | 0.000 |
+  | **LLM (exécution 42)** | **0.810** | **0.844** | 0.667 | **1.000** | 0.778 | 1.000 | 0.600 |
+  | LLM, moyenne des 3 exécutions | 0.762 ± 0.048 | 0.809 ± 0.032 | 0.619 ± 0.048 | — | | | |
+  | ablation : + indices NLI | 0.810 | 0.844 | 0.667 | 1.000 | 0.778 | 1.000 | 0.600 |
+  | ablation : 3 passages | 0.810 | 0.844 | 0.667 | 1.000 | 0.778 | 1.000 | 0.600 |
+  | ablation : 1 passage | 0.619 | 0.659 | 0.524 | 0.909 | 0.667 | 0.857 | 0.200 |
+  | ablation : recherche BM25 | 0.762 | 0.803 | 0.619 | 1.000 | 0.667 | 1.000 | 0.600 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | |
+  | toujours s'abstenir | 0.143 | 0.062 | 0.000 | | | | |
+
+  - Par exécution : 13 → 0.714 / 0.781 (3 sorties rejetées, JSON invalide) ; 42 → 0.810 / 0.844
+    (0 rejet) ; 2026 → 0.762 / 0.803 (1 rejet). Sorties valides : 0.936 ± 0.073.
+  - Toutes exécutions : abstention justifiée 1.00 (3 affirmations sans preuve, dont `tf-c13`, erreur
+    la plus grave du Bronze) ; **0 citation invalide**.
+  - Bootstrap (exécution 42 contre le gabarit) : exactitude +0.524 [0.333 ; 0.714], p < 0.001 ;
+    macro-F1 +0.626 [0.396 ; 0.779], p < 0.001. Ablations : 1 passage +0.333 [0.095 ; 0.571] ;
+    recherche BM25 +0.476 [0.286 ; 0.667].
+  - Erreurs de l'exécution 42 (4, toutes des abstentions sur des affirmations fausses) : `tf-c08`
+    (fr), `tf-c17` (fr), `tf-c11` (arabizi), `tf-c19` (arabizi).
+- **Résultats — dev (20 affirmations)** : gabarit 0.50 / 0.375 ; LLM 0.80 / 0.705 (3 exécutions :
+  0.817 ± 0.029 / 0.709 ± 0.007), sorties valides 1.00 ; majorité 0.60 / 0.187 ; ablations : indices
+  NLI 0.75 (1 sortie rejetée), 3 passages 0.80, 1 passage 0.85, BM25 0.85. Bootstrap LLM − gabarit :
+  +0.30 [0.10 ; 0.50], p < 0.001.
+- **Analyse** :
+  1. Le LLM contraint **dépasse largement le gabarit et la classe majoritaire** sur le test
+     (0.81 contre 0.29 et 0.52), écart significatif. Le Bronze restait sous la majorité (EXP-D-007).
+  2. **Aucun verdict faux** : les 14 verdicts émis sont justes (précision sélective 1.00). Les 4
+     erreurs sont des abstentions de trop, le côté le moins dangereux pour un vérificateur.
+  3. Les erreurs restantes semblent venir de la **recherche** : `tf-c17` (affirmation française,
+     preuves arabes) et `tf-c11` (arabizi) figurent déjà parmi les erreurs de recherche classées
+     dans EXP-D-007 ; `tf-c19` (arabizi) et `tf-c08` sont à vérifier dans les sorties. Le goulot
+     passe du NLI à la recherche.
+  4. Tunisien : 0.0 → 0.6 ; l'arabizi reste difficile quand la preuve n'est pas retrouvée.
+  5. Ablations : un seul passage fait perdre 0.19 (les preuves se complètent) ; la recherche
+     hybride apporte +0.05 au verdict par rapport à BM25 ; les indices du NLI Bronze n'apportent
+     rien au LLM.
+  6. Variabilité : 0.71 à 0.81 selon l'exécution ; l'exécution 42 est la meilleure des trois, la
+     moyenne (0.762 ± 0.048) est le chiffre à retenir. 4 sorties sur 63 rejetées (JSON invalide)
+     et remplacées par le gabarit : le contrôle par le code est nécessaire.
+  7. **Limites** : (a) contamination possible : les articles Tunifact sont publics, le LLM a pu les
+     voir à l'entraînement ; indices rassurants (0 citation invalide, abstention sur les 3
+     affirmations inventées), mais non mesuré ; (b) graine refusée par l'API : résultats non
+     reproductibles à l'identique (sorties gardées en cache) ; (c) modèle d'API qui peut changer ;
+     (d) petit test (21 affirmations).
+- **Décision / suite** : verdict par LLM contraint retenu pour le palier Silver (recherche hybride +
+  `gemini-3.5-flash-lite` + prompt v1). Suite : relancer avec le NLI fine-tuné du Lot C (repli et
+  indices) ; mesurer la contamination (LLM sans passages, Gold) ; 2e LLM ouvert (Gemma) pour une
+  ablation « choix du modèle » ; corriger la recherche en langue croisée et en arabizi.
 
 ### EXP-D-008 — Silver : recherche dense et hybride mesurées sur le test gelé
 - **Date** : 2026-11-14
