@@ -25,6 +25,11 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-D-010 | 2026-11-15 | D | Silver officiel : verdict par LLM ouvert ≤ 8 Md contraint aux preuves | CohereLabs/aya-expanse-8b (4 bits, Colab T4), même prompt v1 et mêmes contrôles qu'EXP-D-009, température 0.3, 3 graines locales (13, 42, 2026) ; recherche hybride (EXP-D-008) ; 4 ablations ; bootstrap apparié 10 000 tirages ; aucune donnée envoyée à une API | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.730 ± 0.028 / 0.410 ± 0.016 (graine 42 : 0.714 / 0.401) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.429, IC95 [0.143 ; 0.714], p = 0.004) et majorité 0.524 / 0.172 (exactitude +0.19, p = 0.055 ; macro-F1 +0.23, p = 0.004) ; couverture 1.00, abstention justifiée 0.00 ; tunisien 0.8 ; 0 citation invalide | résultat officiel du Silver ; exact mais jamais d'abstention (3 affirmations sans preuve jugées « faux ») ; suite : contrôle de pertinence avant le LLM, abstention évaluée (Gold) |
+| EXP-D-009 | 2026-11-15 | D | Comparaison (non officiel) : verdict par LLM contraint, API Gemini | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | comparaison seulement (modèle > 8 Md, données envoyées à une API) ; officiel : EXP-D-010 ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
+| EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
+
+| EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test, n = 56) | principal 0.809 ± 0.000 (3 graines) vs zero-shot float32 0.798 (+0.011, IC95 [−0.052 ; +0.071], p = 0.40), Bronze 0.471, majorité 0.194 ; fr 0.745 / ar 0.841 ; ablation sans XNLI 0.427 ± 0.044 | composant Silver : modèle affiné (graine 42), déclaré équivalent au zero-shot (gardé comme backend) ; chiffres v3 (pas de v4 au 12/11) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
 | EXP-C-010 | 2026-10-25 | C | Détection d'affirmations (Model 1) palier Bronze : TF-IDF caractères | TF-IDF `char_wb` 3–5 + régression logistique `class_weight=balanced`, 600 phrases annotées, split 480 / 120 stratifié, graine 42 | macro-F1 (test, n = 120) | 0.643 vs 0.230 classe majoritaire ; fr 0.58 / ar 0.48 / tn-arabe 0.70 / arabizi 0.55 / mixte 0.81 | composant Bronze de la démo (CLAIM_DETECTOR_BACKEND=tfidf par défaut) |
@@ -59,8 +64,920 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-009 | 2026-10-26 | A2 | Adjudication de l'annotation et analyse d'erreurs (≥ 30) | 21 désaccords tranchés à deux ; règles ajoutées au guide ; erreurs classées | langue par classe sur les étiquettes de référence ; erreurs par catégorie | arabe : `a` 23/23, `t` 41/77 ; latin : `f` 12/16, `t` 65/70 ; 45 erreurs en 10 catégories | référence retenue ; suite : lexique élargi, affixes, négation contractée |
 | EXP-A2-010 | 2026-10-26 | A2 | Perplexité : repérer les textes bruités | modèle de langue à n-grammes de caractères (ordre 4, interpolé), un par alphabet, graine 13 ; seuil = 95e centile dev | faux signalements sur test ; bruit artificiel repéré ; AUC | arabe : 4,7 % ; encodage 100 %, lettres 99,6 %, mélange 99,5 % ; latin : 5,3 % ; encodage 12,3 % (AUC 0,53), lettres 99,3 %, mélange 99,0 % | retenu pour signaler (pas supprimer) ; suite : règle de détection d'encodage pour les lettres latines |
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
+| EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
+| EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
+| EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
+| EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (540 textes, P061–P600, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
+| EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
 
 ## Entrées
+
+### EXP-B-011 — Mesure exploratoire sur silver_40 (détection, modalité, SPO, coréférence)
+- **Statut** : **exploratoire, n = 40, une annotation indépendante non garantie, SPO n = 10 dont
+  3 réserves ouvertes, aucun texte tn en lettres arabes**.
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : mesurer le système gelé sur le jeu silver_40 livré par le Lot A1
+  (livraison provisoire), pour la détection, la modalité, le triplet SPO et la coréférence. Pas
+  d'hypothèse chiffrée : il s'agit d'une première lecture, sur un petit jeu.
+- **Données** (hors dépôt ; aucun texte reproduit ici) :
+  - Textes de référence : `silver_40_ghofran_livraison_provisoire.tsv` (40 textes corrigés).
+    - Par rapport aux fichiers d'annotation, 5 textes ont des corrections mineures (encodage,
+      apostrophes ; similarité ≥ 0.989).
+    - 2 textes ont été remplacés : `tarc-forum-0424` → `tarc-forum-0169` et `tarc-forum-0333` →
+      `tarc-forum-0152`.
+  - Annotations :
+    - Achraf : `silver_40_achraf.tsv`, 38 textes communs (pas de label pour 0152 et 0169).
+    - Ghofrane : `silver_40_ghofran.tsv` pour 38 textes ; livraison provisoire pour 0152 et 0169.
+      Sur les 38 textes communs, les labels de la livraison et du fichier initial sont identiques.
+    - Modalités normalisées sur une copie de travail (`rapport?` → `rapporté`, `hypoth?tique` →
+      `hypothétique`).
+  - Provenance : TArC 30, Tunifact fr 5, Tunifact ar 5 (langue Tunifact : fichier de métadonnées
+    de la livraison).
+  - Labels (Ghofrane, 40) : AUTRE 21, OPINION 9, AFFIRMATION 10. Les 10 affirmations sont toutes
+    Tunifact : **label et provenance sont confondus**.
+  - Aucun texte tunisien en lettres arabes ; groupes linguistiques de la livraison provisoires
+    (2 textes TArC « à vérifier »).
+  - SPO : `silver_40_spo_ghofran_propositions_v2.jsonl`, 10 propositions (5 fr, 5 ar, toutes
+    Tunifact), converties au format JSONL d'eval_30.
+    - 7 sans réserve ; 3 avec réserve ouverte : `tunifact-797-003`, `tunifact-698-s0004`,
+      `tunifact-933-s0022`.
+    - `resolved_text` présent pour 1 proposition seulement (`tunifact-698-s0004`, avec réserve).
+    - `phenomena`, champ obligatoire du format : repris de la livraison quand il existe, sinon
+      rempli mécaniquement (`rapporté` d'après la modalité ; `coréférence_affixe` pour
+      `tunifact-933-s0022` d'après l'addendum ; valeur technique pour 2 propositions). Les
+      métriques globales sont identiques sans ce champ (vérifié) ; les résultats par phénomène
+      ne sont pas utilisés.
+    - SHA-256 de la conversion (10 propositions) :
+      `54ab22cdfb7d15c120364922a016056d4b10164b067a3badef5437d2b198fe07`.
+- **Vérifications avant la mesure** :
+  - **CSV de relecture de #18** (`data/annotations/a1_relecture_achref_31_sans_textes.csv`,
+    branche `a1/relecture-achref`, même contenu sur `lot-a1-data`) :
+    - seuls **8 des 30** identifiants TArC de silver_40 y figurent (22 n'y sont pas ; 23
+      identifiants du CSV ne sont pas dans silver_40) ;
+    - sur ces 8, les labels d'Achraf sont égaux à `label_achref` (8/8), **pas** à
+      `decision_achref` (6/8 ; écarts : `tarc-forum-0210`, `tarc-forum-0353`).
+    - L'hypothèse « mêmes 30 identifiants, labels = `decision_achref` » n'est donc pas vérifiée.
+      Cela ne prouve pas l'indépendance : la livraison indique qu'elle n'est pas confirmée.
+      L'accord ci-dessous est donc rapporté **sans garantie d'indépendance**.
+  - **Recouvrements de textes** (comparaison après repli : casse, ponctuation, diacritiques) :
+    - eval_30, fixtures et tests du Lot B : aucun ;
+    - P061–P600 (test d'EXP-B-010) : aucun ;
+    - **P01–P60 (pilote, jeu de mise au point d'EXP-B-008 / B-009) : 5 textes identiques**,
+      tous Tunifact et tous parmi les propositions SPO : `tunifact-797-001` (P17),
+      `tunifact-937-s0004` (P36), `tunifact-890-001` (P48), `tunifact-797-003` (P56),
+      `tunifact-698-s0001` (P58). Sur ces 5 textes, les modalités silver diffèrent de celles du
+      pilote pour 3 textes chez Achraf et 3 chez Ghofrane (rapporté au lieu d'assertif).
+    - Les mesures sont donc aussi données **hors pilote (35 textes)**.
+- **Méthode / configuration** :
+  - Système gelé, aucune modification : extracteur du commit `1826244`, mesure sur `ae1c142`
+    (branche `lot-b-silver40-exp`, issue de `lot-b-freeze`). `git diff 1826244 ae1c142 --
+    linguistic_analysis` ne touche que `MODEL_CARD.md`.
+  - Détection et modalité : `linguistic_analysis/evaluate_double.py` (unité texte, convention
+    d'EXP-B-008 : AFFIRMATION → affirmation), puis découpage par provenance avec les mêmes
+    fonctions (`detection_block`, `modality_block`, `agreement.cohen_kappa`).
+  - SPO et coréférence : `python -X utf8 -m linguistic_analysis.evaluate --eval-set <copie>
+    [--rules] --exp-id EXP-B-011 --out-dir <hors dépôt>`, sur 10, 7 et 3 propositions.
+  - IC : bootstrap percentile 95 %, graine 20261015, 1000 tirages ; extracteur − baseline :
+    apparié, graine 42, 2000 tirages.
+  - **Avertissement d'effectif** : 5 textes par groupe Tunifact, 28 à 30 TArC. Aucune mesure par
+    langue n'est fiable ; les groupes sont des provenances, pas des langues.
+- **Résultats** :
+  - **Accord entre annotateurs** (38 textes communs, indépendance non garantie) :
+
+    | Sous-ensemble | N | Kappa label (3 classes) | Kappa affirmation | Kappa modalité |
+    |---|---|---|---|---|
+    | tous | 38 | 0.660 [0.434 ; 0.858] (30/38) | 0.934 [0.782 ; 1.000] | 0.900 [0.768 ; 1.000] |
+    | TArC | 28 | 0.347 [−0.029 ; 0.674] (20/28) | 0.000 (27/28, une seule affirmation) | 0.862 [0.690 ; 1.000] |
+    | Tunifact fr | 5 | accord 5/5 | accord 5/5 | accord 5/5 |
+    | Tunifact ar | 5 | accord 5/5 | accord 5/5 | accord 5/5 |
+    | hors pilote | 33 | 0.573 [0.267 ; 0.806] | 0.891 [0.602 ; 1.000] | 0.884 [0.730 ; 1.000] |
+
+    Le kappa global est tiré vers le haut par les 10 textes Tunifact, tous AFFIRMATION chez les
+    deux annotateurs.
+  - **Détection et modalité, mode règles** (macro-F1 de détection ; exactitude de modalité ;
+    baseline entre parenthèses) :
+
+    | Sous-ensemble | Gold | N | Détection macro-F1 | Modalité exactitude |
+    |---|---|---|---|---|
+    | tous | Achraf | 38 | 0.438 [0.282 ; 0.603] (0.224) | 0.395 [0.237 ; 0.553] (0.289) |
+    | tous | Ghofrane | 40 | 0.394 [0.242 ; 0.545] (0.200) | 0.375 [0.225 ; 0.525] (0.225) |
+    | tous | accord | 30 / 35 | 0.486 [0.299 ; 0.667] (0.250) | 0.400 [0.257 ; 0.571] (0.257) |
+    | TArC | Ghofrane | 30 | 0.167 [0.062 ; 0.268] (0.000) | 0.267 [0.133 ; 0.433] (0.133) |
+    | Tunifact fr | les deux | 5 | 1.000 (1.000) | 0.800 [0.400 ; 1.000] (0.600) |
+    | Tunifact ar | les deux | 5 | 1.000 (1.000) | 0.600 [0.200 ; 1.000] (0.400) |
+    | hors pilote | Ghofrane | 35 | 0.314 [0.160 ; 0.457] (0.125) | 0.371 [0.229 ; 0.543] (0.229) |
+
+    - Extracteur − baseline, macro-F1 de détection (38 textes) : +0.213 [+0.084 ; +0.347]
+      (Achraf), +0.206 [+0.081 ; +0.338] (Ghofrane), +0.236 [+0.087 ; +0.388] (accord).
+    - Mode parseurs : détection identique (aucun texte ne change) ; modalité : un seul texte
+      change (`tarc-forum-0097`). Le macro-F1 de modalité varie pourtant de 0.399 à 0.544
+      (Ghofrane, 38) : sur ce jeu, cette mesure est instable (classes à 1–3 exemples).
+    - Rappel 1.000 partout où il est défini. **TArC : 24 textes sur 30 prédits affirmation**, alors que le gold
+      n'en compte aucune (Ghofrane) ou une (Achraf).
+    - Modalité (Ghofrane, 40, règles) : 25 erreurs, dont 24 vers `assertif` (opinion 11,
+      rapporté 6, interrogatif 4, conditionnel, hypothétique, souhait 1 chacun).
+    - Tunifact : détection triviale (que des affirmations ; la baseline fait aussi 1.000).
+  - **SPO et coréférence** (`evaluate.py`, triplet exact ; F1 de jetons par rôle) :
+
+    | Jeu | Mode | N | Triplet exact | Sujet / prédicat / objet exacts | F1 de jetons S / P / O | Coréférence |
+    |---|---|---|---|---|---|---|
+    | 7 sans réserve | règles | 7 | 1/7 (0.14 [0.00 ; 0.43]) | 0.29 / 0.14 / 0.14 | 0.50 / 0.23 / 0.43 | — (0) |
+    | 7 sans réserve | parseurs | 7 | 2/7 (0.29 [0.00 ; 0.71]) | 0.71 / 0.29 / 0.29 | 0.71 / 0.33 / 0.59 | — (0) |
+    | 3 avec réserve | règles | 3 | 0/3 | 0.33 / 0.33 / 0.00 | 0.33 / 0.33 / 0.27 | 0/1 |
+    | 3 avec réserve | parseurs | 3 | 0/3 | 0.33 / 0.67 / 0.33 | 0.33 / 0.67 / 0.38 | 0/1 |
+    | 10 (ensemble) | règles | 10 | 1/10 | 0.30 / 0.20 / 0.10 | 0.45 / 0.26 / 0.39 | 0/1 |
+    | 10 (ensemble) | parseurs | 10 | 2/10 | 0.60 / 0.40 / 0.30 | 0.60 / 0.43 / 0.53 | 0/1 |
+
+    - Par écriture (10 propositions) : règles, triplet exact 0/5 en arabe, 1/5 en français ;
+      parseurs, 1/5 et 1/5.
+    - Les triplets exacts (`tunifact-797-001` dans les deux modes, `tunifact-890-001` en
+      parseurs) portent sur des textes du pilote.
+    - Coréférence : la seule annotation (`tunifact-698-s0004`, réserve ouverte) porte sur un
+      « Nous » qui renvoie à l'unité de vérification. Le système ne produit aucune résolution
+      (journal vide) ; en mode règles, il ne trouve pas non plus de sujet ni de prédicat.
+  - Non-régression eval_30 (`exp_id` EXP-B-011) : détection 1.000, modalité 1.000, triplet exact
+    20/22 (règles) et 19/22 (parseurs), comme EXP-B-010.
+- **Analyse** :
+  - Sur les textes de forum TArC, l'extracteur considère presque tout comme une affirmation. Les
+    annotateurs n'y voient pas d'affirmation. C'est la même erreur qu'en EXP-B-010 (opinions et
+    autres textes prédits affirmations), en plus marqué sur des messages de forum.
+  - La modalité reste dominée par le défaut `assertif`, comme en EXP-B-009 et B-010.
+  - Sur Tunifact, la détection ne mesure rien (une seule classe). La modalité et le SPO y portent
+    sur 5 textes par écriture, dont 5 au total déjà vus dans le pilote.
+  - SPO : les parseurs semblent meilleurs que les règles sur le sujet, mais avec 7 propositions
+    sans réserve, l'écart n'est pas établi.
+  - Ces chiffres ne remplacent pas EXP-B-010 (540 textes) et ne permettent aucune conclusion par
+    langue.
+- **Limites** :
+  - n = 40 (38 en double annotation) ; une annotation indépendante non garantie ;
+  - label confondu avec la provenance ; aucune affirmation TArC ; aucun texte tn en lettres
+    arabes ; aucune affirmation tunisienne pour le SPO ;
+  - SPO n = 10, dont 3 réserves ouvertes ; coréférence n = 1, avec réserve ;
+  - 5 textes déjà dans le pilote de mise au point ; livraison provisoire (classification
+    linguistique et triplets non validés).
+- **Décision / suite** :
+  - Résultat exploratoire, à ne pas citer comme mesure Silver de référence.
+  - Après arbitrage des 3 réserves et confirmation de l'indépendance : refaire la mesure avec les
+    mêmes commandes (2ᵉ passage, système toujours gelé).
+  - Demander, pour eval_100 : des affirmations tunisiennes (arabizi, mixte, lettres arabes) et
+    des triplets sur des textes jamais vus par le Lot B.
+
+### EXP-B-010 — Mesure du système gelé sur un jeu de test jamais vu (P061–P600)
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : obtenir une première mesure non optimiste de l'extracteur, sur un jeu
+  qui n'a servi ni à écrire ni à régler les règles. Hypothèse : l'écart à la baseline mesuré sur
+  le pilote (EXP-B-009) se confirme.
+- **Données** :
+  - Lignes P061 à P600 du jeu de 600 phrases du Lot A1 : **540 textes**, extraits de
+    `claim_detection_600.xlsx` vers un fichier tabulé hors dépôt (`id`, `texte`, `label`,
+    `modalite`, `doute`, `source`, `langue`, `script`).
+  - **SHA-256 du fichier mesuré** :
+    `5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b`. L'empreinte a été notée
+    avant la mesure, et le fichier est en lecture seule depuis.
+  - **Un seul annotateur** : pas d'accord inter-annotateurs ni de consensus. 47 textes sont
+    marqués « doute ».
+  - Labels : AFFIRMATION 284, AUTRE 175, OPINION 81.
+  - Modalités : assertif 208, rapporté 92, opinion 84, interrogatif 50, souhait 47,
+    hypothétique 39, conditionnel 20.
+  - Langue et écriture déclarées par le jeu : fr 140, ar 135, tn en arabizi 135, tn en lettres
+    arabes 81, tn mixte 49.
+  - **Indépendance** : jeu vierge pour le Lot B.
+    - Aucun fichier du Lot B, sur aucune branche, ne cite ces identifiants. La seule occurrence
+      est un test synthétique de plage d'identifiants.
+    - Les mesures précédentes (EXP-B-008, B-009) excluaient explicitement ces lignes.
+    - Aucun texte n'est identique à un texte du pilote, d'eval_30 ou des tests.
+- **Méthode / configuration** :
+  - **Système gelé avant la mesure** (entrée « Gel du système du Lot B pour EXP-B-010 »).
+  - Unité : le texte. Un texte est une affirmation si l'une de ses phrases candidates l'est ; sa
+    modalité est celle de la première affirmation, sinon de la première candidate.
+  - **Convention de détection, comme EXP-B-008** : AFFIRMATION → affirmation ; OPINION et AUTRE →
+    non-affirmation. Ces deux labels n'ont pas d'équivalent direct dans `is_claim`.
+  - Baselines : « tout = affirmation » et « tout = assertif ».
+  - IC : bootstrap percentile 95 %, graine 20261015, 1000 tirages.
+  - Extracteur − baseline : bootstrap apparié, graine 42, 2000 tirages.
+  - Parseurs − règles : bootstrap apparié, graine 20261015, 1000 tirages.
+  - Groupes : langue et écriture déclarées par le jeu ; contrôle avec la langue donnée par le
+    Lot A2.
+- **Code** : extracteur du commit `1826244`. Mesure faite sur `c6ed6ad` (branche `lot-b-freeze`,
+  `main` `5d93800` fusionné). `git diff 1826244 c6ed6ad -- linguistic_analysis` ne touche que
+  `MODEL_CARD.md`. Fonctions de mesure : `linguistic_analysis/evaluate_double.py` (lecture,
+  prédiction par texte, métriques, bootstrap), avec un seul fichier d'annotation.
+- **Résultats** :
+
+  | Mesure (540 textes) | Règles [IC 95 %] | Parseurs [IC 95 %] | Baseline |
+  |---|---|---|---|
+  | Détection, exactitude | 0.785 [0.750 ; 0.820] | 0.789 [0.754 ; 0.824] | 0.526 |
+  | Détection, précision | 0.714 [0.670 ; 0.757] | 0.718 [0.674 ; 0.761] | 0.526 |
+  | Détection, rappel | 0.986 [0.972 ; 0.997] | 0.986 [0.972 ; 0.997] | 1.000 |
+  | Détection, macro-F1 | 0.771 [0.733 ; 0.806] | 0.775 [0.737 ; 0.810] | 0.345 |
+  | Modalité, exactitude | 0.733 [0.696 ; 0.769] | 0.731 [0.696 ; 0.767] | 0.385 |
+  | Modalité, macro-F1 | 0.734 [0.690 ; 0.772] | 0.729 [0.686 ; 0.767] | 0.079 |
+
+  - **Extracteur − baseline (macro-F1, mode règles)** :
+    - détection : +0.426 [+0.391 ; +0.460] ;
+    - modalité : +0.655 [+0.613 ; +0.691].
+  - **Parseurs − règles** : aucune différence établie.
+    - Détection, macro-F1 : +0.004 [−0.004 ; +0.013].
+    - Modalité, exactitude : −0.002 [−0.013 ; +0.009].
+    - Seuls 4 textes diffèrent en détection et 10 en modalité.
+  - **Par langue / écriture déclarée** (mode règles) :
+
+    | Groupe | N | Macro-F1 de détection | Exactitude de modalité | Macro-F1 de modalité |
+    |---|---|---|---|---|
+    | fr | 140 | 0.731 | 0.750 | 0.705 |
+    | ar | 135 | 0.794 | 0.748 | 0.738 |
+    | tn, lettres arabes | 81 | 0.713 | 0.667 | 0.573 |
+    | tn, arabizi | 135 | 0.780 | 0.704 | 0.703 |
+    | tn, mixte | 49 | 0.868 | 0.837 | 0.757 |
+
+  - **Doute** (mode règles) :
+    - 47 textes « doute » : macro-F1 de détection 0.668, exactitude de modalité 0.660 ;
+    - 493 autres : 0.780 et 0.740.
+  - **Faux positifs** (mode règles) :
+    - 54 OPINION sur 81 et 58 AUTRE sur 175 sont prédits comme affirmations ;
+    - 4 AFFIRMATION sur 284 sont manquées.
+  - **Confusions principales de modalité** (mode règles, gold → prédit) :
+    - opinion → assertif : 55 sur 84 ;
+    - rapporté → assertif : 33 sur 92 ;
+    - souhait → assertif : 30 sur 47 ;
+    - hypothétique → assertif : 17 sur 39.
+    - En revanche, interrogatif 50/50 et conditionnel 20/20.
+- **Analyse** :
+  - Sur un jeu jamais vu, l'extracteur dépasse nettement les deux baselines. L'écart sur la
+    baseline est **établi**, avec un IC loin de 0.
+  - Les scores sont plus élevés que sur le pilote (macro-F1 de détection 0.60–0.74), surtout en
+    tunisien arabizi. Ce jeu semble formé de phrases plus courtes et plus nettes que les messages
+    du pilote. Ce point reste à vérifier : nombre de phrases par texte.
+  - L'erreur dominante reste **le défaut `assertif`** pour les opinions, les souhaits et une partie
+    du discours rapporté. C'est cohérent avec l'ablation d'EXP-B-009.
+  - Le tunisien en lettres arabes est le groupe le plus faible. Le Lot A2 en classe 41 sur 81 comme
+    arabe standard, et aucun parseur ne le couvre.
+  - Les parseurs n'apportent rien de mesurable sur ce jeu.
+  - **Limites** :
+    - un seul annotateur (pas de kappa, pas de gold adjugé) ;
+    - même annotateur que le gold « A » du pilote ;
+    - pas de gold de triplet, de source ni de coréférence sur ce jeu.
+- **Décision / suite** :
+  - Ces chiffres sont **la référence Silver du Lot B**. Toute modification ultérieure des règles
+    rend une nouvelle mesure sur ce jeu optimiste : elle sera rapportée comme un « 2ᵉ passage ».
+  - Pistes, à mesurer sur un autre jeu :
+    - opinions évaluatives sans marqueur à la 1re personne ;
+    - souhaits et injonctions ;
+    - discours rapporté sans verbe de parole connu ;
+    - tunisien en lettres arabes.
+  - Comparaison avec l'encodeur du Lot C (question de recherche 1) : ce jeu a servi à entraîner
+    et à tester le Model 1 du Lot C. Son test gelé
+    (`data/splits/claim_detection_multiclass_600_seed42.json`, 120 identifiants) en a **112 dans
+    P061–P600**. La comparaison équitable se fera sur ces 112 textes, vierges pour les deux lots.
+
+### Gel du système du Lot B pour EXP-B-010 (pas une expérience)
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Code gelé** : commit `1826244`, branche `lot-b-freeze`. Le commit de gel qui suit ne modifie
+  que la documentation.
+  - Après fusion, vérifier que
+    `git diff 1826244 <commit mesuré> -- linguistic_analysis ':!linguistic_analysis/MODEL_CARD.md'`
+    est vide.
+- **Règles ajoutées depuis EXP-B-009** (lexiques `opinion_<langue>.txt` et `factuality.py`, avec
+  tests) :
+  - **R1 Salutation conventionnelle seule → `souhait`** (`62c7a9c`), validée par le Lot A1. Elle
+    n'est retenue qu'en tête de phrase et sans indice factuel.
+  - **R2 Formules de politesse ou requête → `souhait`** (`9df1c30`) : « merci d'avance », « svp »
+    et leurs équivalents en arabe et en tunisien.
+  - **R4 Appréciation à la 1re personne → `opinion`** (`1826244`) : « j'aime », « je déteste » et
+    leurs équivalents. Le verbe n'est compté qu'à la 1re personne ; « préférer » est exclu.
+- **Chiffres sur le pilote P01–P60, mode règles, avant → après** (`evaluate_double`, mêmes réglages
+  qu'EXP-B-009) :
+  - **détection, textes d'accord (47)** :
+    - exactitude 0.745 → 0.809 ;
+    - précision 0.721 → 0.775 ;
+    - rappel 1.000 → 1.000 ;
+    - macro-F1 0.619 → 0.741 ;
+  - **détection, macro-F1** : 0.519 → 0.603 (Achraf), 0.635 → 0.737 (Ghofrane) ;
+  - **faux positifs** : 23 → 20 (Achraf), 14 → 11 (Ghofrane) ; aucun faux négatif ;
+  - **modalité, exactitude** :
+    - 0.567 → 0.600 (Achraf) ;
+    - 0.467 → 0.450 (Ghofrane) ;
+    - 0.571 → 0.600 sur les 35 textes d'accord ;
+  - **textes changés : 3** (P06 par R4, P37 par R1, P52 par R2), tous de vrai à faux en détection ;
+  - **McNemar exact sur l'accord** : détection 0 cassé et 3 corrigés, p = 0.25 ; modalité p = 1.0.
+    **Gain non établi**, et mesuré sur le jeu qui a servi à choisir les règles (optimiste).
+  - **eval_30 inchangé** : détection et modalité 1.000, triplet exact 20/22 en règles et 19/22 en
+    parseurs.
+- **Règle de gel** : aucune modification du code ni des lexiques de `linguistic_analysis/` entre ce
+  commit et la mesure EXP-B-010. Exceptions : la documentation et `MODEL_CARD.md`.
+  - L'empreinte du jeu de test est notée avant la mesure.
+  - Toute modification après avoir vu les résultats est rapportée comme un « 2ᵉ passage ».
+
+### EXP-E-002 — Sélecteur de verdict et trace Silver C/D
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Lot E, développement et vérifications assistés par IA.
+- **Objectif** : relier les composants C (#21) et D (#25) sans modifier le contrat Verdict.
+- **Données** : exemples fictifs des tests ; aucun test scientifique relancé.
+- **Méthode** : VERDICT_BACKEND gabarit/llm partagé par pipeline et API ; repli visible ;
+  construction d'un fournisseur distant refusée sans LLM_ALLOW_EXTERNAL=1 ; cache du moteur local.
+- **Code** : common/verdict_runtime.py, pipeline.py, api/main.py ; tests/test_verdict_runtime.py.
+- **Résultats** : 657 tests passés, 1 skipped, 77 deselected, 6 xfailed (suite non slow) ;
+  Ruff et syntaxe JavaScript de l'accueil et de la page D vérifiés.
+- **Limites** : générateur fictif pendant les tests ; aucun Aya 8B, e5-base ou appel API externe
+  exécuté. Les chiffres scientifiques D-008 à D-010 et C-011 ne sont pas recalculés.
+- **Suite** : validation machine de démo avec ressources réelles ; accord collectif avant tout
+  envoi à une API externe. Le modèle Aya officiel reste distinct de la comparaison Gemini.
+
+- **Suivi de relecture Lot D** : reprise des champs input/normalized (texte, langue,
+  écriture) et du helper _claims_from_doc de lot-e-demo, dans une unique route
+  /check/detail ; normalisation exécutée une fois. Repli citation_hors_liste distinct
+  de llm_unavailable. 659 passed, 1 skipped, 77 deselected, 6 xfailed ; Ruff/JS OK.
+
+
+
+### EXP-D-010 — Silver officiel : verdict par LLM ouvert (≤ 8 Md) contraint aux preuves
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : refaire EXP-D-009 dans les conditions du cahier des charges (modèle
+  ouvert de 8 milliards de paramètres au plus en inférence) et sans envoyer de données Tunifact à
+  une API (décision de l'équipe, 15/11/2026). Le LLM ouvert fait-il mieux que le gabarit Bronze ?
+- **Données** : dev fictif (20 affirmations) ; test Tunifact v1 **gelé le 23/10/2026** (21
+  affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Calcul dans une session Colab ; aucune donnée envoyée à une API.
+- **Méthode / configuration** :
+  - LLM : `CohereLabs/aya-expanse-8b` (8 Md, 23 langues dont l'arabe et le français ; licence
+    CC-BY-NC, accès contrôlé), chargé en 4 bits (bitsandbytes) sur GPU T4. Choisi avant la mesure :
+    dans le benchmark tunisien d'EMNLP 2025, son prédécesseur Aya-23-8B est le meilleur petit
+    modèle ouvert évalué (devant Llama-3.1-8B).
+  - **Même prompt v1** et mêmes contrôles par le code qu'EXP-D-009 (JSON, citations parmi les
+    passages fournis, repli sur le gabarit) ; recherche hybride BM25 + e5-base, top 5 ; positions
+    NLI du NLI Bronze (gabarit, repli, ablation « indices NLI »).
+  - Température 0.3, top-p 0.9, **3 graines fixées localement** (13, 42, 2026) ; référence : 42.
+  - Ablations (graine 42) : indices NLI ; 3 passages ; 1 passage ; recherche BM25.
+  - Bootstrap apparié contre le gabarit (10 000 tirages, graine 42).
+- **Code** : `rag_llm/llm_verdict.py`, `rag_llm/silver_verdict.py`,
+  `notebooks/lot_d_rag/02_silver_verdict_llm.ipynb` (branche `lot-d-silver`).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (recherche hybride) | 0.286 | 0.219 | 0.381 | 0.500 | 0.444 | 0.286 | 0.000 |
+  | **LLM Aya 8B (graine 42)** | **0.714** | **0.401** | 1.000 | 0.714 | 0.667 | 0.714 | 0.800 |
+  | LLM Aya 8B, moyenne des 3 graines | 0.730 ± 0.028 | 0.410 ± 0.016 | 1.000 ± 0.000 | — | | | |
+  | ablation : + indices NLI | 0.714 | 0.408 | 1.000 | 0.714 | 0.556 | 0.714 | 1.000 |
+  | ablation : 3 passages | 0.714 | 0.401 | 1.000 | 0.714 | 0.667 | 0.714 | 0.800 |
+  | ablation : 1 passage | 0.619 | 0.438 | 0.905 | 0.632 | 0.556 | 0.714 | 0.600 |
+  | ablation : recherche BM25 | 0.667 | 0.374 | 1.000 | 0.667 | 0.556 | 0.714 | 0.800 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | |
+  | toujours s'abstenir | 0.143 | 0.062 | 0.000 | | | | |
+
+  - Par graine : 13 → 0.762 / 0.428 ; 42 → 0.714 / 0.401 ; 2026 → 0.714 / 0.401. Sorties valides
+    1.00, 0 citation invalide, **abstention justifiée 0.00** pour les 3 graines.
+  - Bootstrap (graine 42 contre le gabarit) : exactitude +0.429 [0.143 ; 0.714], p = 0.004 ;
+    macro-F1 +0.182 [0.009 ; 0.441], p = 0.020.
+  - Bootstrap (graine 42 contre la classe majoritaire « faux », mêmes prédictions, calculé après
+    coup à la demande de la relecture, sans nouvelle génération) : exactitude +0.190
+    [0.000 ; 0.429], p = 0.055 (non significatif) ; macro-F1 +0.229 [0.115 ; 0.387], p = 0.004.
+  - Erreurs (graine 42, 6) : 3 affirmations sans preuve jugées « faux » (`tf-c13`, `tf-c14`,
+    `tf-c15`) ; 2 « trompeur » jugés « vrai » (`tf-c05`, `tf-c09`) ; 1 position inversée en arabizi
+    (`tf-c11`, « faux » jugé « vrai »).
+- **Résultats — dev (20 affirmations)** : gabarit 0.50 / 0.375 ; LLM 0.75 / 0.557 (3 graines
+  identiques, écart-type 0), couverture 0.95, sorties valides 1.00 ; bootstrap +0.25 [-0.05 ; 0.50],
+  p = 0.054 ; ablations : indices NLI 0.75, 3 passages 0.75, 1 passage 0.85, BM25 0.75.
+- **Comparaison avec EXP-D-009 (Gemini, même prompt, même test)** : exactitude proche (0.730 ±
+  0.028 contre 0.762 ± 0.048), mais macro-F1 0.410 contre 0.809, précision sélective 0.714 contre
+  1.000 et abstention justifiée 0.00 contre 1.00. Le petit modèle est aussi exact, mais il ne suit
+  pas la consigne « dans le doute, preuves_insuffisantes » et ne produit jamais « trompeur ».
+- **Analyse** :
+  1. Le LLM ouvert **dépasse nettement le gabarit** (+0.43, significatif). Face à la classe
+     majoritaire, il est **significativement meilleur en macro-F1** (+0.23, p = 0.004) mais **pas
+     significativement en exactitude** (0.71 contre 0.52, p = 0.055) : la moitié des affirmations
+     du test sont « faux », ce qui rend la majorité forte en exactitude. Le Bronze restait sous elle.
+  2. **Il ne s'abstient jamais** : les 3 affirmations inventées reçoivent un verdict « faux », avec
+     des citations qui existent bien (le contrôle de format passe) mais ne parlent pas du même
+     fait. C'est l'erreur `tf-c13` du Bronze, revenue sous une autre forme : le contrôle des
+     citations vérifie qu'elles existent, pas qu'elles sont pertinentes.
+  3. « trompeur » n'est jamais produit (2 erreurs) ; une position inversée en arabizi (`tf-c11`).
+  4. Tunisien : 0.8 (4 sur 5), meilleur que le gabarit (0.0) ; échantillon très petit.
+  5. Ablations : un seul passage fait perdre 0.10 ; la recherche hybride apporte +0.05 au verdict
+     par rapport à BM25 ; les indices NLI ne changent pas l'exactitude globale.
+  6. Variabilité : 0.71 à 0.76 selon la graine sur le test (0 sur le dev : à température 0.3, le
+     modèle est presque déterministe).
+  7. **Limites** : petit test (21 affirmations ; macro-F1 très sensible aux 3 affirmations sans
+     preuve) ; modèle quantifié en 4 bits ; contamination possible (articles publics), non mesurée.
+- **Décision / suite** : **résultat officiel du palier Silver** pour le verdict (recherche hybride +
+  Aya Expanse 8B + prompt v1), EXP-D-009 restant une comparaison. Suite : refuser un verdict quand
+  la preuve citée ne parle pas du même fait (contrôle de pertinence avant le LLM, ou seuil sur la
+  recherche) ; abstention évaluée et audit des preuves citées (Gold) ; NLI fine-tuné du Lot C.
+
+### EXP-D-009 — Comparaison (non officiel) : verdict par LLM contraint, API Gemini (3 exécutions, ablations, bootstrap)
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : un LLM avec prompt contrôlé, obligé de citer les passages fournis,
+  fait-il mieux que le gabarit Bronze (règles d'abstention + NLI par lexique), en particulier sur le
+  tunisien, et sans inventer de preuves ?
+- **Données** : dev fictif (20 affirmations, 15 passages) ; test Tunifact v1 **gelé le 23/10/2026**
+  (21 affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Les affirmations et les passages ont été envoyés à l'API Gemini (offre gratuite : Google indique
+  que ce contenu peut servir à améliorer ses produits) ; à valider par l'équipe pour les données
+  Tunifact (droits de redistribution non confirmés, voir la Data Card du Lot A1).
+- **Méthode / configuration** :
+  - LLM : `gemini-3.5-flash-lite` via l'API compatible OpenAI de Google (offre gratuite : 15
+    requêtes / min, 500 / jour). `gemini-3.6-flash` et `gemini-3.8-flash` écartés avant toute mesure :
+    quota gratuit de 20 requêtes / jour (et pas de réponse pour 3.8 Flash).
+  - Prompt **v1** (`rag_llm/llm_verdict.py`), figé après le dev, inchangé pour le test : passages
+    numérotés P1…P5, réponse JSON (`label`, `citations`, `explication`), 4 labels dont « trompeur »,
+    « preuves_insuffisantes » en cas de doute. Contrôles faits par le code : JSON lisible, label
+    connu, citations parmi les passages fournis, au moins une citation pour vrai / faux / trompeur ;
+    sinon sortie rejetée et remplacée par le verdict du gabarit.
+  - Recherche : hybride BM25 + e5-base, top 5 (EXP-D-008). Positions NLI : NLI Bronze du Lot C
+    (utilisées par le gabarit, le repli et l'ablation « indices NLI »).
+  - Température 0.3, top-p 0.9, `LLM_REASONING_EFFORT=low`. **3 exécutions** étiquetées 13 / 42 /
+    2026 : l'API a refusé le champ `seed`, retiré automatiquement ; la variabilité mesurée est donc
+    celle de l'échantillonnage, et les sorties exactes sont conservées dans le cache (non versionné).
+    Exécution de référence fixée avant la mesure : 42.
+  - Ablations (exécution 42) : indices NLI dans le prompt ; 3 passages ; 1 passage ; recherche BM25.
+  - Bootstrap apparié contre le gabarit (10 000 tirages, graine 42), exactitude et macro-F1.
+- **Code** : `rag_llm/llm_verdict.py`, `rag_llm/silver_verdict.py` (branche `lot-d-silver`) ;
+  `python -X utf8 -m rag_llm.silver_verdict --splits dev`, puis `--splits test` (une fois).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (recherche hybride) | 0.286 | 0.219 | 0.381 | 0.500 | 0.444 | 0.286 | 0.000 |
+  | **LLM (exécution 42)** | **0.810** | **0.844** | 0.667 | **1.000** | 0.778 | 1.000 | 0.600 |
+  | LLM, moyenne des 3 exécutions | 0.762 ± 0.048 | 0.809 ± 0.032 | 0.619 ± 0.048 | — | | | |
+  | ablation : + indices NLI | 0.810 | 0.844 | 0.667 | 1.000 | 0.778 | 1.000 | 0.600 |
+  | ablation : 3 passages | 0.810 | 0.844 | 0.667 | 1.000 | 0.778 | 1.000 | 0.600 |
+  | ablation : 1 passage | 0.619 | 0.659 | 0.524 | 0.909 | 0.667 | 0.857 | 0.200 |
+  | ablation : recherche BM25 | 0.762 | 0.803 | 0.619 | 1.000 | 0.667 | 1.000 | 0.600 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | |
+  | toujours s'abstenir | 0.143 | 0.062 | 0.000 | | | | |
+
+  - Par exécution : 13 → 0.714 / 0.781 (3 sorties rejetées, JSON invalide) ; 42 → 0.810 / 0.844
+    (0 rejet) ; 2026 → 0.762 / 0.803 (1 rejet). Sorties valides : 0.936 ± 0.073.
+  - Toutes exécutions : abstention justifiée 1.00 (3 affirmations sans preuve, dont `tf-c13`, erreur
+    la plus grave du Bronze) ; **0 citation invalide**.
+  - Bootstrap (exécution 42 contre le gabarit) : exactitude +0.524 [0.333 ; 0.714], p < 0.001 ;
+    macro-F1 +0.626 [0.396 ; 0.779], p < 0.001. Ablations : 1 passage +0.333 [0.095 ; 0.571] ;
+    recherche BM25 +0.476 [0.286 ; 0.667].
+  - Erreurs de l'exécution 42 (4, toutes des abstentions sur des affirmations fausses) : `tf-c08`
+    (fr), `tf-c17` (fr), `tf-c11` (arabizi), `tf-c19` (arabizi).
+- **Résultats — dev (20 affirmations)** : gabarit 0.50 / 0.375 ; LLM 0.80 / 0.705 (3 exécutions :
+  0.817 ± 0.029 / 0.709 ± 0.007), sorties valides 1.00 ; majorité 0.60 / 0.187 ; ablations : indices
+  NLI 0.75 (1 sortie rejetée), 3 passages 0.80, 1 passage 0.85, BM25 0.85. Bootstrap LLM − gabarit :
+  +0.30 [0.10 ; 0.50], p < 0.001.
+- **Analyse** :
+  1. Le LLM contraint **dépasse largement le gabarit et la classe majoritaire** sur le test
+     (0.81 contre 0.29 et 0.52), écart significatif. Le Bronze restait sous la majorité (EXP-D-007).
+  2. **Aucun verdict faux** : les 14 verdicts émis sont justes (précision sélective 1.00). Les 4
+     erreurs sont des abstentions de trop, le côté le moins dangereux pour un vérificateur.
+  3. Les erreurs restantes semblent venir de la **recherche** : `tf-c17` (affirmation française,
+     preuves arabes) et `tf-c11` (arabizi) figurent déjà parmi les erreurs de recherche classées
+     dans EXP-D-007 ; `tf-c19` (arabizi) et `tf-c08` sont à vérifier dans les sorties. Le goulot
+     passe du NLI à la recherche.
+  4. Tunisien : 0.0 → 0.6 ; l'arabizi reste difficile quand la preuve n'est pas retrouvée.
+  5. Ablations : un seul passage fait perdre 0.19 (les preuves se complètent) ; la recherche
+     hybride apporte +0.05 au verdict par rapport à BM25 ; les indices du NLI Bronze n'apportent
+     rien au LLM.
+  6. Variabilité : 0.71 à 0.81 selon l'exécution ; l'exécution 42 est la meilleure des trois, la
+     moyenne (0.762 ± 0.048) est le chiffre à retenir. 4 sorties sur 63 rejetées (JSON invalide)
+     et remplacées par le gabarit : le contrôle par le code est nécessaire.
+  7. **Limites** : (a) contamination possible : les articles Tunifact sont publics, le LLM a pu les
+     voir à l'entraînement ; indices rassurants (0 citation invalide, abstention sur les 3
+     affirmations inventées), mais non mesuré ; (b) graine refusée par l'API : résultats non
+     reproductibles à l'identique (sorties gardées en cache) ; (c) modèle d'API qui peut changer ;
+     (d) petit test (21 affirmations).
+- **Décision / suite** : **comparaison seulement**, pas le résultat officiel du Silver : le cahier des
+  charges limite le système évalué à 8 Md de paramètres en inférence, et l'équipe a préféré ne pas
+  envoyer les données Tunifact à une API (15/11/2026). Résultat officiel : EXP-D-010 (Aya Expanse 8B,
+  même prompt). Ce qui a été envoyé à Google : les 21 affirmations du test et les 5 passages
+  retrouvés pour chacune (phrases d'articles publics de Tunifact), sans annotation ni label. Suite : relancer avec le NLI fine-tuné du Lot C (repli et
+  indices) ; mesurer la contamination (LLM sans passages, Gold) ; 2e LLM ouvert (Gemma) pour une
+  ablation « choix du modèle » ; corriger la recherche en langue croisée et en arabizi.
+
+### EXP-D-008 — Silver : recherche dense et hybride mesurées sur le test gelé
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif / hypothèse** : la recherche « par le sens » (encodeur multilingue) corrige-t-elle la
+  première cause d'erreur du Bronze, la langue croisée (24 erreurs sur 52 dans EXP-D-007) ?
+  Hypothèse : l'hybride BM25 + e5-base, meilleur sur le dev (EXP-D-003), fait mieux que BM25 sur
+  le test réel.
+- **Données** : dev fictif (15 passages, 18 affirmations avec preuve) ; test Tunifact v1 **gelé le
+  23/10/2026** (84 passages, 21 affirmations dont 18 avec preuve : fr 7, ar 6, tunisien 5 = 2 en
+  lettres arabes + 3 en arabizi). Empreintes vérifiées par `freeze_test` avant la mesure.
+- **Méthode / configuration** :
+  - `bm25` (baseline Bronze, k1 = 1.5, b = 0.75) ; `dense` (`intfloat/multilingual-e5-base`,
+    préfixes « query: » / « passage: », seuil de similarité 0.4) ; `hybrid` = fusion RRF des deux
+    (k = 60, 20 candidats par méthode) — **configuration retenue a priori**, choisie sur le dev dans
+    EXP-D-003, avant toute mesure sur le test.
+  - Ablations : hybride sans seuil de similarité dense ; hybride avec `multilingual-e5-small`.
+  - Top 5 pour le Rappel@5, profondeur 10 pour le MRR ; moyenne globale et par langue.
+  - Bootstrap apparié contre BM25 (mêmes affirmations tirées pour les deux systèmes), 10 000
+    tirages, graine 42 ; IC 95 % par percentiles ; p unilatéral (part des tirages ≤ 0).
+  - 3 exécutions de la configuration retenue (encodeur rechargé, sans cache disque).
+  - Aucun paramètre réglé sur le test.
+- **Code** : `rag_llm/silver_retrieval.py` (branche `lot-d-silver`) ;
+  `python -X utf8 -m rag_llm.silver_retrieval`.
+- **Résultats** (test gelé, 18 affirmations avec preuve) :
+
+  | Configuration | Rappel@5 | MRR | Hit@1 | R@5 fr (7) | R@5 ar (6) | R@5 tunisien (5) |
+  |---|---|---|---|---|---|---|
+  | BM25 (baseline Bronze) | 0.411 | 0.630 | 0.611 | 0.357 | 0.650 | 0.200 |
+  | dense e5-base | 0.394 | 0.630 | 0.556 | 0.362 | 0.672 | 0.107 |
+  | **hybride e5-base (retenu)** | **0.446** | **0.646** | 0.556 | **0.429** | **0.672** | 0.200 |
+  | ablation : hybride sans seuil dense | 0.446 | 0.646 | 0.556 | 0.429 | 0.672 | 0.200 |
+  | ablation : hybride e5-small | 0.432 | 0.667 | 0.611 | 0.393 | 0.672 | 0.200 |
+
+  Bootstrap apparié contre BM25 (différence, IC 95 %, p) :
+  - hybride e5-base : Rappel@5 +0.035 [-0.022 ; 0.111], p = 0.171 ; MRR +0.016 [-0.065 ; 0.081], p = 0.323 ;
+  - dense e5-base : Rappel@5 -0.017 [-0.135 ; 0.096], p = 0.596 ; MRR -0.000 [-0.189 ; 0.176], p = 0.493 ;
+  - hybride e5-small : Rappel@5 +0.021 [-0.022 ; 0.074], p = 0.218 ; MRR +0.037 [0.006 ; 0.080], p = 0.010.
+
+  Dev : BM25 0.667 / 0.907 ; dense 0.917 / 0.956 ; hybride 0.944 / 0.956 (Rappel@5 +0.278
+  [0.167 ; 0.389], p < 0.001), identique à EXP-D-003. Les 3 exécutions de l'hybride donnent des
+  classements identiques (encodeur déterministe en inférence : variance nulle).
+- **Analyse** :
+  1. **Reproductibilité** : les chiffres du dev d'EXP-D-003 sont retrouvés exactement.
+  2. Sur le test réel, l'hybride ne fait **pas significativement mieux** que BM25 (+0.035 de
+     Rappel@5, intervalle qui contient 0). Le gain vient du français (0.357 → 0.429), c'est-à-dire
+     de la langue croisée, comme attendu, mais il reste petit.
+  3. Le dense seul n'est pas meilleur que BM25 et **recule sur le tunisien** (0.200 → 0.107) :
+     e5 a peu vu de dialecte tunisien ni d'arabizi. La fusion RRF garde le meilleur des deux.
+  4. **Écart dev / test** : +0.278 sur le dev contre +0.035 sur le test. Le dev a été écrit par
+     nous (phrases courtes, traductions directes) : il surestime nettement le dense.
+  5. Ablation du seuil : aucun effet, aucun passage candidat n'a une similarité inférieure à 0.4
+     (les cosinus d'e5 sont resserrés vers le haut). Ce seuil ne peut donc pas servir de signal
+     d'abstention pour le dense ; à revoir (règle A2 du verdict).
+  6. e5-small obtient le meilleur MRR sur le test (seul écart significatif, p = 0.010). Il **n'est
+     pas retenu** : le choisir maintenant reviendrait à régler sur le test. Résultat noté comme
+     ablation.
+  7. Puissance faible : 18 affirmations ; un écart de quelques points ne peut pas être significatif.
+- **Décision / suite** : hybride BM25 + e5-base gardé comme recherche du palier Silver (choix fait
+  sur le dev, gain non significatif sur le test, rapporté tel quel). Suite : mesurer le verdict
+  avec cette recherche et le NLI fine-tuné du Lot C (EXP-C, 0.809), puis le verdict par LLM
+  contraint (3 graines) ; relire les preuves en langue croisée encore manquées ; test élargi.
+
+### EXP-C-011 — NLI (Model 2), palier Silver : fine-tuning de mDeBERTa-v3 (protocole fixé avant mesure)
+- **Date** : 2026-11-10 (protocole et règle de version) ; résultats à compléter
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : affiner sur le train du corpus A1 le modèle NLI d'EXP-C-008 améliore-t-il la macro-F1 par rapport à ce modèle sans entraînement (0.798), aux règles Bronze d'EXP-C-009 (0.471) et à la classe majoritaire (0.194) ?
+- **Données** : corpus NLI du Lot A1 (privé, non versionné). Règle de version fixée le 2026-11-10, avant tout entraînement et toute mesure :
+  - si la v4 n'est pas disponible le jeudi 2026-11-12 à midi, ou si elle change le test gelé, les chiffres Silver sont ceux de la v3 (`data/splits/nli_v3_by_article_seed42.json` : train 174, val 33, test 56) ;
+  - « change le test gelé » : le test v4 n'a pas exactement les mêmes `pair_id` que le test v3, ou l'une de ces paires a une affirmation, une preuve ou un label différent ;
+  - sinon : réentraînement sur le train v4 avec les hyperparamètres choisis sur la val v3, puis une seule mesure du test v4 ;
+  - état connu le 2026-11-10 : P135, P136 et P138 ne sont pas encore validées dans la v4 (déjà écartées comme brouillons dans la v3) ; pas de paires en tunisien attendues dans la v4.
+- **Méthode / configuration** (prévue) : `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` affiné sur le train ; hyperparamètres (taux d'apprentissage, nombre d'époques, l'époque 0 sans affinage restant candidate) choisis sur la val seulement, d'après la moyenne de 3 graines (42, 123, 2026) ; test mesuré une seule fois à la fin. Ablation : `microsoft/mdeberta-v3-base` (même architecture, sans pré-entraînement XNLI), même protocole. Comparaisons par bootstrap apparié contre les règles Bronze, la classe majoritaire et le modèle sans entraînement ; résultats par langue ; au moins 30 erreurs classées.
+- **Note** : le dossier `models/checkpoints/nli_mdeberta-ft_v3_seed42` du 2026-10-26 (15:18) a des poids identiques à ceux du modèle de base (sauvegarde de l'époque 0, exécution interrompue, sans journal) et n'a jamais été évalué sur le test : il n'est pas utilisé (supprimé le 2026-11-10).
+- **Zero-shot re-mesuré en float32 (décidé le 2026-11-14, avant toute mesure Silver du test)** : sur la val v3, le même modèle zero-shot donne une macro-F1 de 0.662 chargé en float16 (format dans lequel il est stocké, chargé tel quel par `stance.py` avec transformers 5) et de 0.692 en float32 (comme `train.py`) ; la taille des lots (4 ou 16) ne change rien. `stance.py` charge désormais en float32. Le zero-shot sera donc re-mesuré une seule fois sur le test, en float32, au moment de la mesure finale du Silver, et c'est ce chiffre qui servira aux comparaisons ; l'ancien 0.798 d'EXP-C-008 reste dans le journal, sans être modifié.
+- **Grille et règle de choix (fixées le 2026-11-14, avant toute exécution de la grille)** :
+  - modèle principal : lr ∈ {1e-5, 2e-5, 3e-5} × graines {42, 123, 2026} = 9 exécutions ; ablation `microsoft/mdeberta-v3-base` (tête neuve) : lr ∈ {2e-5, 3e-5, 5e-5} × les mêmes graines = 9 exécutions (réduite à {2e-5, 5e-5} si le temps manque) ;
+  - chaque exécution : 6 époques, `--no-save`, lot effectif 8 (4 × 2), embeddings gelés ; la val est notée aux époques 0 à 6 ; le journal de chaque exécution est copié dans `models/checkpoints/grid_v3/` (non versionné) ;
+  - choix : la configuration (lr, époque k) de meilleure macro-F1 moyenne sur les 3 graines ; la val n'ayant que 33 paires (une paire ≈ 3 points), toute configuration dont la moyenne est à moins de 0.03 de la meilleure est jugée équivalente, et on garde alors d'abord l'époque la plus ancienne (l'époque 0, sans affinage, si elle est dans cette marge), puis le lr le plus petit ;
+  - modèle final : relance de la configuration choisie avec `--epochs 6 --keep-epoch k` (même planning du taux d'apprentissage que la grille, calculs déterministes) pour les 3 graines, avec les poids ;
+  - l'essai du 2026-11-10 (lr 1e-5, 1 époque, graine 42) n'est pas réutilisé : son planning du taux d'apprentissage est différent ;
+  - si la mémoire graphique manque (pic de 5,61 Go sur 6 Go à l'essai) : `--batch-size 2 --grad-accum 4`, même lot effectif.
+- **Code** : `models/nli/train.py` (entraînement, val seulement) ; `models/nli/run_grid.ps1` (grille en série, journaux dans `models/checkpoints/grid_v3/`, non versionné) ; `models/nli/analyse_grid.py` (moyenne ± écart-type de la val par lr et par époque, choix par la règle ; ne lit que les journaux de val et refuse tout journal contenant une clé de test).
+- **Résultats — grille principale (2026-11-14, val v3 seulement, 9 exécutions sur 9)** : macro-F1 de val, moyenne ± écart-type sur les graines 42, 123 et 2026 (`python models/nli/analyse_grid.py main`) :
+
+  | lr | ép. 0 | ép. 1 | ép. 2 | ép. 3 | ép. 4 | ép. 5 | ép. 6 |
+  |---|---|---|---|---|---|---|---|
+  | 1e-5 | 0.692 ± 0.000 | **0.722 ± 0.000** | 0.722 ± 0.000 | 0.731 ± 0.016 | 0.731 ± 0.016 | 0.722 ± 0.000 | 0.722 ± 0.000 |
+  | 2e-5 | 0.692 ± 0.000 | 0.702 ± 0.034 | 0.740 ± 0.016 | 0.700 ± 0.011 | 0.730 ± 0.033 | 0.730 ± 0.033 | 0.730 ± 0.033 |
+  | 3e-5 | 0.692 ± 0.000 | 0.699 ± 0.032 | 0.718 ± 0.005 | 0.710 ± 0.026 | 0.729 ± 0.047 | 0.719 ± 0.032 | 0.709 ± 0.035 |
+
+  - **choix par la règle : lr 1e-5, époque 1 (moyenne 0.722)**. Meilleure moyenne : 0.740 (lr 2e-5, époque 2) ; 14 configurations à moins de 0.03 (moyenne > 0.710) ; l'époque 0 (0.692) est à 0.048, hors de la marge ; parmi les équivalentes, l'époque la plus ancienne est l'époque 1, et le lr le plus petit 1e-5 ;
+  - gain sur la val par rapport au zero-shot (époque 0, float32) : +0.030, soit environ **une paire sur 33** : dans le bruit de la val, seul le test dira s'il est réel ;
+  - écart-type nul : l'époque 0 est le même modèle pour toutes les graines (aucun pas d'entraînement ; la graine ne change que l'ordre des paires) ; pour lr 1e-5, les 3 graines donnent la même macro-F1 aux époques 1, 2, 5 et 6 (pour 123 et 2026, mêmes prédictions de val à l'époque gardée) alors que leurs pertes d'entraînement diffèrent (époque 1 : 0.653 / 0.687 / 0.678) : sur 33 paires, des modèles différents peuvent donner les mêmes prédictions ;
+  - relances : l'exécution lr 2e-5 / graine 42 a échoué à 13h02 (mémoire graphique pleine, `CUDA out of memory`, après l'époque 0) ; l'exécution lr 3e-5 / graine 2026 a été interrompue à 13h54 (fenêtre de la grille fermée ou Ctrl+C, après l'époque 0) ; les deux ont été refaites à l'identique (mêmes réglages, lots de 4 × 2) à 14h12 et 14h15 ; l'époque 0 des premières tentatives (0.692) est identique à celle des relances ; les journaux des tentatives sont gardés (`*.oom.log`, `*.interrompu.log`) ;
+  - durée d'une exécution de 6 époques : de 2,5 à 18 min selon l'état de la carte (bridée à 25 W au début, sans doute sur batterie ou en économie d'énergie) ; pic de mémoire graphique 5,61–5,63 Go.
+- **Résultats — ablation `microsoft/mdeberta-v3-base` (2026-11-14, val v3 seulement, 9 exécutions sur 9)** : tête à 3 classes neuve, même protocole (`python models/nli/analyse_grid.py ablation`) :
+
+  | lr | ép. 0 | ép. 1 | ép. 2 | ép. 3 | ép. 4 | ép. 5 | ép. 6 |
+  |---|---|---|---|---|---|---|---|
+  | 2e-5 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.197 ± 0.052 | 0.167 ± 0.000 | 0.306 ± 0.126 | 0.330 ± 0.146 | 0.355 ± 0.163 |
+  | 3e-5 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.273 ± 0.092 | 0.259 ± 0.131 | 0.335 ± 0.084 | 0.373 ± 0.098 |
+  | 5e-5 | 0.167 ± 0.000 | 0.194 ± 0.047 | 0.265 ± 0.093 | 0.251 ± 0.116 | 0.320 ± 0.166 | **0.401 ± 0.121** | 0.426 ± 0.078 |
+
+  - **choix par la règle : lr 5e-5, époque 5 (moyenne 0.401)**. Meilleure moyenne : 0.426 (lr 5e-5, époque 6) ; 2 configurations à moins de 0.03 (époques 5 et 6 de lr 5e-5) ; on garde la plus ancienne, l'époque 5 ;
+  - 0.167 = une seule classe prédite pour toutes les paires (tête neuve tirée au hasard à l'époque 0, puis modèle qui n'a pas encore appris) ; une exécution (lr 2e-5, graine 2026) reste à 0.167 jusqu'à l'époque 6 ;
+  - l'ablation n'a pas fini d'apprendre en 6 époques : la perte d'entraînement baisse encore (lr 5e-5, époque 6 : 0.44 à 0.75 selon la graine) et la moyenne de val monte encore à l'époque 6 ; écarts-types élevés (0.08 à 0.17). Limite connue, laissée telle quelle pour respecter la grille fixée avant exécution ;
+  - même à son meilleur, l'ablation (0.43) reste très loin du modèle pré-entraîné sur XNLI, avec ou sans affinage (0.69 à 0.74) : avec 174 paires d'entraînement, le pré-entraînement NLI fait l'essentiel du travail ;
+  - relance : le PC a redémarré à 15h25 pendant l'exécution lr 3e-5 / graine 2026 (après l'époque 0) ; elle a été refaite à l'identique à 15h42 (journal de la tentative gardé : `*.redemarrage.log`), suivie des 3 exécutions lr 5e-5.
+- **Relance finale avec les poids (2026-11-14, 15h58–18h42, `models/nli/run_final.ps1`)** : modèle principal lr 1e-5, `--epochs 6 --keep-epoch 1` ; ablation lr 5e-5, `--epochs 6 --keep-epoch 5` ; graines 42, 123, 2026 ; 6 exécutions sur 6 OK (pause probable du PC en veille entre 16h17 et 18h37 pendant la dernière, sans effet sur le résultat). Contrôles, sur la val seulement :
+  - pour chacune des 6 relances, la macro-F1 de val aux époques 0 à 6 et la perte d'entraînement de chaque époque sont identiques à celles de la grille (calculs déterministes) ; val à l'époque gardée : principal 0.722 / 0.722 / 0.722, ablation 0.290 / 0.530 / 0.382 ;
+  - poids écrits (`model.safetensors`, 1,12 Go, avec config et tokenizer) dans `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed<graine>/` et `nli_mdeberta-v3-base-ft_v3_lr5e-05_e6_seed<graine>/` (non versionnés) ;
+  - rechargés par `stance.py` (même chemin que l'API, float32, sur processeur), les 6 modèles redonnent exactement les prédictions de val de l'époque gardée notées dans leur journal (0 différence sur 33 pour chacun).
+- **Mesure du test prévue (fixée le 2026-11-14, avant toute lecture des labels du test par un modèle Silver)** — une seule fois, par `python -m models.nli.measure_test` (vérifications seules : `--dry-run` ; le script refuse une seconde exécution) :
+  - contrôle du gel : SHA-256 de `data/splits/nli_v3_by_article_seed42.json` = `59582eb7…3552c` (valeur gelée le 26/10, vérifiée le 14/11) et mêmes 56 `pair_id` dans `nli_v3_test.jsonl` (vérifié le 14/11 ; ce fichier privé n'avait pas de SHA-256 noté : `f8f12d7f…5cb869`, noté ici avant la mesure) ;
+  - modèles mesurés, avec `predict_stances` (même code que l'API et le Lot D, chargement en float32) : (1) le zero-shot `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` en float32 ; (2) les 3 modèles principaux (graines 42, 123, 2026) ; (3) les 3 modèles d'ablation (mêmes graines) ;
+  - baselines déjà mesurées, non re-mesurées : règles Bronze (prédictions d'EXP-C-009 reconstituées à partir de `erreurs_bronze_v3_test.csv`, les autres paires étant justes ; contrôle : macro-F1 0.471) et classe majoritaire du train (« supports ») ;
+  - métriques : macro-F1 (et accuracy) de chaque modèle ; pour le principal et l'ablation, moyenne ± écart-type sur les 3 graines, globale, par langue de l'affirmation (fr / ar) et sur les paires des articles du test du Lot D ; IC 95 % par bootstrap pour chaque modèle ;
+  - comparaisons : bootstrap apparié (1000 tirages, graine 20261026) de chacun des 3 modèles principaux contre les règles Bronze, la classe majoritaire et le zero-shot float32 ;
+  - sorties : `evaluation/results/lot-c_nli-silver_test_<date>.json` (chiffres seulement) ; prédictions privées dans `data/interim/lot_c/nli/silver_test/` (non versionné) pour l'analyse d'erreurs (au moins 30 erreurs classées) ; les anciennes prédictions zero-shot float16 du 26/10 ne sont pas écrasées ;
+  - aucun réglage ne sera changé après la mesure.
+- **Résultats — test v3 (mesure unique, 2026-11-14, `python -m models.nli.measure_test`, n = 56 : 25 fr, 31 ar, 30 paires des articles du Lot D)** : contrôle du gel OK (découpage `59582eb7…`, 56 `pair_id`) ; fichier `evaluation/results/lot-c_nli-silver_test_20261114.json` ; prédictions privées dans `data/interim/lot_c/nli/silver_test/`.
+
+  | Modèle | macro-F1 (IC 95 %) | accuracy | fr (n = 25) | ar (n = 31) | articles Lot D (n = 30) |
+  |---|---|---|---|---|---|
+  | Zero-shot float32 | 0.798 [0.669 ; 0.891] | 0.804 | 0.779 | 0.776 | 0.767 |
+  | **Principal (lr 1e-5, ép. 1), 3 graines** | **0.809 ± 0.000** [0.689 ; 0.905] | 0.821 ± 0.000 | 0.745 ± 0.000 | 0.841 ± 0.000 | 0.759 ± 0.000 |
+  | Ablation sans XNLI (lr 5e-5, ép. 5), 3 graines | 0.427 ± 0.044 (0.378 / 0.440 / 0.463) | 0.530 ± 0.027 | 0.450 ± 0.161 | 0.325 ± 0.056 | 0.505 ± 0.050 |
+  | Règles Bronze (EXP-C-009, reconstitué) | 0.471 | 0.464 | 0.504 | 0.400 | 0.475 |
+  | Classe majoritaire (« supports ») | 0.194 | 0.411 | 0.190 | 0.197 | 0.167 |
+
+  - contrôle Bronze : la reconstitution redonne 0.4708, soit le 0.471 d'EXP-C-009 (et fr 0.50 / ar 0.40, comme dans EXP-C-009) ; les scores Bronze et majorité par langue et Lot D sont calculés à partir des prédictions sauvegardées, sans nouvelle mesure ;
+  - bootstrap apparié (1000 tirages, graine 20261026) ; les 3 graines du principal ont exactement les mêmes prédictions de test, donc les mêmes chiffres :
+
+    | Principal contre | différence de macro-F1 | IC 95 % | p |
+    |---|---|---|---|
+    | règles Bronze | +0.339 | [+0.185 ; +0.491] | 0.000 |
+    | classe majoritaire | +0.615 | [+0.484 ; +0.712] | 0.000 |
+    | zero-shot float32 | +0.011 | [−0.052 ; +0.071] | 0.398 |
+
+  - zero-shot float32 : 0.798, comme le 0.798 d'EXP-C-008 (float16 probable), qui reste dans le journal sans être modifié ; sur le test, les prédictions float32 et celles du 26/10 sont identiques (0 différence sur 56) : l'écart float16 / float32 vu sur la val (0.662 / 0.692) ne se produit pas sur le test ;
+  - principal et zero-shot ne diffèrent que sur 3 paires sur 56 : le principal en corrige 2 et en abîme 1.
+- **Analyse** :
+  - le modèle affiné dépasse nettement les règles Bronze (+0.34) et la classe majoritaire (+0.62), avec des IC 95 % loin de 0 ;
+  - en revanche, son gain sur le même modèle sans affinage (+0.011, une paire nette sur 56) n'est pas significatif (IC 95 % contenant 0, p = 0.40) : avec 174 paires d'entraînement et une seule époque à lr 1e-5, l'affinage change très peu le modèle XNLI ; cela confirme ce que montrait la val (+0.03, une paire sur 33) ;
+  - par langue, le principal gagne en arabe (0.841 contre 0.776) et perd en français (0.745 contre 0.779) par rapport au zero-shot ; effectifs très petits (25 et 31 paires), à ne pas surinterpréter ;
+  - écart-type nul : les 3 graines donnent les mêmes prédictions de test (déjà vu sur la val), ce qui ne mesure pas la variance d'un affinage plus fort ; l'ablation (même architecture sans pré-entraînement XNLI) reste à 0.43, sous les règles Bronze : le pré-entraînement NLI fait l'essentiel du travail ; l'ablation n'avait pas fini d'apprendre en 6 époques (limite déjà notée) ;
+  - aucun réglage n'a été changé après la mesure du test.
+- **Décision / suite (2026-11-14, prise après la mesure du test, sans changer aucun réglage)** :
+  - **composant Silver retenu : le modèle affiné choisi par la règle fixée sur la val (lr 1e-5, époque 1), checkpoint de la graine 42** (`models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/`, non versionné). Raison : c'est la configuration désignée à l'avance par le protocole (choix sur la val seulement, règle fixée avant exécution), pas un choix fait d'après le test ; les 3 graines donnant exactement les mêmes prédictions (val et test), la graine 42 les représente toutes ;
+  - il est déclaré **statistiquement équivalent au zero-shot float32** (+0.011, IC 95 % [−0.052 ; +0.071], p = 0.40) : on ne revendique pas de gain de l'affinage sur le zero-shot ; le zero-shot reste disponible comme backend (`NLI_BACKEND=zero-shot`) ;
+  - données : la v4 n'étant pas arrivée le jeudi 2026-11-12 à midi, les chiffres Silver sont ceux de la v3, selon la règle fixée le 2026-11-10 ;
+  - suite : analyse d'erreurs (CSV privé, catégories proposées, validation manuelle par Membre 4) ; intégration du modèle affiné comme nouveau backend (`NLI_BACKEND`), avec tests et vérification de l'API et du verdict du Lot D.
+- **Analyse d'erreurs (préparée le 2026-11-14, catégories proposées, à valider par Membre 4)** : `python -m models.nli.silver_errors` écrit `data/interim/lot_c/nli/erreurs_silver_v3.csv` (privé), avec une colonne `categorie_validee` vide. Le test ne compte que **12 erreurs** distinctes (principal 10, dont 9 communes avec le zero-shot ; zero-shot 11) : l'objectif de 30 erreurs ne peut pas être atteint sur le test avec ces deux modèles ; on y ajoute les **10 erreurs de la val** (principal et zero-shot float32), soit 22 erreurs, analysées en entier ; pour dépasser 30, une section séparée (colonne `modele`) ajoute les **28 erreurs de l'ablation (graine 42) sur le test**, soit **50 erreurs** en tout. L'ablation prédit « supports » pour 48 paires sur 56 ; catégories proposées pour elle : recouvrement trompeur 11, négation 6, démenti implicite 4, nombres 4, méta-affirmation 2, marqueur de démenti trompeur 1. Paires « annotation à vérifier » (toutes dans la val, signalées au Lot A1, aucun label modifié) : NLI-P035, NLI-P037, P297. Catégories : celles du Bronze quand c'est possible, plus « confirmation implicite non détectée », « méta-affirmation », « preuve dans l'autre langue » et « annotation à vérifier ». Proposition initiale (principal / zero-shot) sur le test : nombres mal comparés 3, démenti implicite non détecté 3, paraphrase non reconnue 2, recouvrement trompeur 1, confirmation implicite 1, méta-affirmation 1, négation 1 ; sur la val : annotation à vérifier 3, recouvrement trompeur 2, et 1 pour chacune des autres. Chiffres finaux : paragraphe suivant.
+- **Analyse d'erreurs — catégories finales (2026-11-14)** : colonne `categorie_finale` du CSV, remplie par relecture de chacune des 50 lignes par Claude (Membre 4 n'a pas encore rempli `categorie_validee`, qui reste vide) ; catégorie proposée gardée pour 49 lignes, une seule correction (P236 de l'ablation : chiffre absent de la preuve → recouvrement trompeur, comme P278 et P293, et non nombres mal comparés). Une erreur commune au principal et au zero-shot compte une fois dans chacune des deux colonnes.
+
+  | Catégorie finale | principal (19 : 10 test, 9 val) | zero-shot float32 (21 : 11 test, 10 val) | exemples typiques |
+  |---|---|---|---|
+  | nombres mal comparés | 4 (3 test) | 3 (2 test) | NLI-P004, P255, NLI-P012 |
+  | démenti implicite non détecté | 4 (3 test) | 4 (3 test) | NLI-P006, NLI-P007, P140 |
+  | recouvrement trompeur (même sujet, autre fait) | 3 (1 test) | 3 (1 test) | NLI-P010, NLI-P053, P145 |
+  | annotation à vérifier | 3 (0 test) | 3 (0 test) | NLI-P035, NLI-P037, P297 |
+  | négation mal interprétée | 2 (1 test) | 2 (1 test) | P277, P300 |
+  | paraphrase non reconnue (recouvrement faible) | 1 (1 test) | 2 (2 test) | P276, P207 |
+  | méta-affirmation (« selon X », « X a vérifié ») | 0 | 2 (1 test) | P188, P279 |
+  | confirmation implicite non détectée | 1 (1 test) | 1 (1 test) | NLI-P057 |
+  | preuve dans l'autre langue (fr / ar) | 1 (0 test) | 1 (0 test) | P299 |
+
+  Sur 22 paires en erreur, 18 sont communes aux deux modèles ; le principal corrige les 2 méta-affirmations et P207, et se trompe seul sur NLI-P004 (nombres).
+
+  | Catégorie finale | ablation graine 42 (28, test) | exemples typiques |
+  |---|---|---|
+  | recouvrement trompeur (même sujet, autre fait) | 12 | NLI-P011, P231, P278 |
+  | négation mal interprétée | 6 | NLI-P074, P209, P232 |
+  | démenti implicite non détecté | 4 | NLI-P001, P234, P290 |
+  | nombres mal comparés | 3 | NLI-P004, NLI-P012, P255 |
+  | méta-affirmation (« selon X », « X a vérifié ») | 2 | P189, P252 |
+  | marqueur de démenti trompeur | 1 | NLI-P005 |
+
+  Lecture : les erreurs du principal et du zero-shot viennent surtout de ce qu'il faut **comparer** (nombres, dates) ou **déduire** (démenti d'une rumeur sans reprendre son contenu, confirmation implicite) ; 3 des 9 erreurs de val tiennent sans doute au label (signalées au Lot A1). L'ablation, qui prédit « supports » pour 48 paires sur 56, échoue surtout dès que la preuve parle du même sujet (recouvrement trompeur, 12) ou contient une négation (6) : sans pré-entraînement NLI, 174 paires ne suffisent pas à apprendre la négation. Effectifs petits : ces chiffres décrivent des cas, pas des taux.
+- **Intégration (2026-11-14)** : nouveau moteur `NLI_BACKEND=fine-tuned` dans `models/nli/stance.py` (checkpoint Silver graine 42 par défaut ; `CHECKPOINT_DIR` / `NLI_FINETUNED_MODEL` pour un autre chemin ; float32 ; checkpoint absent → « neutre », confiance 0) ; le moteur par défaut reste `bronze` et `zero-shot` reste disponible. L'API (`/nli`, `/verdict`, `/verdict/detail`, `/check`), le pipeline et le verdict du Lot D passent tous par `predict_stances` : aucun changement de leur code. Tests : sélection du checkpoint, surcharge par variable, repli « neutre », passage par l'API (faux modèle, CI légère) ; suite complète 641 passés. Vérification avec le vrai checkpoint : routes de l'API en 200, `backend_info` = `fine-tuned` ; verdict du Lot D sur le jeu de développement **fictif** (n = 20, pas le test gelé du Lot D, aucun fichier écrit) : macro-F1 0.503 avec le modèle affiné, 0.530 avec le zero-shot, 0.524 avec les règles du Lot D (écarts d'une ou deux affirmations sur 20 : non interprétables).
+
+### EXP-B-009 — Réanalyse du pilote (macro-F1, bootstrap apparié) et ablation des composants
+- **Date** : 2026-11-14
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : compléter EXP-B-008 avec les mesures demandées par la fiche du projet,
+  à savoir :
+  - macro-F1 de détection ;
+  - différence avec la baseline par bootstrap apparié ;
+  - ablation des composants.
+
+  Hypothèse : l'extracteur dépasse la baseline en détection, ce que l'exactitude n'établissait pas
+  dans EXP-B-008.
+- **Données** :
+  - **eval_30** (34 phrases, 5 groupes).
+  - **Pilote P01–P60 du Lot A1** :
+    - annoté par texte, indépendamment, par Achraf et Ghofrane ;
+    - non adjugé ;
+    - langue selon le Lot A2 : fr 26, ar 15, tn-arabizi 19.
+  - Fichiers hors dépôt, dans l'espace de travail du Lot A1 :
+    - `annotation_achraf.xlsx`, lignes P01–P60 seulement, SHA-256
+      `ec50eda9f0cafd810c196f98b871b66126774b670c4e2918c74a7d4e3ace2f08` ;
+    - `annotation_pilote_A1_Ghofran_utf8.csv`, SHA-256
+      `d0eb33fc2c51346dd8ed82bcfa991dc0ee5b0d3d22730cdd39bb9cdafc51dc87`.
+  - **Les deux jeux ont servi à la mise au point** :
+    - eval_30 pour les règles (EXP-B-001 à EXP-B-006) ;
+    - le pilote pour l'analyse d'erreurs d'EXP-B-008 et le choix de corrections.
+    - Les chiffres ci-dessous sont donc **optimistes**. La mesure sur un jeu de test gelé sera
+      **EXP-B-010**.
+- **Méthode / configuration** :
+  - extracteur sans aucune modification de règle ni de lexique depuis EXP-B-008 ;
+  - unité : le texte, affirmation si l'une de ses phrases l'est ;
+  - gold : label AFFIRMATION, contre chaque annotateur et sur les textes d'accord (47 pour le
+    label, 35 pour la modalité) ;
+  - baselines : « tout = affirmation » et « tout = assertif » ;
+  - IC : bootstrap percentile 95 %, graine 20261015, 1000 tirages ;
+  - extracteur − baseline : bootstrap apparié sur les textes, graine 42, 2000 tirages ;
+  - ablation : retrait en mémoire de chaque composant, sans toucher aux fichiers :
+    - lexiques de modalité ;
+    - coréférence ;
+    - règles de factualité ;
+    - verbes de parole ;
+    - parseurs.
+- **Code** : commit `88cdb36`, `linguistic_analysis/evaluate_double.py` et
+  `linguistic_analysis/ablation.py`. Le code de l'extracteur est identique à `main` (`9e19647`).
+  Ce commit est sur `main` tel quel : fusion `f6eaf81` de la PR #20, par commit de fusion et sans
+  squash, donc le SHA est inchangé.
+  Commandes, depuis la racine du dépôt :
+  - `python -X utf8 -m linguistic_analysis.evaluate_double --a <annotation_achraf.xlsx> --b <annotation_pilote_A1_Ghofran_utf8.csv> --name-a Achraf --name-b Ghofrane --ids P01-P60 --exp-id EXP-B-009 --out-dir <hors dépôt>` ;
+  - `python -X utf8 -m linguistic_analysis.ablation --a <…> --b <…> --name-a Achraf --name-b Ghofrane --ids P01-P60`.
+- **Résultats** :
+  - **accord** :
+    - label : 47/60, kappa 0.615 [0.410 ; 0.785] ;
+    - oui/non : 49/60, kappa 0.624 [0.421 ; 0.799] ;
+    - modalité : 35/60, kappa 0.390 [0.207 ; 0.561].
+  - **Détection** (identique dans les deux modes) :
+
+    | Gold | Exactitude | Précision | Rappel | Macro-F1 [IC] | Baseline macro-F1 |
+    |---|---|---|---|---|---|
+    | Achraf | 0.617 | 0.582 | 1.000 | 0.519 [0.394 ; 0.644] | 0.348 |
+    | Ghofrane | 0.767 | 0.745 | 1.000 | 0.635 [0.477 ; 0.773] | 0.406 |
+    | Accord (47) | 0.745 | 0.721 | 1.000 | 0.619 [0.439 ; 0.769] | 0.397 |
+
+  - **Modalité** :
+
+    | Mode | Exactitude Achraf / Ghofrane / accord (35) | Macro-F1 Achraf / Ghofrane / accord |
+    |---|---|---|
+    | règles | 0.567 / 0.467 / 0.571 | 0.412 / 0.198 / 0.363 |
+    | parseurs | 0.600 / 0.500 / 0.629 | 0.441 / 0.217 / 0.404 |
+
+    Baseline « tout = assertif » : exactitude 0.533 / 0.433 / 0.514.
+  - **Extracteur − baseline (apparié)** :
+    - détection, macro-F1 :
+      - Achraf : +0.172 [+0.044 ; +0.288] ;
+      - Ghofrane : +0.229 [+0.067 ; +0.361] ;
+      - accord : +0.221 [+0.061 ; +0.365] ;
+    - modalité, macro-F1, mode règles :
+      - Achraf : +0.313 [+0.040 ; +0.409] ;
+      - Ghofrane : +0.097 [−0.007 ; +0.218] ;
+      - accord : +0.228 [−0.006 ; +0.419] ;
+    - modalité, macro-F1, mode parseurs :
+      - Achraf : +0.341 [+0.072 ; +0.440] ;
+      - Ghofrane : +0.117 [+0.014 ; +0.243] ;
+      - accord : +0.268 [+0.057 ; +0.473].
+  - **Ablation**, mode règles, écart au système complet :
+
+    | Variante | eval_30 : détection / modalité / triplet / coréférence | Pilote : macro-F1 de détection (A / G) / macro-F1 de modalité sur l'accord |
+    |---|---|---|
+    | sans lexiques de modalité | −0.029 / −0.118 / 0 / 0 | −0.063 / −0.081 / **+0.061** |
+    | sans coréférence | 0 / 0 / 0 / −3 (sur 3) | 0 / 0 / 0 |
+    | sans règles de factualité | −0.324 / −0.324 / 0 / 0 | −0.031 / −0.039 / −0.169 |
+    | sans verbes de parole | 0 / −0.118 / −5 (sur 22) / 0 | 0 / 0 / −0.055 |
+    | sans parseurs (contre parseurs complet) | 0 / 0 / +1 / 0 | 0 / 0 / −0.041 |
+
+  - **Non-régression eval_30** (`exp_id` EXP-B-009) : identique à EXP-B-008.
+    - Détection et modalité : 1.000 dans les deux modes.
+    - Triplet exact : 20/22 en règles, 19/22 en parseurs.
+- **Analyse** :
+  - **Macro-F1 de détection** : l'extracteur dépasse la baseline contre chaque gold. L'IC apparié
+    exclut 0, alors qu'en exactitude les IC recouvraient la baseline (EXP-B-008). La baseline n'a
+    aucune bonne réponse sur la classe non-affirmation.
+  - **Modalité** :
+    - le gain sur la baseline est établi en mode parseurs ;
+    - en mode règles, il ne l'est que contre Achraf.
+    - Le macro-F1 est très défavorable à la baseline « tout = assertif », une seule classe. Elle
+      reste plus juste en exactitude, où les écarts sont de +0.03 à +0.12 seulement.
+  - **Ablation** :
+    - la factualité porte la détection ;
+    - les verbes de parole portent le triplet et le rapporté ;
+    - la coréférence n'a d'effet que sur `resolved_text`, mesuré sur 3 phrases ;
+    - les parseurs aident la modalité en fr et ar.
+    - **Les lexiques de modalité aident sur eval_30 mais nuisent à la modalité sur le pilote** :
+      sur-ajustement probable au jeu de développement.
+  - Les écarts d'ablation portent sur 0 à 7 textes du pilote. Ils sont indicatifs, sans IC.
+- **Décision / suite** :
+  - `evaluate_double` et `ablation` sont retenus comme protocole (`docs/lot-b_protocole_eval_100.md`
+    §8).
+  - Aucune règle ni aucun lexique n'est modifié avant EXP-B-010, la mesure sur un jeu de test neuf
+    et gelé, empreinte notée avant la mesure.
+  - Vérifier sur ce jeu l'effet des lexiques de modalité.
+  - Points ouverts :
+    - adjudication du pilote ;
+    - point L5 avec le Lot C (classe AUTRE).
+
+### EXP-A2-013 — Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig)
+- **Date** : 2026-11-06
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : suite d'EXP-A2-012, dont les fausses alertes venaient d'un filtre trop
+  petit (« absent de PADT `train` »). Hypothèse : en n'ajoutant que des mots (presque) absents d'une
+  grande référence d'arabe standard, on relève le rappel du tunisien en lettres arabes sans fausse
+  alerte sur la presse.
+- **Données** : même découpage qu'EXP-A2-012 (référence d'EXP-A2-009, 100 textes : « reglage » 47,
+  « mesure » 53). Référence d'arabe standard : Leipzig Corpora Collection, arabe, News 2022, 300 000
+  phrases (`ara_news_2022_300K.tar.gz`, SHA-256
+  `63b50fc6756002b2896055aafc3773cf2169a41a3947bac6ec39eb0febe5215d`), CC BY, téléchargée le
+  2026-11-06, non versionnée (`data/raw/langid/leipzig/`), lue sans extraction ; citation :
+  Goldhahn, Eckart et Quasthoff, LREC 2012. Corpus de presse maghrébine écartés volontairement
+  (citations possibles en dialecte). Réglage : PADT `dev` (909 phrases). Mesure unique : moitié
+  « mesure », PADT `test` (680 phrases), eval_30 (34 phrases).
+- **Méthode / configuration** : `python -X utf8 -m normalization.silver_tuning tune --leipzig`.
+  Grille : seuil `MIN_TEXTS` 8 / 6 / 4 × nombre maximal de phrases Leipzig contenant le mot ajouté
+  (0 / 2 / 5) × retrait des affixes, plus le lexique actuel (seuil 12) ; le lexique actuel n'est
+  jamais filtré. Règle de choix fixée avant le lancement : meilleur macro-F1 sur « reglage » parmi
+  les configurations à 0 fausse alerte sur PADT `dev` ; égalité : seuil le plus haut, filtre le plus
+  strict, sans affixes. Critère d'adoption fixé avant la mesure finale : sur la moitié « mesure »,
+  macro-F1 au moins égal à l'actuel ; 0 fausse alerte sur PADT `test` ; aucune baisse sur eval_30.
+  Mesure unique : `python -X utf8 -m normalization.silver_tuning final --min-texts 4 --max-leipzig 0`.
+  Non-régression : `tune` sans option redonne le tableau d'EXP-A2-012 à l'identique.
+- **Code** : `normalization/silver_tuning.py` (`read_leipzig_sentences`, `reference_counts`,
+  option `--leipzig`, `--max-leipzig`) ; 2 tests ajoutés dans `tests/test_langid_affixes.py`
+  (10 au total) ; tableau gardé hors dépôt (`data/interim/langid/silver_tuning_leipzig.tsv`).
+- **Résultats** :
+  - réglage (moitié « reglage », N = 47) : sans affixes, 0 alerte sur PADT `dev` pour N = 0 et 2
+    à tous les seuils (contre 2 à 15 sans filtre, EXP-A2-012) ; avec affixes, 5 à 17 alertes dès le
+    seuil 6. Retenu : seuil 4, N = 0, sans affixes, 445 marques (78 + 367) : macro-F1 0.65 → 0.68,
+    rappel `tn` 0.56 → 0.64, précision 1.00 → 0.96 ;
+  - mesure unique, configuration actuelle → retenue :
+
+    | Jeu | Macro-F1 | Rappel tn | Précision tn | Fausses alertes |
+    |---|---|---|---|---|
+    | dev, moitié « mesure » (N = 53) | 0.61 → 0.68 | 0.51 → 0.61 | 1.00 → 1.00 | — |
+    | eval_30 (N = 34) | 0.94 → 0.94 | 0.86 → 0.86 | 1.00 → 1.00 | — |
+    | PADT `test` (680 phrases) | — | — | — | 0 → 1 |
+
+  - tests : 637 réussis ; `ruff check` sans remarque.
+- **Analyse** : l'hypothèse tient en grande partie. Le filtre Leipzig supprime presque toutes les
+  fausses alertes d'EXP-A2-012, et le gain se confirme sur des données jamais vues (+0.07 de
+  macro-F1, +10 points de rappel, précision intacte sur les commentaires). Il reste une fuite : une
+  phrase de presse sur 680 classée tunisienne. Les affixes n'apportent rien et recréent des alertes :
+  abandonnés. Limites : petits effectifs (53 textes ; 1 texte pèse environ 0.02), un seul
+  annotateur de référence par texte après adjudication ; eval_30 ne contient que 5 phrases en
+  tunisien en lettres arabes, donc il ne peut guère montrer de gain.
+  Analyse de l'alerte de PADT `test` (faite après la mesure, sans aucun réglage) :
+  la phrase, de la presse égyptienne en arabe standard, bascule sur une seule marque
+  ajoutée, « الطحان », ici un nom
+  de famille (5 textes TSAC, 0 phrase Leipzig) : un nom propre rare passe tout filtre de
+  fréquence. Relecture des 367 marques ajoutées : 45 commencent par l'article « ال » (noms
+  communs, noms de famille ; les 3 marques d'origine en « ال » sont de vraies marques) ; la
+  liste automatique mêle aussi des injures et termes vulgaires, des fautes de frappe et des
+  mots d'arabe standard. Le critère « fréquent dans TSAC, absent de la presse » retient ce qui
+  est propre aux commentaires, pas seulement ce qui est tunisien : une liste automatique ne
+  peut pas entrer telle quelle dans le lexique (ni dans le dépôt).
+- **Décision / suite** : **non activé** : le critère d'adoption fixé avant la mesure (0 alerte sur
+  PADT `test`) n'est pas rempli ; le pipeline garde le lexique actuel (78 marques, `STRIP_AFFIXES =
+  False`). La moitié « mesure » et PADT `test` ont servi pour cette configuration : toute correction
+  devra être mesurée sur de nouvelles données (une presse de test neuve et un échantillon TSAC neuf
+  annoté à deux, déjà prévu par EXP-A2-011). Suite : analyser la phrase en cause (mot responsable),
+  puis préparer ce nouveau jeu de test.
+  Suite révisée (EXP-A2-014) : relecture humaine des 367 candidats selon des critères écrits
+  avant de commencer (garder les mots-outils et formes verbales dialectales ; rejeter noms
+  propres, injures, mots d'arabe standard et fautes de frappe), sans regarder le dev ni les
+  tests ; mesure sur un jeu neuf.
+
+### EXP-A2-012 — Silver : lexique élargi et retrait des affixes (résultat négatif)
+- **Date** : 2026-11-06
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : suite d'EXP-A2-009 (lexique plus grand, affixes). Relever le rappel
+  du tunisien en lettres arabes (0.53, EXP-A2-011) sans perdre la précision (1.00) ni créer de
+  fausse alerte sur la presse. Hypothèse : des marques plus rares et le retrait des affixes collés
+  (« ولقيتها » → « لقيت ») relèvent le rappel sans toucher la presse.
+- **Données** : référence en lettres arabes d'EXP-A2-009 (`tsac_arabic_sample_reference.tsv`,
+  100 textes, non versionnée) coupée en deux moitiés fixes selon l'empreinte SHA-256 de chaque
+  texte : « reglage » (47 textes) et « mesure » (53, non utilisée ici). Presse : PADT `dev`
+  (909 phrases) pour régler. Candidats : TSAC en lettres arabes hors textes annotés, absents de
+  PADT `train` (même critère qu'EXP-A2-004). PADT `test` et eval_30 non utilisés.
+- **Méthode / configuration** : 8 configurations = seuil `MIN_TEXTS` du lexique (12 = lexique
+  actuel ; 8, 6, 4 : ajout des mots vus dans 4 à 11 textes, d'au moins 3 lettres, hors verbes en
+  ن et mots écartés dans l'en-tête de `tn_markers.txt` ; les mots à 12 textes ou plus déjà écartés
+  ne reviennent pas) × retrait d'un préfixe (و ف ب ل ك) et d'un suffixe (ني ك ه ها نا كم هم),
+  forme restante d'au moins 3 lettres. Règle de choix fixée avant le lancement : meilleur
+  macro-F1 sur « reglage » parmi les configurations à 0 fausse alerte sur PADT `dev` ; égalité :
+  seuil le plus haut, puis sans affixes. Déterministe (aucune graine). Contrôle : la configuration
+  actuelle sur toute la référence redonne 0.63 (EXP-A2-011).
+- **Code** : `normalization/silver_tuning.py` (commande `tune`) ; `normalization/langid.py` :
+  `affix_variants`, options `markers` et `strip_affixes` (désactivées par défaut,
+  `STRIP_AFFIXES = False`) ; 8 tests dans `tests/test_langid_affixes.py` (ce commit).
+  Commande : `python -X utf8 -m normalization.silver_tuning tune` ; tableau gardé hors dépôt
+  (`data/interim/langid/silver_tuning.tsv`).
+- **Résultats** (moitié « reglage », N = 47 ; alertes = phrases de PADT `dev` classées `tn`) :
+
+  | Seuil | Affixes | Marques | Macro-F1 | Rappel tn | Précision tn | Alertes PADT dev |
+  |---|---|---|---|---|---|---|
+  | 12 | non | 78 | 0.65 | 0.56 | 1.00 | 0 |
+  | 12 | oui | 78 | 0.65 | 0.56 | 1.00 | 0 |
+  | 8 | non | 291 | 0.70 | 0.67 | 0.96 | 2 |
+  | 8 | oui | 291 | 0.72 | 0.69 | 0.96 | 2 |
+  | 6 | non | 476 | 0.70 | 0.67 | 0.96 | 7 |
+  | 6 | oui | 476 | 0.72 | 0.69 | 0.96 | 16 |
+  | 4 | non | 965 | 0.71 | 0.72 | 0.93 | 15 |
+  | 4 | oui | 965 | 0.71 | 0.72 | 0.93 | 48 |
+
+  Tests : 635 réussis ; `ruff check` sans remarque.
+- **Analyse** : l'hypothèse ne tient pas sous la contrainte de précision. Les affixes seuls
+  n'apportent rien avec 78 marques (surtout des mots-outils, rarement affixés). Un lexique plus
+  grand relève le rappel (0.56 → 0.67 à 0.72) mais crée des fausses alertes sur la presse et fait
+  baisser la précision ; avec les affixes, les nouvelles marques s'accrochent aussi à des mots de
+  presse (48 alertes au seuil 4). Cause : le filtre « absent de PADT `train` » (quelques milliers
+  de phrases) est trop petit pour écarter les mots rares d'arabe standard, qu'on trouve aussi
+  dans les commentaires. Limites : N = 47, un écart de 0.05 correspond à environ 2 textes ; la
+  négation contractée (EXP-A2-009) n'est pas traitée ici.
+- **Décision / suite** : abandonné en l'état : configuration actuelle conservée (lexique inchangé,
+  affixes désactivés) ; l'outil de réglage et l'option restent pour la suite. Pas de mesure
+  `final` : la moitié « mesure » reste intacte. Suite (EXP-A2-013) : filtrer les candidats contre
+  une référence d'arabe standard beaucoup plus grande, même protocole (réglage sur « reglage » et
+  PADT `dev`, mesure unique sur « mesure » et PADT `test`).
 
 ### EXP-B-008 — Mesure sur le pilote de 60 textes (deux annotateurs indépendants)
 - **Date** : 2026-10-28
@@ -176,7 +1093,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     (416 phrases, EXP-A2-003 / 008).
 - **Méthode / configuration** : `python -X utf8 -m normalization.review` (déterministe). Baselines :
   « majorité » (toujours la classe la plus fréquente du jeu) ; « alphabet seul » (lettres arabes →
-  `ar`, sinon `fr` : le comportement d'avant le Lot A2). Normaliseur : textes dont les nombres sont
+  `ar`, sinon `fr` : baseline triviale ; le normaliseur d'origine faisait mieux : exactitude 0.82, EXP-A2-001). Normaliseur : textes dont les nombres sont
   identiques avant et après `normalize` (chiffres arabes-indiens convertis comptés comme conservés),
   et mots différents avant / après, contre la baseline « copie de la source ». Erreurs du dev
   exportées avec leur catégorie d'EXP-A2-009, regroupées en 5 familles. Sortie gardée hors dépôt :

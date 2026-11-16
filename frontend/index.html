@@ -76,7 +76,8 @@
       err.hidden = true; go.disabled = true;
       document.getElementById("status").textContent = "Analyse en cours…";
       try {
-        const { verdicts } = await NC.api("/check", { text: document.getElementById("text").value });
+        const detail = await NC.api("/check/detail", { text: document.getElementById("text").value });
+        const verdicts = detail.claims.map((item) => item.verdict);
         out.innerHTML = verdicts.length ? verdicts.map((v, i) => `
           <article class="card">
             <div class="row" style="justify-content:space-between;align-items:center">
@@ -85,10 +86,13 @@
             </div>
             <div style="font-size:1.08rem">${NC.text(v.claim.text)}</div>
             ${NC.verdictBox(v)}
+            <p class="sub">Verdict : ${NC.esc(detail.claims[i].verdict_engine.used)}${detail.claims[i].verdict_engine.fallback_reason ? ` · repli : ${NC.esc(detail.claims[i].verdict_engine.fallback_reason)}` : ""} · recherche ${NC.fmt(detail.claims[i].timings_ms.retrieval, 1)} ms · NLI ${NC.fmt(detail.claims[i].timings_ms.nli, 1)} ms · verdict ${NC.fmt(detail.claims[i].timings_ms.verdict, 1)} ms</p>
           </article>`).join("")
           : `<p class="empty">Aucune affirmation vérifiable détectée dans ce texte.</p>`;
+        out.insertAdjacentHTML("afterbegin", `<section class="card"><h2>Texte normalisé</h2><p>${NC.text(detail.normalized.text)}</p><p class="sub">Langue détectée : ${NC.esc(detail.normalized.lang)} · écriture : ${NC.esc(detail.normalized.script)}</p></section>`);
+        out.insertAdjacentHTML("afterbegin", `<p class="notice">Recherche : ${NC.esc(detail.engines.retrieval)} · NLI : ${NC.esc(detail.engines.nli.backend || detail.engines.nli.status)} · ${detail.candidates} candidat(s), ${detail.retained} retenu(s) · total ${NC.fmt(detail.timings_ms.total, 1)} ms.</p>`);
         if (verdicts.length && verdicts.every((v) => v.abstained)) {
-          out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention. C'est normal tant que le modèle NLI du Lot C n'est pas branché (le module actuel répond toujours « neutre ») ou que le corpus de preuves n'est pas installé : voir la page « D · Preuves et verdict ».</p>`);
+          out.insertAdjacentHTML("afterbegin", `<p class="notice">Toutes les affirmations sont en abstention. Vérifiez la pertinence des preuves, le moteur NLI actif et les éventuels replis affichés : voir la page « D · Preuves et verdict ».</p>`);
         }
       } catch (ex) {
         err.hidden = false; err.textContent = ex.message;

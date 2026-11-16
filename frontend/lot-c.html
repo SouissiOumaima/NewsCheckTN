@@ -12,7 +12,7 @@
     <div class="page-head">
       <div class="eyebrow">Lot C · modèles</div>
       <h1>Détection d'affirmations et NLI</h1>
-      <p class="lede">Model 1 utilise XLM-R + LoRA pour garder les affirmations vérifiables. Model 2 comparera ensuite une affirmation avec une preuve.</p>
+      <p class="lede">Model 1 utilise XLM-R + LoRA pour garder les affirmations vérifiables. Model 2 compare une affirmation avec une preuve (soutient, contredit ou neutre).</p>
     </div>
 
     <div class="error" id="err" hidden></div>
@@ -43,8 +43,11 @@
     </section>
 
     <section class="card">
-      <div class="row" style="align-items:center;justify-content:space-between"><div><h2 style="margin:0">Model 2 · NLI</h2><p class="sub" id="nli-state">Le modèle NLI est en préparation.</p></div><span class="tag">supports · refutes · neutral</span></div>
-      <p class="notice">Le fine-tuning NLI attend des paires annotées <code>claim</code>–<code>evidence</code> avec les labels <code>supports</code>, <code>refutes</code> ou <code>neutral</code>. Le test ci-dessous utilise le baseline actuellement disponible.</p>
+      <div class="row" style="align-items:center;justify-content:space-between"><div><h2 style="margin:0">Model 2 · NLI</h2><p class="sub" id="nli-state">Chargement du bilan NLI Silver…</p></div><span class="tag">supports · refutes · neutral</span></div>
+      <div class="kpis" id="nli-kpis"></div>
+      <div class="table-wrap" id="nli-langs"></div>
+      <p class="notice" id="nli-limits"></p>
+      <p class="sub" id="nli-deployment"></p>
       <form id="nli-form">
         <label class="field">Affirmation<textarea id="claim" dir="auto" style="min-height:60px" required></textarea></label>
         <label class="field">Passage de preuve<textarea id="ev" dir="auto" style="min-height:80px" required></textarea></label>
@@ -74,6 +77,16 @@
       langs.innerHTML = `<table class="t"><thead><tr><th>Langue</th><th class="n">Macro-F1</th><th class="n">Exemples test</th></tr></thead><tbody>${body}</tbody></table>`;
       langs.hidden = false;
       document.getElementById("nli-state").textContent = data.nli.message;
+      const n = data.nli.evaluation;
+      if (n) {
+        document.getElementById("nli-kpis").innerHTML = `
+          <div class="kpi"><div class="k">Macro-F1 Silver · 3 graines</div><div class="v">${NC.fmt(n.macro_f1, 3)} ± ${NC.fmt(n.std, 3)}</div><div class="sub">${NC.esc(n.split)} · ${NC.esc(n.exp_id)}</div></div>
+          <div class="kpi"><div class="k">Bronze / majorité</div><div class="v">${NC.fmt(n.baselines.bronze, 3)} / ${NC.fmt(n.baselines.majority, 3)}</div></div>
+          <div class="kpi"><div class="k">Zero-shot float32</div><div class="v">${NC.fmt(n.baselines.zero_shot, 3)}</div><div class="sub">Gain du fine-tuning non significatif · p = ${NC.fmt(n.zero_shot_comparison.p, 3)}</div></div>`;
+        document.getElementById("nli-langs").innerHTML = `<table class="t"><thead><tr><th>Langue</th><th>Macro-F1 Silver</th><th>Exemples test</th></tr></thead><tbody>${Object.entries(n.by_lang).map(([lang, value]) => `<tr><td>${NC.esc(lang.toUpperCase())}</td><td>${NC.fmt(value.macro_f1, 3)}</td><td>${value.n}</td></tr>`).join("")}</tbody></table>`;
+        document.getElementById("nli-limits").textContent = n.limitations;
+      }
+      document.getElementById("nli-deployment").textContent = data.nli.deployment || "";
     }
 
     document.querySelectorAll("[data-detect]").forEach((button) => button.addEventListener("click", () => {

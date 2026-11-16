@@ -1,11 +1,13 @@
 # Lexique fait / opinion — français
 # Une entrée par ligne, '#' pour les commentaires. Comparaison en minuscules.
-# [verbes]        : verbes d'opinion, comptés seulement à la 1re personne (je pense, nous estimons)
+# [verbes]        : verbes d'opinion et d'appréciation, comptés seulement à la 1re personne
+#                   (je pense, nous estimons, j'aime)
 # [expressions]   : marqueurs d'opinion comptés quel que soit le contexte
 # [evaluatifs]    : adjectifs / noms évaluatifs (renforcés en position d'attribut : « c'est honteux »)
 # [intensifieurs] : intensifieurs et superlatifs (comptés seulement sans donnée chiffrée)
 # [questions]     : marqueurs interrogatifs en début de phrase
-# [souhaits]      : souhait, espoir, injonction
+# [souhaits]      : souhait, espoir, injonction (dont la requête polie : « merci d'avance », « svp »)
+# [salutations]   : formules de salutation, en début de phrase et sans indice factuel (→ souhait)
 # [dates]         : noms de mois (signal factuel)
 
 [verbes]
@@ -27,6 +29,16 @@ considérons
 juger
 juge
 jugeons
+# appréciation du locuteur (j'aime, je déteste)
+aimer
+aime
+aimons
+adorer
+adore
+adorons
+détester
+déteste
+détestons
 
 [expressions]
 à mon avis
@@ -40,6 +52,14 @@ hélas
 franchement
 il est clair que
 il est évident que
+# appréciation à la 1re personne écrite sans apostrophe (messages) ; « j'aime » est déjà
+# couvert par [verbes] (« j' » + « aime »), ne pas le répéter ici (double comptage)
+jaime
+jadore
+jdeteste
+jdéteste
+ça me plaît
+ça me plait
 
 [evaluatifs]
 scandaleux
@@ -90,6 +110,22 @@ espérons
 il faut que
 souhaitons
 je souhaite
+# requête polie adressée au lecteur (injonction) : la phrase demande, elle n'affirme rien
+merci d'avance
+s'il vous plaît
+s'il vous plait
+s'il te plaît
+s'il te plait
+svp
+stp
+
+[salutations]
+bonjour
+bonsoir
+salut
+coucou
+bonne journée
+bonne soirée
 
 [dates]
 janvier

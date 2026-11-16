@@ -7,8 +7,8 @@ Ce que le script produit (rien n'est réglé ici : il ne fait que mesurer) :
 1. Gel des jeux : empreinte SHA-256, taille, et dernier commit pour un fichier versionné.
 2. Identification de langue contre deux baselines triviales, sur chaque jeu :
    - « majorité » : toujours la classe la plus fréquente du jeu ;
-   - « alphabet seul » : lettres arabes -> arabe standard, sinon -> français (ce que faisait
-     le stub avant le Lot A2).
+   - « alphabet seul » : lettres arabes -> arabe standard, sinon -> français (baseline
+     triviale ; le stub d'origine faisait mieux, EXP-A2-001).
 3. Résultats par langue / script (tableau 2 du guide de la revue).
 4. Normaliseur : nombres conservés (règle d'or) et réduction du vocabulaire, contre la baseline
    « copie de la source ».
@@ -68,7 +68,7 @@ def majority_baseline(golds: list[str]) -> list[str]:
 
 
 def alphabet_baseline(texts: list[str]) -> list[str]:
-    """Lettres arabes majoritaires -> « ar », sinon « fr » : l'alphabet seul, sans le Lot A2."""
+    """Lettres arabes majoritaires -> « ar », sinon « fr » : l'alphabet seul, baseline triviale."""
     predictions = []
     for text in texts:
         arabic = len(ARABIC_LETTER.findall(text))
