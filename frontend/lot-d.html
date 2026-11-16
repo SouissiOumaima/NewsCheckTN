@@ -33,8 +33,8 @@
         </label>
         <label class="field">Position des preuves (NLI)
           <select id="nli">
-            <option value="regles">règles du Lot D (provisoire)</option>
-            <option value="lot-c">modèle du Lot C</option>
+            <option value="lot-c">moteur actif du Lot C</option>
+            <option value="regles">règles du Lot D</option>
           </select>
         </label>
         <button class="btn" type="submit" id="go">Vérifier</button>
@@ -56,7 +56,7 @@
 
     <section class="card">
       <h2>Mesures du Lot D</h2>
-      <p class="sub" style="margin:0">Jeux d'évaluation : jeu de développement fictif et jeu réel Tunifact (articles du Lot A1). Journal : entrées EXP-D-001 à EXP-D-006 de <code>experiments.md</code>. Les fichiers de résultats sont dans le <a href="evaluation.html">tableau de bord d'évaluation</a>.</p>
+      <p class="sub" style="margin:0">Jeux d'évaluation : jeu de développement fictif et jeu réel Tunifact (articles du Lot A1). Journal : entrées EXP-D-001 à EXP-D-010 de <code>experiments.md</code>. Les fichiers de résultats sont dans le <a href="evaluation.html">tableau de bord d'évaluation</a>.</p>
     </section>
   </main>
 
@@ -87,7 +87,12 @@
         const notes = [];
         if (d.corpus && d.corpus.warning) notes.push(`Le corpus chargé par l'API ne contient que ${d.corpus_size} passage(s) d'exemple. Pour les vrais articles Tunifact : créer le corpus avec <code>python -m rag_llm.build_tunifact_eval</code>, puis relancer l'API avec la variable <code>EVIDENCE_CORPUS=data/interim/lot_d/evidence_tunifact_v1.jsonl</code> (voir <code>frontend/README.md</code>).`);
         else notes.push(`Corpus chargé : ${d.corpus_size} passages (${NC.esc(d.corpus ? d.corpus.origin : "?")}).`);
-        if (d.nli === "lot-c") notes.push("NLI du Lot C : tant que le modèle n'est pas branché, il répond toujours « neutre » et le système s'abstient.");
+        if (d.nli_engine) notes.push(`NLI actif : ${NC.esc(d.nli_engine.backend || d.nli_engine.status)}.`);
+        if (d.verdict_engine) {
+          notes.push(`Verdict demandé : ${NC.esc(d.verdict_engine.requested)} ; utilisé : ${NC.esc(d.verdict_engine.used)}.`);
+          if (d.verdict_engine.model) notes.push(`Modèle : ${NC.esc(d.verdict_engine.model)}.`);
+          if (d.verdict_engine.fallback_reason) notes.push(`Repli : ${NC.esc(d.verdict_engine.fallback_reason)}.`);
+        }
         document.getElementById("notice").innerHTML = `<p class="notice">${notes.join(" ")}</p>`;
         document.getElementById("verdict").innerHTML = NC.verdictBox(d.verdict);
         const cited = new Set(d.verdict.citations);

@@ -1987,3 +1987,98 @@ def test_ablation_cli_refuses_bad_options(tmp_path):
         with pytest.raises(SystemExit) as exc:
             ablation.main(argv)
         assert exc.value.code == 2
+
+
+# --- Détection : formules de requête polie (souhait / injonction) ----------------------------
+
+POLITE_REQUEST_CASES = [
+    "Pouvez-vous me conseiller une bonne voiture, merci d'avance.",
+    "Envoyez-moi le lien du communiqué s'il vous plaît.",
+    "3aychek 9olli win nal9a el formulaire mta3 el inscription.",
+    "عيشك قلي وين نلقى الاستمارة متاع التسجيل.",
+    "من فضلك أرسل لي رابط البلاغ الرسمي.",
+]
+
+
+@pytest.mark.parametrize("text", POLITE_REQUEST_CASES)
+def test_polite_request_is_wish_not_claim(text):
+    (claim,) = extract_claims_detailed(normalize(text))
+    assert claim.modality == "souhait" and not claim.is_claim, claim.triggers
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Le ministre a remercié les médecins de Sfax en 2024.",
+        "El 7koma 3mlet 200 khedma jdida fi Gafsa.",
+        "عيشة بنت محمد فازت بالجائزة الأولى سنة 2024.",  # prénom proche de la formule tunisienne
+    ],
+)
+def test_request_markers_do_not_fire_on_claims(text):
+    claims = extract_claims_detailed(normalize(text))
+    assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
+
+
+# --- Détection : formules de salutation (phatiques) ---------------------------------------
+
+SALUTATION_CASES = [
+    "Bonjour à tous les membres du groupe !",
+    "Aslema 3la el jma3a el kol.",
+    "صباح الخير على الجميع يا أصدقاء.",
+    "مساء الخير لكل المتابعين الكرام.",
+]
+
+
+@pytest.mark.parametrize("text", SALUTATION_CASES)
+def test_salutation_alone_is_not_claim(text):
+    (claim,) = extract_claims_detailed(normalize(text))
+    assert claim.modality == "souhait" and not claim.is_claim, claim.triggers
+    assert any(t.startswith("souhait:salutation:") for t in claim.triggers)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Bonjour, le ministre a annoncé 200 emplois à Gafsa.",  # indice factuel : nombre
+        "Bonjour, El Ministre Ben Salah a visité Sfax.",  # indice factuel : entité (règles)
+        "Le président a dit bonjour aux enfants de l'école.",  # salutation hors tête de phrase
+        "Aslema, el 7koma 3mlet 200 khedma jdida.",
+    ],
+)
+def test_salutation_does_not_hide_claim(text):
+    claims = extract_claims_detailed(normalize(text))
+    assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
+    assert not any(t.startswith("souhait:salutation") for c in claims for t in c.triggers)
+
+
+# --- Détection : verbes d'appréciation à la 1re personne ----------------------------------
+
+APPRECIATION_CASES = [
+    "J'aime beaucoup l'ambiance de cette ville.",
+    "Je déteste les embouteillages du matin.",
+    "jaime pas du tout la nouvelle formule du journal",
+    "El mentalite hedhi ma3jebnich bel kol.",
+    "ما يعجبنيش الوضع في البلاد.",
+    "يعجبني هذا القرار الجديد كثيرا.",
+]
+
+
+@pytest.mark.parametrize("text", APPRECIATION_CASES)
+def test_first_person_appreciation_is_opinion(text):
+    is_opinion, _, triggers = factuality.classify_factuality(_sentence(text))
+    assert is_opinion and any(t.startswith("opinion:") for t in triggers), triggers
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Il aime le football depuis son enfance.",  # 3e personne
+        "Les supporters adorent le club de Sfax.",
+        "El jomhour 3ajbou el match mta3 el bera7.",  # 3jeb sans -ni (« me »)
+        "أعجب الجمهور بالعرض الأول في قرطاج.",
+        "J'aime rappeler que le chômage a atteint 16 % en 2023.",  # données précises
+    ],
+)
+def test_appreciation_markers_keep_claims(text):
+    claims = extract_claims_detailed(normalize(text))
+    assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
