@@ -25,6 +25,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-D-011 | 2026-11-15 | D | Silver : verdict avec le NLI affiné du Lot C (PR #21) | même système qu'EXP-D-010 (recherche hybride top 5, gabarit A1–A4, Aya Expanse 8B 4 bits, prompt v1, graine 42) ; seul change le NLI : règles Bronze → mDeBERTa-v3 affiné (EXP-C-011) ; configurations et hypothèses fixées avant la mesure (commit 77a98e7) ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | gabarit : 0.286 / 0.219 → **0.524 / 0.404** (+0.238, IC95 [0.000 ; 0.476], p = 0.031 ; macro-F1 +0.185, p = 0.019), arabe 0.29 → 0.86 ; mais exactitude = majorité (0.524, p = 0.56) ; Aya + indices NLI affiné 0.619 / 0.360 contre 0.714 / 0.408 avec les indices Bronze (H2 rejetée) | le NLI affiné sert au gabarit (repli, démo sans GPU) ; système officiel inchangé : Aya sans indices (EXP-D-010) ; suite (Gold) : inversions de polarité, abstention du gabarit à combiner avec le LLM |
 | EXP-D-010 | 2026-11-15 | D | Silver officiel : verdict par LLM ouvert ≤ 8 Md contraint aux preuves | CohereLabs/aya-expanse-8b (4 bits, Colab T4), même prompt v1 et mêmes contrôles qu'EXP-D-009, température 0.3, 3 graines locales (13, 42, 2026) ; recherche hybride (EXP-D-008) ; 4 ablations ; bootstrap apparié 10 000 tirages ; aucune donnée envoyée à une API | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.730 ± 0.028 / 0.410 ± 0.016 (graine 42 : 0.714 / 0.401) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.429, IC95 [0.143 ; 0.714], p = 0.004) et majorité 0.524 / 0.172 (exactitude +0.19, p = 0.055 ; macro-F1 +0.23, p = 0.004) ; couverture 1.00, abstention justifiée 0.00 ; tunisien 0.8 ; 0 citation invalide | résultat officiel du Silver ; exact mais jamais d'abstention (3 affirmations sans preuve jugées « faux ») ; suite : contrôle de pertinence avant le LLM, abstention évaluée (Gold) |
 | EXP-D-009 | 2026-11-15 | D | Comparaison (non officiel) : verdict par LLM contraint, API Gemini | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | comparaison seulement (modèle > 8 Md, données envoyées à une API) ; officiel : EXP-D-010 ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
 | EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
@@ -71,6 +72,91 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
 
 ## Entrées
+
+### EXP-D-011 — Silver : verdict avec le NLI affiné du Lot C
+- **Date** : 2026-11-15 (exécution Colab, horloge UTC ; nuit du 15 au 16/11 à Tunis)
+- **Auteur / Lot** : Membre 5 (Hadil) / Lot D, avec le composant Silver du Lot C (Wiem, PR #21)
+- **Objectif / hypothèse** : le modèle NLI affiné du Lot C (EXP-C-011, `NLI_BACKEND=fine-tuned`)
+  améliore-t-il le verdict du Lot D par rapport au NLI Bronze (règles par lexique) d'EXP-D-010 ?
+  - **H1** : `gabarit + NLI affiné` meilleur que `gabarit + NLI Bronze` ;
+  - **H2** : `LLM + indices NLI affiné` meilleur que `LLM + indices NLI Bronze`.
+- **Données** : dev fictif (20 affirmations) ; test Tunifact v1 **gelé le 23/10/2026** (21
+  affirmations : fr 9, ar 7, tunisien 5 ; 84 passages), empreintes vérifiées avant la mesure.
+  Calcul dans une session Colab (GPU T4) ; aucune donnée envoyée à une API.
+- **Méthode / configuration** (fixées avant la mesure : mail à Achref du 15/11 et commit `77a98e7`,
+  poussé avant le dev et le test ; rien n'est réglé) :
+  - même système qu'EXP-D-010 : recherche hybride BM25 + e5-base, top 5, faite **une seule fois**
+    (mêmes passages pour tous les systèmes) ; gabarit avec les mêmes seuils A1–A4 ; Aya Expanse 8B
+    (4 bits), prompt v1, température 0.3, top-p 0.9, **graine 42** ;
+  - **seul change le moteur NLI** qui donne les positions (soutient / contredit / neutre) :
+    `bronze` (règles, référence) ou `fine-tuned` = checkpoint
+    `nli_mdeberta-ft_v3_lr1e-05_e6_seed42` (lr 1e-5, époque 1, graine 42 ; `train_log.json`
+    vérifié ; SHA-256 de `model.safetensors` enregistré dans le fichier de résultats, début
+    `72881aba54d94ede`) ; le script s'arrête si le modèle affiné ne se charge pas ;
+  - 5 systèmes : gabarit + NLI Bronze ; gabarit + NLI affiné ; LLM sans indices ; LLM + indices
+    NLI Bronze ; LLM + indices NLI affiné. Les références sont recalculées dans la même exécution ;
+  - bootstrap apparié (10 000 tirages, graine 42), exactitude et macro-F1 : H1, H2, et LLM + indices
+    NLI affiné contre LLM sans indices ; en plus, accord des deux NLI passage par passage.
+  - Exécution du test : la session Colab s'est coupée pendant une première exécution ; relance du
+    même code, les 57 générations déjà faites ont été reprises du cache (6 nouvelles) : aucune
+    modification entre les deux, pas de nouvelle mesure.
+- **Code** : `rag_llm/silver_verdict_nli.py`, `tests/test_rag_llm_silver_nli.py`,
+  `notebooks/lot_d_rag/03_silver_verdict_nli.ipynb` (branche `lot-d-silver-nli`) ; sortie
+  `evaluation/results/lot-d_silver_verdict_nli_<split>_20261115.json` (non versionnée).
+- **Résultats — test gelé (21 affirmations)** :
+
+  | Système | Exactitude | Macro-F1 | Couverture | Précision sélective | Abstention justifiée | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|---|
+  | gabarit + NLI Bronze (= EXP-D-010) | 0.286 | 0.219 | 0.381 | 0.500 | 0.667 | 0.444 | 0.286 | 0.000 |
+  | **gabarit + NLI affiné** | **0.524** | **0.404** | 0.714 | 0.600 | 0.667 | 0.333 | **0.857** | 0.400 |
+  | LLM sans indices (= EXP-D-010, officiel) | 0.714 | 0.401 | 1.000 | 0.714 | 0.000 | 0.667 | 0.714 | 0.800 |
+  | LLM + indices NLI Bronze (= EXP-D-010) | 0.714 | 0.408 | 1.000 | 0.714 | 0.000 | 0.556 | 0.714 | 1.000 |
+  | LLM + indices NLI affiné | 0.619 | 0.360 | 1.000 | 0.619 | 0.000 | 0.556 | 0.714 | 0.600 |
+  | majorité (« faux », du dev) | 0.524 | 0.172 | 1.000 | | | | | |
+
+  - Les 3 références redonnent exactement les chiffres d'EXP-D-010 ; sorties du LLM valides 1.00,
+    0 citation invalide pour tous les systèmes.
+  - **H1** (gabarit affiné contre gabarit Bronze) : exactitude +0.238 [0.000 ; 0.476], p = 0.031 ;
+    macro-F1 +0.185 [0.011 ; 0.391], p = 0.019 → **confirmée**.
+  - Gabarit affiné contre majorité (calculé après la mesure, mêmes prédictions) : exactitude
+    +0.000 [−0.333 ; 0.333], p = 0.557 (aucune différence) ; macro-F1 +0.232 [0.006 ; 0.455],
+    p = 0.022.
+  - **H2** (indices affinés contre indices Bronze) : exactitude −0.095 [−0.238 ; 0.000], p = 1.0 ;
+    macro-F1 −0.048 [−0.213 ; 0.000], p = 0.99 → **rejetée**. Contre LLM sans indices : −0.095,
+    macro-F1 −0.040 [−0.205 ; 0.026], p = 0.89.
+  - Accord des deux NLI : 0.533 des 105 passages ; le NLI affiné prend position bien plus souvent
+    (soutient 22, contredit 26, neutre 57) que les règles (8, 10, 87).
+  - Verdicts du gabarit changés par le NLI affiné : 12 sur 21 → 6 corrigés (`tf-c04`, `c06`, `c07`,
+    `c12`, `c18`, `c20`), 1 cassé (`tf-c03`, « faux » → « vrai »), 5 restés faux.
+  - Erreurs restantes du gabarit affiné (10) : 5 inversions vrai / faux (`tf-c03`, `c10`, `c17`,
+    `c19`, `c21`) ; 4 abstentions sur des affirmations qui ont une réponse (`tf-c05`, `c08`, `c09`,
+    `c11`, dont les 2 « trompeur ») ; 1 affirmation sans preuve jugée « faux » (`tf-c13`).
+  - Indices affinés donnés au LLM : 3 verdicts changés, 2 cassés en arabizi (`tf-c11` → « trompeur »,
+    `tf-c19` → « vrai »), 1 erreur changée en une autre (`tf-c05`).
+- **Résultats — dev (20 affirmations)** : gabarit Bronze 0.50 / 0.375, gabarit affiné 0.75 / 0.539
+  (+0.25, p = 0.027) ; LLM sans indices 0.75 / 0.557 (= EXP-D-010) ; indices Bronze 0.75 / 0.542 ;
+  indices affinés 0.70 / 0.367. Mêmes tendances que le test.
+- **Analyse** :
+  1. Le composant Silver du Lot C **sert dans la chaîne** : il améliore nettement le gabarit
+     (+0.24, significatif), surtout en arabe (0.29 → 0.86), langue où les règles par lexique
+     trouvaient peu d'indices. En français, il fait légèrement moins bien (0.44 → 0.33).
+  2. Mais le gabarit affiné **n'est pas meilleur que la classe majoritaire en exactitude** (0.524
+     des deux côtés) ; il ne la dépasse qu'en macro-F1. Le LLM reste devant (0.714).
+  3. Donner ses positions au LLM **nuit** (H2 rejetée) : le LLM suit les positions affirmées du NLI,
+     y compris quand elles sont fausses (arabizi). Le NLI a été affiné sur 174 paires seulement et
+     n'est pas significativement meilleur que le zero-shot sur son propre test (EXP-C-011).
+  4. Erreur principale du NLI affiné : **l'inversion de polarité** (5 erreurs sur 10, « soutient »
+     au lieu de « contredit » ou l'inverse).
+  5. Point positif du gabarit : il **s'abstient correctement** sur 2 des 3 affirmations sans preuve
+     (abstention justifiée 0.667), là où le LLM ne s'abstient jamais (0.000). Les deux systèmes
+     sont complémentaires.
+  6. **Limites** : petit test (21 affirmations ; une affirmation = 0.048 d'exactitude) ; une seule
+     graine pour le LLM ; test du NLI affiné du Lot C également petit (n = 56) ; contamination
+     possible (articles publics), non mesurée.
+- **Décision / suite** : le NLI affiné devient le moteur conseillé pour le **gabarit** (repli du LLM
+  et démo sans GPU, `NLI_BACKEND=fine-tuned`) ; le **système officiel reste inchangé** : Aya **sans
+  indices NLI** (EXP-D-010). Suite (Gold) : traiter les inversions de polarité (Lot C) ; combiner
+  l'abstention du gabarit et le verdict du LLM, à fixer sur le dev puis à mesurer une seule fois.
 
 ### EXP-B-011 — Mesure exploratoire sur silver_40 (détection, modalité, SPO, coréférence)
 - **Statut** : **exploratoire, n = 40, une annotation indépendante non garantie, SPO n = 10 dont
