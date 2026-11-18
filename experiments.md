@@ -30,6 +30,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
 
 | EXP-C-014 | 2026-11-18 | C | NLI (Model 2) palier Gold : biais par langue et par source | prédictions Silver d'EXP-C-011 relues, sans nouvelle inférence ; groupes fixés avant calcul ; bootstrap 1000 tirages, graine 20261026 ; règle n ≥ 10 | accuracy et macro-F1 par groupe (test, n = 56) | principal fr 0.760 / ar 0.871 (acc.), écart −0.111 [−0.311 ; +0.090] ; tunifact.org 0.833 (48) / nawaat.org 0.750 (8) ; 2 articles = 25 paires sur 56, 0 erreur du principal sur eux | aucun écart établi (IC larges) ; test trop concentré pour un biais de source ; sujet en attente du Lot A1 |
+| EXP-C-013 | 2026-11-18 | C | NLI (Model 2) palier Gold : robustesse aux paraphrases | protocole seulement : paraphrases humaines des 56 affirmations du test, même preuve et même label, double vérification, gel SHA-256 avant une mesure unique | taux de changement de prédiction ; macro-F1 | non mesuré | jeu à construire |
+| EXP-C-012 | 2026-11-18 | C | NLI (Model 2) palier Gold : transfert vers le tunisien (question de recherche) | protocole seulement : 56 affirmations du test réécrites en tunisien (lettres arabes obligatoire, arabizi en bonus) par des humains, même preuve et même label, double vérification, gel SHA-256 avant une mesure unique | macro-F1 ; écart apparié tunisien − original | non mesuré | jeu à construire (réécritures humaines) |
 | EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test, n = 56) | principal 0.809 ± 0.000 (3 graines) vs zero-shot float32 0.798 (+0.011, IC95 [−0.052 ; +0.071], p = 0.40), Bronze 0.471, majorité 0.194 ; fr 0.745 / ar 0.841 ; ablation sans XNLI 0.427 ± 0.044 | composant Silver : modèle affiné (graine 42), déclaré équivalent au zero-shot (gardé comme backend) ; chiffres v3 (pas de v4 au 12/11) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
@@ -72,6 +74,48 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
 
 ## Entrées
+
+### EXP-C-013 — NLI (Model 2), palier Gold : robustesse aux paraphrases (protocole, non mesuré)
+- **Date** : 2026-11-18 (protocole écrit avant la construction du jeu et avant toute mesure)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : une reformulation de l'affirmation, dans la même langue, qui garde le même fait change-t-elle la position prédite ? Test d'invariance (« INV paraphrases » du cahier des charges) : idéalement, aucune prédiction ne change.
+- **Données (à construire)** : les 56 paires du test v3 (mêmes `pair_id` qu'EXP-C-011) ; pour chacune, une paraphrase de l'affirmation dans sa langue d'origine (fr ou ar), obligatoire, et une seconde en bonus ; la preuve et le label ne changent pas. Gabarit privé : `data/interim/lot_c/nli/gold/paraphrases_v1.csv` (créé par `python -X utf8 -m models.nli.gold_templates`, non versionné).
+- **Règles de construction** :
+  - paraphrases écrites par des humains ; changements permis : ordre des mots, synonymes, voix active / passive, découpage de la phrase ; interdits : ajouter ou retirer une information, changer un nombre, une date, un nom ou la modalité (« selon X », conditionnel) ;
+  - une autre personne vérifie chaque paraphrase (`verif_sens_identique`, `verif_label_tient`) ; une paraphrase avec un « non » est écartée (`statut = ecarte`) et le nombre d'écartées est rapporté ;
+  - aide d'une IA possible seulement si elle est déclarée ligne par ligne (`ia_utilisee` : outil et rôle) et relue et corrigée par un humain ;
+  - aucun modèle n'est lancé sur les paraphrases avant le gel.
+- **Gel** : une fois le fichier rempli et vérifié, il est copié en `paraphrases_v1_gele.csv` (privé) et son SHA-256 est noté ici **avant** la mesure ; une seule mesure, par un script qui refuse une seconde exécution.
+- **Modèles mesurés** : principal (graine 42), zero-shot float32 et règles Bronze, avec `predict_stances` (même code que l'API) ; aucun réglage. Les prédictions sur les affirmations d'origine sont celles déjà sauvegardées par EXP-C-011 (pas de nouvelle inférence sur le test d'origine).
+- **Métriques** :
+  - taux de changement : part des paires gardées dont la prédiction sur la paraphrase diffère de celle sur l'original, sur toutes les paires gardées et sur celles qui étaient justes au départ ;
+  - macro-F1 et accuracy sur les paraphrases, et écart apparié paraphrase − original sur les mêmes paires (bootstrap apparié, 1000 tirages, graine 20261026) ;
+  - par langue d'origine (fr / ar) ; avec 2 paraphrases, chacune est comptée séparément et l'accord entre les deux est rapporté.
+- **Règle de lecture** : si moins de 40 paires sont gardées, le résultat est déclaré exploratoire.
+- **Résultats** : non mesuré.
+
+### EXP-C-012 — NLI (Model 2), palier Gold : transfert vers des affirmations en tunisien (protocole, non mesuré)
+- **Date** : 2026-11-18 (protocole écrit avant la construction du jeu et avant toute mesure)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Question de recherche (cahier des charges)** : le NLI multilingue transfère-t-il vers des paires affirmation tunisienne / preuve française ou arabe ? Mesure : la perte de performance quand seule la langue de l'affirmation change (mêmes faits, même preuve, même label). Le corpus NLI v3 (et la v4 décrite par le Lot A1 le 2026-11-15) ne contient aucune paire tunisienne : le jeu doit être construit.
+- **Données (à construire)** : les 56 paires du test v3 (mêmes `pair_id` qu'EXP-C-011 ; choix de Membre 4 du 2026-11-18, la val restant propre pour le seuil d'abstention) ; l'affirmation de chaque paire est réécrite en tunisien **en lettres arabes (obligatoire)** et **en arabizi (bonus, si le temps le permet)** ; la preuve (fr ou ar) et le label ne changent pas. Les paires du train sont exclues (vues par le modèle affiné). Gabarit privé : `data/interim/lot_c/nli/gold/reecritures_tn_v1.csv` (créé par `python -X utf8 -m models.nli.gold_templates`, non versionné).
+- **Règles de construction** :
+  - réécriture par une personne tunisophone (nom dans `auteur_tn_arabe` / `auteur_arabizi`) ; traduction faite ou relue par un humain dans tous les cas ;
+  - garder exactement les nombres, les dates, les noms propres et la modalité (« selon X », conditionnel) ; ne rien ajouter ni retirer ;
+  - vérification par une **autre** personne tunisophone (`verificateur`) : `verif_sens_identique` et `verif_label_tient` ; une réécriture avec un « non » est écartée (`statut = ecarte`), et le nombre d'écartées est rapporté ;
+  - aide d'une IA possible seulement si elle est déclarée ligne par ligne (`ia_utilisee` : outil et rôle) et relue et corrigée par un humain ;
+  - contrôle par `normalization.tag_lang` (Lot A2) : part des réécritures reconnues `tn` et écriture détectée, **rapportée seulement**, sans écarter de paire (le jugement humain prime) ;
+  - aucun modèle n'est lancé sur les réécritures avant le gel.
+- **Gel** : une fois le fichier rempli et vérifié, il est copié en `reecritures_tn_v1_gele.csv` (privé) et son SHA-256 est noté ici **avant** la mesure ; une seule mesure, par un script qui refuse une seconde exécution.
+- **Modèles mesurés** : principal (graine 42), zero-shot float32 et règles Bronze, avec `predict_stances` (même code que l'API) ; aucun réglage, aucun seuil choisi sur ce jeu. Les prédictions sur les affirmations d'origine sont celles déjà sauvegardées par EXP-C-011 (pas de nouvelle inférence sur le test d'origine). Bonus, seulement s'il est décidé et noté ici avant le gel : translittération de l'arabizi en lettres arabes par le Lot A2 avant le NLI, comme ablation.
+- **Métriques** :
+  - macro-F1 et accuracy par variante (original, tunisien en lettres arabes, arabizi), sur les mêmes paires gardées, avec IC 95 % par bootstrap ;
+  - écart apparié tunisien − original sur les mêmes paires (bootstrap apparié, 1000 tirages, graine 20261026) ;
+  - taux de changement de prédiction entre l'original et sa réécriture ;
+  - par langue de la preuve (fr / ar) : affirmation tunisienne / preuve française et affirmation tunisienne / preuve arabe ;
+  - accord de `tag_lang` avec la variante prévue.
+- **Règle de lecture** : si moins de 40 paires sont gardées pour une variante, son résultat est déclaré exploratoire ; un écart dont l'IC 95 % contient 0 est déclaré non établi.
+- **Résultats** : non mesuré.
 
 ### EXP-C-014 — NLI (Model 2), palier Gold : biais par langue et par source (prédictions Silver déjà sauvegardées)
 - **Date** : 2026-11-18 (protocole écrit avant tout calcul)
