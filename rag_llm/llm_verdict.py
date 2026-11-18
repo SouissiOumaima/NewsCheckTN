@@ -216,6 +216,21 @@ def llm_verdict(
 # ---------------------------------------------------------------------------
 
 
+COMPUTE_DTYPES = ("float16", "bfloat16", "float32")
+
+
+def compute_dtype_name() -> str:
+    """Type de calcul du LLM local en 4 bits : `LLM_COMPUTE_DTYPE`, float16 par défaut.
+
+    float16 est le réglage d'EXP-D-010 (Aya). Falcon-H1 produit des `inf` / `nan` en float16 sur
+    un GPU T4 (pas de bfloat16) : EXP-D-013 utilise float32, plus lent mais stable.
+    """
+    name = (os.getenv("LLM_COMPUTE_DTYPE") or "float16").strip().lower()
+    if name not in COMPUTE_DTYPES:
+        raise ValueError(f"LLM_COMPUTE_DTYPE={name!r} : choisir parmi {COMPUTE_DTYPES}")
+    return name
+
+
 class TransformersGenerator:
     """Modèle ouvert chargé avec transformers (4 bits sur GPU si bitsandbytes est installé)."""
 
@@ -232,9 +247,12 @@ class TransformersGenerator:
         if self.load_in_4bit and torch.cuda.is_available():
             from transformers import BitsAndBytesConfig
 
+            compute = getattr(torch, compute_dtype_name())
             kwargs["quantization_config"] = BitsAndBytesConfig(
-                load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16
+                load_in_4bit=True, bnb_4bit_compute_dtype=compute
             )
+            if compute is not torch.float16:  # parties non quantifiées dans le même type
+                kwargs["dtype"] = compute
         self._tok = AutoTokenizer.from_pretrained(self.name)
         self._model = AutoModelForCausalLM.from_pretrained(self.name, **kwargs)
 
