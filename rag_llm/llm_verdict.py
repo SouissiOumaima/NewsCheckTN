@@ -283,7 +283,8 @@ class OpenAICompatibleGenerator:
     sépare deux appels ; une erreur 429 / 5xx ou un délai dépassé (`LLM_TIMEOUT`, défaut 300 s)
     est réessayé jusqu'à 6 fois avec une attente croissante. `LLM_REASONING_EFFORT` (optionnel,
     ex. `low`) limite la « réflexion » des modèles qui raisonnent avant de répondre (Gemini) ;
-    si l'API refuse ce champ ou `seed`, il est retiré.
+    si l'API refuse ce champ ou `seed`, il est retiré. `LLM_RESPONSE_FORMAT=json` (optionnel)
+    demande à l'API d'imposer une sortie JSON (`response_format = json_object`, EXP-D-015).
     """
 
     MAX_TOKENS = 1024  # marge pour les modèles qui « réfléchissent » avant de répondre
@@ -295,6 +296,7 @@ class OpenAICompatibleGenerator:
         self.min_interval = float(os.getenv("LLM_MIN_INTERVAL", "4"))
         self.timeout = float(os.getenv("LLM_TIMEOUT", "300"))
         self.reasoning_effort = os.getenv("LLM_REASONING_EFFORT") or None
+        self.json_mode = (os.getenv("LLM_RESPONSE_FORMAT") or "").strip().lower() == "json"
         self.dropped: list[str] = []  # champs refusés par l'API (à noter dans le rapport)
         self._last = 0.0
 
@@ -327,6 +329,8 @@ class OpenAICompatibleGenerator:
         }
         if self.reasoning_effort:
             payload["reasoning_effort"] = self.reasoning_effort
+        if self.json_mode:
+            payload["response_format"] = {"type": "json_object"}
         for field_name in self.dropped:
             payload.pop(field_name, None)
         for attempt in range(7):
@@ -343,7 +347,7 @@ class OpenAICompatibleGenerator:
                     refused = next(
                         (
                             f
-                            for f in ("reasoning_effort", "seed")
+                            for f in ("reasoning_effort", "response_format", "seed")
                             if f in payload and f in detail.lower()
                         ),
                         None,
