@@ -105,8 +105,14 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   1. Imposer le JSON fait passer les sorties valides de 0.57 à 0.97 sur le test, sans perte de qualité.
   2. **2e passage** d'un système Falcon-H1-3B sur le même test (EXP-D-014 puis EXP-D-015) : risque
      d'optimisme, les deux résultats sont rapportés ensemble.
-  3. 0.762 contre 0.730 pour Aya 8B (EXP-D-010) : écart non testé, très probablement non significatif
-     (21 affirmations) ; le tunisien 5/5 porte sur 5 affirmations seulement.
+  3. **Comparaison appariée avec Aya 8B** (EXP-D-010, graine 42, `rag_llm.compare_llm_runs`, calculée
+     après la mesure) : exactitude 0.810 contre 0.714, +0.095 IC95 [−0.095 ; 0.286] ; macro-F1 0.625
+     contre 0.401, +0.224 IC95 [−0.044 ; 0.391] → **aucune différence significative** dans un sens ou
+     dans l'autre (p « Aya meilleur » = 0.91 et 0.96). 6 verdicts différents : gagnés tf-c11 (arabizi,
+     « faux » au lieu de « vrai »), tf-c13 et tf-c15 (abstention correcte) ; perdu tf-c08 (abstention à
+     tort) ; tf-c05 et tf-c09 (« trompeur ») faux pour les deux modèles. **Abstention justifiée : 0.667**
+     (2 affirmations sans preuve sur 3 ; tf-c14 reste « faux ») contre **0.000** pour Aya 8B. Le
+     tunisien 5/5 porte sur 5 affirmations seulement.
   4. Quantification GGUF (Ollama) différente de bitsandbytes (Colab) ; `max_tokens` 1024 (API) au lieu
      de 300.
 - **Décision** : Falcon-H1-3B (Ollama, JSON imposé) est le LLM de la **démo et de l'intégration
