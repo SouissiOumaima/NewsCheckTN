@@ -33,7 +33,8 @@ $env:LLM_MIN_INTERVAL = "0"
 $env:LLM_TIMEOUT = "600"
 $env:RETRIEVAL_METHOD = "hybrid"
 $env:NLI_BACKEND = "bronze"
-$env:LLM_RESPONSE_FORMAT = "json"   # seul changement par rapport a EXP-D-014
+$env:LLM_RESPONSE_FORMAT = "json"
+$env:LLM_CACHE = "evaluation/results/lot-d_llm_cache_exp-d-015.jsonl"   # cache separe : la cle du cache ne contient pas le format   # seul changement par rapport a EXP-D-014
 Remove-Item Env:LLM_REASONING_EFFORT -ErrorAction SilentlyContinue
 
 $pyArgs = @("-X", "utf8", "-m", "rag_llm.silver_verdict", "--main-only", "--splits", $Split)
