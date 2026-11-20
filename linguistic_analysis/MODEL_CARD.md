@@ -3,9 +3,9 @@
 Composant : `linguistic_analysis/claim_extraction.py`
 (`extract_claims(doc: Document) -> list[Claim]`, version détaillée `extract_claims_detailed`).
 Système à règles et lexiques, avec analyseurs syntaxiques facultatifs. Aucun apprentissage, aucun
-poids appris. Journal : EXP-B-001 à EXP-B-009. **Système gelé pour EXP-B-010** : aucune
-modification du code ni des lexiques avant cette mesure (voir `experiments.md`, « Gel du système
-pour EXP-B-010 »).
+poids appris. Journal : EXP-B-001 à EXP-B-011. **Système gelé** au commit `1826244` : aucune
+modification du code ni des lexiques depuis (voir `experiments.md`, « Gel du système du Lot B
+pour EXP-B-010 »). Résultat de référence : **EXP-B-010** (540 textes jamais vus).
 
 ## 1. Rôle, entrées et sorties
 
@@ -54,19 +54,61 @@ entrées de lexique dans `opinion_<langue>.txt` et une condition dans `factualit
 Les modèles spaCy et Stanza sont chargés paresseusement. S'ils manquent, le mode règles prend le
 relais.
 
-## 3. Données de mise au point
+## 3. Données (mise au point, test gelé, exploratoire)
 
 | Jeu | Contenu | Rôle |
 | --- | --- | --- |
 | eval_30 (`tests/fixtures/linguistic_analysis/eval_30.jsonl`) | 34 phrases, 5 groupes (`fr-latin`, `ar-arabic`, `tn-arabic`, `tn-arabizi`, `tn-mixed`), gold complet (affirmation, modalité, triplet sur 22 phrases, coréférence sur 3) | jeu de développement : les règles ont été réglées dessus (EXP-B-001 à EXP-B-006) |
 | Pilote du Lot A1 (P01–P60) | 60 textes annotés par deux personnes (label, modalité ; pas de triplet) ; langue selon le Lot A2 : fr 26, ar 15, tn-arabizi 19 | première mesure (EXP-B-008, EXP-B-009) ; a aussi servi à choisir des corrections : ce n'est plus un jeu de test. Fichiers hors dépôt |
 
-Le jeu de test neuf, à geler avant toute mesure, sera mesuré dans EXP-B-010
-(`docs/lot-b_protocole_eval_100.md`).
+| Jeu | Contenu | Rôle |
+| --- | --- | --- |
+| Test P061–P600 du Lot A1 | 540 textes, un annotateur (label, modalité ; pas de triplet ni de coréférence) ; langue déclarée : fr 140, ar 135, tn-arabizi 135, tn-arabe 81, tn-mixte 49 ; SHA-256 `5514039a…4f9a6b` noté avant la mesure | **test gelé** d'EXP-B-010 : jamais utilisé pour écrire ni régler les règles. Fichier hors dépôt |
+| silver_40 du Lot A1 (livraison provisoire) | 40 textes (TArC 30, Tunifact 10), deux annotations, 10 triplets dont 3 avec réserve, 1 coréférence | mesure exploratoire EXP-B-011 ; 5 textes déjà dans le pilote. Fichiers hors dépôt |
 
 ## 4. Résultats
 
-Système gelé : règles R1, R2 et R4 comprises. Bootstrap percentile 95 %, graine 20261015,
+### 4.1 Référence : test gelé P061–P600 (EXP-B-010)
+
+Système gelé (`1826244`), unité texte, un annotateur. Bootstrap percentile 95 %, graine 20261015,
+1000 tirages ; extracteur − baseline : apparié, graine 42, 2000 tirages. Commande dans
+`experiments.md` (EXP-B-010).
+
+| Mesure (540 textes) | Règles [IC 95 %] | Parseurs | Baseline |
+| --- | --- | --- | --- |
+| Détection, exactitude | 0.785 [0.750 ; 0.820] | 0.789 | 0.526 (« tout = affirmation ») |
+| Détection, précision | 0.714 [0.670 ; 0.757] | 0.718 | 0.526 |
+| Détection, rappel | 0.986 [0.972 ; 0.997] | 0.986 | 1.000 |
+| Détection, macro-F1 | 0.771 [0.733 ; 0.806] | 0.775 | 0.345 |
+| Modalité, exactitude | 0.733 [0.696 ; 0.769] | 0.731 | 0.385 (« tout = assertif ») |
+| Modalité, macro-F1 | 0.734 [0.690 ; 0.772] | 0.729 | 0.079 |
+
+- **Extracteur − baseline (règles)** : détection +0.426 [+0.391 ; +0.460] ; modalité +0.655
+  [+0.613 ; +0.691].
+- **Parseurs − règles** : aucune différence établie (détection +0.004 [−0.004 ; +0.013]).
+- **Par langue déclarée** (règles ; macro-F1 de détection / exactitude de modalité) : fr 0.731 /
+  0.750 ; ar 0.794 / 0.748 ; tn-arabe 0.713 / 0.667 ; tn-arabizi 0.780 / 0.704 ; tn-mixte
+  0.868 / 0.837.
+- **Erreurs** : 116 en détection (54 OPINION et 58 AUTRE prédits affirmation, 4 affirmations
+  manquées) et 144 en modalité. 40 erreurs sont classées dans `docs/lot-b_analyse_erreurs_silver.md`.
+
+### 4.2 Exploratoire : silver_40 (EXP-B-011)
+
+Ces chiffres ne remplacent pas EXP-B-010. Les effectifs sont trop petits pour une conclusion par
+langue, et l'indépendance de la seconde annotation n'est pas garantie.
+
+| Mesure | N | Règles | Parseurs |
+| --- | --- | --- | --- |
+| Kappa label (3 classes) entre annotateurs | 38 | 0.660 [0.434 ; 0.858] | — |
+| Détection, macro-F1 (gold Ghofrane) | 40 | 0.394 (baseline 0.200) | identique |
+| Détection, macro-F1, TArC seul | 30 | 0.167 (24 textes sur 30 prédits affirmation) | identique |
+| Modalité, exactitude (gold Achraf) | 38 | 0.395 | — |
+| Triplet exact, sans réserve | 7 | 1/7 | 2/7 |
+| Coréférence (avec réserve) | 1 | 0/1 | 0/1 |
+
+### 4.3 Jeux de mise au point (eval_30, pilote)
+
+Règles R1, R2 et R4 comprises. Bootstrap percentile 95 %, graine 20261015,
 1000 tirages ; différences appariées : graine 42, 2000 tirages. Entre parenthèses : la valeur avant
 les règles R1, R2 et R4 (EXP-B-009).
 
@@ -105,40 +147,72 @@ les règles R1, R2 et R4 (EXP-B-009).
 
 ## 6. Limitations
 
-- **Pas de parseur pour le tunisien ni pour l'arabizi** : ces textes passent toujours par les règles,
-  dans les deux modes. Sur le pilote, le groupe tn-arabizi est le plus faible (détection 0.421 et
-  0.526 en exactitude).
-- **Scores eval_30 optimistes** : les règles ont été réglées sur ce jeu. Les 1.000 en détection et
-  en modalité ne se généralisent pas (pilote : 0.667 / 0.817 et 0.600 / 0.450).
-- **Pilote non adjugé et utilisé pour la mise au point** :
-  - les deux annotations divergent (kappa label 0.615, modalité 0.390) ;
-  - les mesures sont données contre chaque annotateur et sur les textes où ils s'accordent ;
-  - aucune n'est un gold définitif ;
-  - les règles R1, R2 et R4 ont été choisies sur ce pilote.
-- **Salutation suivie d'une affirmation dans la même phrase (R1)** :
-  - si la phrase n'a aucun indice factuel (nombre, date, entité), elle reçoit `souhait` et
-    l'affirmation est perdue. Exemple inventé : « Bonjour à tous, les prix du pain ont encore
-    augmenté » ;
-  - avec un indice factuel, ou si la salutation forme une phrase séparée, l'affirmation est
-    gardée ;
-  - le guide d'annotation demande la modalité de l'affirmation : c'est un écart connu, gardé tel
-    quel jusqu'à EXP-B-010.
-- **Requête polie (R2) et demande d'information** : une demande d'information formulée poliment,
-  sans point d'interrogation, reçoit `souhait` au lieu d'`interrogatif`. La détection reste juste
-  (non-affirmation), seule la modalité est en cause.
-- **Coréférence mesurée sur 3 phrases** seulement (eval_30). Aucun gold de coréférence sur le
-  pilote.
-- **« Titre / corps » non traité** : un article est vu comme une suite de phrases. Un titre sans
-  ponctuation peut être fusionné avec la première phrase du corps, et aucun lien titre → corps
-  n'est fait.
-- **Lexiques de modalité possiblement sur-ajustés à eval_30** : sur le pilote, les retirer améliore
-  la modalité (+0.07 à +0.09 de macro-F1 sur l'accord), alors qu'ils servent sur eval_30. À
-  vérifier sur le jeu de test neuf, sans retouche avant.
-- **Unité phrase contre unité texte** : l'annotation du pilote est faite par texte. La mesure
-  agrège les phrases (un texte est une affirmation si l'une de ses phrases l'est), ce qui favorise
-  le rappel au détriment de la précision.
-- **Classe AUTRE** (salutations, demandes, récits personnels) : sans équivalent direct dans
-  `is_claim`, c'est la première source de faux positifs. R1 et R2 n'en traitent qu'une partie :
-  20 faux positifs restent contre A et 11 contre B, sur 60 textes.
+Cinq dimensions. Les chiffres viennent d'EXP-B-010 (test gelé), sauf mention contraire.
+
+### 6.1 Données
+- **Un seul annotateur sur le test** : pas de kappa ni de gold adjugé. 47 textes sur 540 sont
+  marqués « doute » ; sur ces textes, le macro-F1 de détection tombe à 0.668 (0.780 sur les 493
+  autres).
+- **Même annotateur** que le gold A du pilote.
+- **P061–P600 a servi à entraîner le Model 1 du Lot C** : 428 de ces 540 textes sont dans son
+  entraînement, et 112 dans son test gelé (120 identifiants). Une comparaison équitable avec le
+  Model 1 ne peut porter que sur ces 112 textes.
+- **Jeux de mise au point optimistes** : eval_30 (34 phrases, 1.000 en détection et en modalité)
+  et le pilote P01–P60 (kappa 0.615, modalité 0.390) ont servi à régler les règles, dont R1, R2
+  et R4.
+- **Désaccord guide / gold** : une salutation seule est annotée `assertif` dans le test, alors que
+  R1 donne `souhait`. Cela touche 5 des 40 erreurs analysées (catégorie E8).
+
+### 6.2 Langues
+- **Le tunisien en lettres arabes est le groupe le plus faible** : macro-F1 de détection 0.713,
+  exactitude de modalité 0.667, macro-F1 de modalité 0.573 (81 textes), contre 0.731 à 0.868 pour
+  les autres groupes.
+- Le Lot A2 classe 41 de ces 81 textes comme arabe standard. Dans les 5 cas vérifiés de l'analyse
+  d'erreurs, forcer la langue `tn` ne change pas la sortie.
+- **Pas de parseur pour le tunisien ni pour l'arabizi** : ces textes passent toujours par les
+  règles. Les parseurs n'apportent rien de mesurable sur le test (+0.004 [−0.004 ; +0.013]).
+- **Langue par document** : une seule langue par `Document`. Le code-switching dans la phrase
+  n'est pas modélisé.
+
+### 6.3 Phénomènes linguistiques
+- **Défaut `assertif`** : une phrase sans marqueur connu est assertive. Sur le test : opinion →
+  assertif 55/84, souhait → assertif 30/47, rapporté → assertif 33/92, hypothétique → assertif
+  17/39. Sur les 40 erreurs analysées, 25 viennent d'un lexique ou d'une règle incomplets (E3).
+- **Hypothèse** : la règle française ne couvre que « si » + imparfait (7 erreurs analysées sur 40).
+- **Futur** : il n'a pas de label propre. L'indice de futur est détecté, mais la phrase reste
+  `assertif` (exemples P145, P254). Le futur n'est pas mesuré séparément.
+- **Négation** : elle n'est mesurée que sur eval_30 (3 phrases, jeu de mise au point). Sa portée
+  n'est pas mesurée sur le test.
+- **Phrases complexes** (coordination, relatives, apposition) : non traitées. Une phrase donne au
+  plus un triplet.
+- **Triplet et coréférence mesurés sur peu de cas** : triplet exact 20/22 sur eval_30 (mise au
+  point), 1/7 en règles et 2/7 en parseurs sur silver_40 ; coréférence 3/3 sur eval_30 et 0/1 sur
+  silver_40. Aucun gold de triplet ni de coréférence sur le test.
+- **Seuil de 4 mots** : un texte plus court n'a aucune phrase candidate (affirmation manquée,
+  P506).
+- **« Titre / corps » non traité** : un titre sans ponctuation peut être fusionné avec la première
+  phrase du corps.
+
+### 6.4 Robustesse et biais
+- **Robustesse aux paraphrases (INV) : non mesurée.**
+- **Biais par source et par sujet : non mesurés.** Un seul indice : sur silver_40, les textes de
+  forum TArC donnent 24 affirmations prédites sur 30, alors que le gold n'en compte aucune
+  (macro-F1 de détection 0.167). Sur Tunifact, la détection vaut 1.000, mais ce jeu ne contient
+  que des affirmations. Le comportement dépend donc fortement du genre de texte.
+- **Pas de calibration** : `certainty` et `confidence` sont des scores heuristiques, non calibrés
+  (ECE non mesurée).
+
+### 6.5 Usage
+- **Le Lot B ne filtre pas la classe AUTRE.** `is_claim` ne sépare que les opinions, questions,
+  souhaits et hypothèses. Les récits personnels et les faits privés de forme assertive restent des
+  candidates : 58 AUTRE sur 175 sont prédits affirmation, et 4 des 40 erreurs analysées sont dans
+  ce cas (E9). Le tri de vérifiabilité est le **rôle du Lot C** (`filter_checkworthy`). Le Lot B
+  favorise le rappel : 0.986 sur le test.
+- **Salutation suivie d'une affirmation dans la même phrase (R1)** : sans indice factuel, la phrase
+  reçoit `souhait` et l'affirmation est perdue. Exemple inventé : « Bonjour à tous, les prix du
+  pain ont encore augmenté ».
+- **Requête polie (R2)** : une demande d'information polie sans point d'interrogation reçoit
+  `souhait` au lieu d'`interrogatif`. La détection reste juste.
+- **Hors périmètre** : la vérité des affirmations, les autres dialectes arabes, l'anglais.
 - **Éthique** : les lexiques contiennent des mots isolés, aucun texte d'annotation. Les données
   annotées restent hors dépôt.
