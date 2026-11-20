@@ -50,8 +50,7 @@ NLI_BACKEND=fine-tuned uvicorn api.main:app     # ou python pipeline.py, évalua
 Le checkpoint (1,1 Go) n'est pas versionné : par défaut
 `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/` (`CHECKPOINT_DIR` pour un autre
 dossier, `NLI_FINETUNED_MODEL` pour un autre chemin). Pour le recréer :
-`powershell -File models
-liun_final.ps1` (ou `python -m models.nli.train --version v3
+`powershell -File models/nli/run_final.ps1` (ou `python -m models.nli.train --version v3
 --seed 42 --lr 1e-5 --epochs 6 --keep-epoch 1`). S'il est absent, la réponse est « neutre »
 avec une confiance 0, comme pour les autres moteurs.
 
