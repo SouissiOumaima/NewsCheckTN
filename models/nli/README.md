@@ -50,14 +50,37 @@ NLI_BACKEND=fine-tuned uvicorn api.main:app     # ou python pipeline.py, évalua
 Le checkpoint (1,1 Go) n'est pas versionné : par défaut
 `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/` (`CHECKPOINT_DIR` pour un autre
 dossier, `NLI_FINETUNED_MODEL` pour un autre chemin). Pour le recréer :
-`powershell -File models
-liun_final.ps1` (ou `python -m models.nli.train --version v3
+`powershell -File models/nli/run_final.ps1` (ou `python -m models.nli.train --version v3
 --seed 42 --lr 1e-5 --epochs 6 --keep-epoch 1`). S'il est absent, la réponse est « neutre »
 avec une confiance 0, comme pour les autres moteurs.
 
 Sans torch / transformers, ou si le modèle ne se charge pas, la réponse est « neutre » avec une
 confiance 0 : l'API ne tombe jamais. Les tests forcent `NLI_BACKEND=stub` (`tests/conftest.py`) et
 ne téléchargent rien.
+
+## Limites (chiffrées)
+
+Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015) :
+
+- **Petit test** : 56 paires (25 fr, 31 ar, **0 tunisien**) ; IC 95 % de la macro-F1 du modèle
+  affiné [0.689 ; 0.905], soit une largeur d'environ 0.22.
+- **Petite val** : 33 paires (une paire ≈ 3 points) ; 3 labels douteux (9 % de la val), corrigés
+  par le Lot A1 pour la v4 seulement.
+- **Peu d'entraînement** : 174 paires ; l'affinage n'apporte pas de gain établi sur le zero-shot
+  (+0.011, IC 95 % [−0.052 ; +0.071], p = 0.40 ; 3 paires différentes sur 56).
+- **Variance non mesurée** : les 3 graines donnent les mêmes prédictions (val et test).
+- **Ablation inachevée** : sans pré-entraînement NLI, le modèle apprenait encore à 6 époques
+  (0.427 ± 0.044).
+- **Test concentré** : 10 articles, dont 2 font 25 des 56 paires (45 %) ; 2 sites, dont un à
+  8 paires ; aucun écart de langue ou de source n'est établi, faute d'effectifs (EXP-C-014).
+- **Aucun sujet** dans le corpus : biais par sujet non mesuré.
+- **Abstention** : aucun seuil de confiance retenu (τ = 0, choisi sur 33 paires de val, EXP-C-015).
+- **Analyse d'erreurs** : les catégories d'erreurs ont été **proposées par l'assistant (Claude)
+  et ne sont validées par aucun humain** (`categorie_validee` vide) ; 28 des 50 erreurs
+  analysées viennent de l'ablation.
+- **Tunisien et paraphrases** (EXP-C-012, EXP-C-013) : jeux générés par IA, non encore mesurés ;
+  sans relecture humaine, leurs résultats seront exploratoires.
+- **Corpus v3**, pas v4 (règle du 2026-11-10).
 
 ## Lancer
 
