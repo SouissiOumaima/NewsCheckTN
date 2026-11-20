@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import subprocess
 import sys
 import types
@@ -2174,3 +2175,55 @@ def test_qr1_refuses_output_inside_repo(tmp_path):
                   "--out-dir", str(MESURES / "sortie_interdite")])
     assert not (MESURES / "sortie_interdite").exists()
 
+
+def test_inv_perturbations_deterministic_and_numbers_kept():
+    inv = _load_mesure("inv_robustesse")
+    texts = {r[0]: r[1] for r in GOLD_INVENTE}
+    groups = {r[0]: ("tn-arabizi" if r[4] == "tn" else r[4]) for r in GOLD_INVENTE}
+    first, second = inv.perturb_all(texts, groups), inv.perturb_all(texts, groups)
+    assert first == second
+    assert inv.perturbations_sha256(first) == inv.perturbations_sha256(second)
+    assert inv.perturbations_sha256(inv.perturb_all(texts, groups, seed=1)) != \
+        inv.perturbations_sha256(first)
+    number = r"(?<!\w)\d+(?:[.,]\d+)?(?!\w)"
+    for (kind, i), new in first.items():
+        assert new != texts[i]
+        assert re.findall(number, new) == re.findall(number, texts[i]), (kind, i)
+    # types non applicables : exclus
+    assert ("P5_diacritiques", "T01") not in first
+    assert ("P6_arabizi", "T01") not in first and ("P6_arabizi", "T06") in first
+    assert ("P1_casse", "T06") not in first  # déjà en minuscules
+
+
+def test_inv_single_perturbations():
+    inv = _load_mesure("inv_robustesse")
+    rng = random.Random(0)
+    p2 = inv.p2_ponctuation("L'usine a coûté 3,5 millions, selon la mairie.", rng)
+    assert "L'usine" in p2 and "3,5" in p2 and "," not in p2.replace("3,5", "")
+    assert not p2.endswith(".")
+    assert inv.p2_ponctuation("Aucune ponctuation ici", rng) is None
+    assert inv.p1_casse("Belvert", rng) == "belvert"
+    kataba = "كَتَبَ"
+    assert inv.p5_diacritiques(kataba, rng) == "كتب"
+    assert inv.p5_diacritiques("كتب", rng) is None
+    assert inv.p7_fin("Une phrase.", rng).startswith("Une phrase. ")
+    assert inv.p6_arabizi("mechrou3 jdid", rng, "tn-arabizi") == "mechroua jdid"
+    assert inv.p6_arabizi("mechrou3 jdid", rng, "fr") is None
+
+
+def test_inv_run_rules_without_text(tmp_path, monkeypatch):
+    inv = _load_mesure("inv_robustesse")
+    monkeypatch.setattr(inv, "CI_RESAMPLES", 50)
+    monkeypatch.setattr(inv, "PAIRED_RESAMPLES", 50)
+    gold = _write_gold(tmp_path / "gold.tsv")
+    out, csv_rows = inv.run(gold, modes=("regles",))
+    assert out["n"] == len(GOLD_INVENTE)
+    assert set(out["modes"]["regles"]["types"]) == set(inv.TYPES)
+    # T03 garde « est-ce que » sans « ? » : (a) ; T04 n'a que le « ? » : (b)
+    assert out["p2_questions"]["n"] == 2 and out["p2_questions"]["a"] == 1
+    decomposition = {row[0]: row[2] for row in csv_rows[1:]}
+    assert decomposition == {"T03": "a", "T04": "b"}
+    assert all(":" not in cat for c in out["top10"] for x in c["modes"].values()
+               for cat in x["triggers_avant"] + x["triggers_apres"])
+    dump = json.dumps(out, ensure_ascii=False) + inv.to_markdown(out) + json.dumps(csv_rows)
+    assert _no_text(dump)
