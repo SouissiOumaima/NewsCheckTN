@@ -2082,3 +2082,95 @@ def test_first_person_appreciation_is_opinion(text):
 def test_appreciation_markers_keep_claims(text):
     claims = extract_claims_detailed(normalize(text))
     assert claims and all(c.is_claim for c in claims), [c.triggers for c in claims]
+
+
+# ---------------------------------------------------------------------------
+# Scripts de mesure hors CI (notebooks/lot_b_linguistic/mesures), sur données inventées
+# ---------------------------------------------------------------------------
+
+MESURES = Path(__file__).resolve().parents[1] / "notebooks" / "lot_b_linguistic" / "mesures"
+
+# Phrases inventées pour les tests (aucune donnée du corpus).
+GOLD_INVENTE = [
+    ("T01", "La commune fictive de Belvert a voté un budget de 3,5 millions en 2025.",
+     "AFFIRMATION", "assertif", "fr", "latin"),
+    ("T02", "Je trouve ce festival imaginaire vraiment magnifique.", "OPINION", "opinion",
+     "fr", "latin"),
+    ("T03", "Est-ce que la gare inventée de Belvert ouvrira en juin ?", "AUTRE",
+     "interrogatif", "fr", "latin"),
+    ("T04", "La gare inventée de Belvert ouvrira en juin ?", "AUTRE", "interrogatif",
+     "fr", "latin"),
+    ("T05", "L'entreprise Orvanne, société fictive, a recruté 40 salariés en 2024.",
+     "AFFIRMATION", "assertif", "fr", "latin"),
+    ("T06", "el baladia 9alet elli el mechrou3 bech yebda fi 2026", "AFFIRMATION",
+     "rapporté", "tn", "arabizi"),
+]
+
+
+def _load_mesure(name):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(f"lot_b_mesures_{name}", MESURES / f"{name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _write_gold(path):
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f, delimiter="\t")
+        writer.writerow(["id", "texte", "label", "modalite", "langue", "script"])
+        writer.writerows(GOLD_INVENTE)
+    return path
+
+
+def _no_text(dump: str) -> bool:
+    return not any(row[1] in dump or row[1][:25] in dump for row in GOLD_INVENTE)
+
+
+def test_qr1_id_key_and_predictions(tmp_path):
+    qr1 = _load_mesure("qr1_compare")
+    assert qr1.id_key("P25") == qr1.id_key("P025") != qr1.id_key("P250")
+    csv_path = tmp_path / "pred.csv"
+    csv_path.write_text("id,label_predit\nT1,AFFIRMATION\nT02,OPINION\n", encoding="utf-8")
+    assert qr1.read_predictions(csv_path) == {qr1.id_key("T01"): True, qr1.id_key("T2"): False}
+    # JSON d'EXP-C-010 : `label` = gold, `predicted_label` = prédiction
+    json_path = tmp_path / "pred.json"
+    json_path.write_text(json.dumps({"predictions": [
+        {"id": "T01", "label": "OPINION", "predicted_label": "AFFIRMATION"}]}), encoding="utf-8")
+    assert qr1.read_predictions(json_path) == {qr1.id_key("T01"): True}
+
+
+def test_qr1_run_rules_on_invented_data(tmp_path):
+    qr1 = _load_mesure("qr1_compare")
+    gold = _write_gold(tmp_path / "gold.tsv")
+    ids = tmp_path / "split.json"
+    ids.write_text(json.dumps({"test_ids": ["T1", "T2", "T3", "T5", "T6", "T99"]}),
+                   encoding="utf-8")
+    tfidf = tmp_path / "tfidf.csv"
+    tfidf.write_text("id,label\n" + "".join(f"{r[0]},{r[2]}\n" for r in GOLD_INVENTE),
+                     encoding="utf-8")
+    cfg = {"seed": 1, "resamples": 50, "paired_seed": 2, "paired_resamples": 50}
+    out = qr1.run(gold, ids, tfidf, [tfidf, tfidf], modes=("regles",), cfg=cfg)
+    assert out["n"] == 5 and out["ids"] == ["T01", "T02", "T03", "T05", "T06"]
+    glob = out["results"]["global"]
+    assert glob["systems"]["tfidf"]["value"] == 1.0  # prédictions = gold
+    assert glob["n_affirmation"] == 3 and not glob["interpretable"]
+    assert set(glob["paired"]) == {"lot_b_regles - tfidf", "lot_b_regles - baseline",
+                                   "tfidf - baseline"}
+    assert out["results"]["fr"]["n"] == 4 and out["results"]["tn-arabizi"]["n"] == 1
+    assert out["xlmr"]["summary"]["global"]["xlmr_f1"]["sd"] == 0.0
+    assert _no_text(json.dumps(out, ensure_ascii=False) + qr1.to_markdown(out))
+    tfidf.write_text("id,label\nT01,AFFIRMATION\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="identifiants absents"):
+        qr1.run(gold, ids, tfidf, modes=("regles",), cfg=cfg)
+
+
+def test_qr1_refuses_output_inside_repo(tmp_path):
+    qr1 = _load_mesure("qr1_compare")
+    gold = _write_gold(tmp_path / "gold.tsv")
+    with pytest.raises(SystemExit):
+        qr1.main(["--gold", str(gold), "--ids", str(gold), "--tfidf", str(gold),
+                  "--out-dir", str(MESURES / "sortie_interdite")])
+    assert not (MESURES / "sortie_interdite").exists()
+
