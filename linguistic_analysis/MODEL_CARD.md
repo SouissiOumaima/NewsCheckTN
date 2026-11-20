@@ -3,7 +3,8 @@
 Composant : `linguistic_analysis/claim_extraction.py`
 (`extract_claims(doc: Document) -> list[Claim]`, version détaillée `extract_claims_detailed`).
 Système à règles et lexiques, avec analyseurs syntaxiques facultatifs. Aucun apprentissage, aucun
-poids appris. Journal : EXP-B-001 à EXP-B-011. **Système gelé** au commit `1826244` : aucune
+poids appris. Journal : EXP-B-001 à EXP-B-011, EXP-B-013 et EXP-B-014 (EXP-B-012 est réservé à
+eval_100). **Système gelé** au commit `1826244` : aucune
 modification du code ni des lexiques depuis (voir `experiments.md`, « Gel du système du Lot B
 pour EXP-B-010 »). Résultat de référence : **EXP-B-010** (540 textes jamais vus).
 
@@ -194,7 +195,24 @@ Cinq dimensions. Les chiffres viennent d'EXP-B-010 (test gelé), sauf mention co
   phrase du corps.
 
 ### 6.4 Robustesse et biais
-- **Robustesse aux paraphrases (INV) : non mesurée.**
+- **Robustesse aux perturbations de surface (INV, EXP-B-014)** : 7 perturbations à sens conservé
+  sur le test gelé, une par texte et par type (graine 20261015). Δ macro-F1 de détection, mode
+  règles [IC 95 %] :
+  - casse (155 textes) et diacritiques (9) : aucun changement ;
+  - faute de frappe (534) : −0.019 [−0.034 ; −0.006], 1.9 % de décisions changées ;
+  - élongation (532) : −0.007 [−0.018 ; +0.001], non établi ;
+  - variantes arabizi (146) : +0.000 [−0.023 ; +0.023] ; la langue du Lot A2 change pour 11.6 %
+    de ces textes ;
+  - « !! » ou émoji en fin de texte (540) : −0.016 [−0.030 ; −0.004] ;
+  - **ponctuation retirée (341) : −0.137 [−0.178 ; −0.097]**, 12.0 % de décisions changées.
+    Sur les 50 questions, celles qui gardent un mot interrogatif du lexique ne changent pas (0 sur
+    10, effectif non interprétable) ; les autres changent presque toutes (39 sur 40). **La
+    reconnaissance des questions repose presque entièrement sur le point d'interrogation ; le
+    lexique interrogatif ne compte que 6 entrées ; limite de couverture, non corrigée (système
+    gelé).** Le mode parseurs donne des chiffres très proches.
+- **Comparaison avec le Model 1 du Lot C (EXP-B-013)**, sur les 112 textes de son test gelé
+  présents dans P061–P600 : macro-F1 binaire 0.803 [0.725 ; 0.874] contre 0.825 [0.742 ; 0.893]
+  pour le TF-IDF ; différence −0.023 [−0.124 ; +0.076], **non établie**, ni par langue.
 - **Biais par source et par sujet : non mesurés.** Un seul indice : sur silver_40, les textes de
   forum TArC donnent 24 affirmations prédites sur 30, alors que le gold n'en compte aucune
   (macro-F1 de détection 0.167). Sur Tunifact, la détection vaut 1.000, mais ce jeu ne contient
