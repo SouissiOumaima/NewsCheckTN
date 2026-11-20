@@ -264,6 +264,27 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   `main` `5d93800` fusionné). `git diff 1826244 c6ed6ad -- linguistic_analysis` ne touche que
   `MODEL_CARD.md`. Fonctions de mesure : `linguistic_analysis/evaluate_double.py` (lecture,
   prédiction par texte, métriques, bootstrap), avec un seul fichier d'annotation.
+- **Commande reproductible** (depuis la racine du dépôt ; fichier de test et sortie hors dépôt ;
+  le même fichier est passé comme annotateur A et B, puisqu'il n'y a qu'une annotation) :
+
+  ```bash
+  python -X utf8 -m linguistic_analysis.evaluate_double \
+      --a <test_P061_P600.tsv> --b <test_P061_P600.tsv> --name-a A --name-b A_bis \
+      --exp-id EXP-B-010 --out-dir <dossier hors dépôt> \
+      --seed 20261015 --resamples 1000 --paired-seed 42 --paired-resamples 2000
+  ```
+
+  - Vérifier d'abord le SHA-256 du fichier (ci-dessus).
+  - Vérifiée le 2026-11-20 sur `a48e447` (diff nul avec `1826244` dans `linguistic_analysis/` hors
+    `MODEL_CARD.md`) : elle redonne à l'identique, en mode règles et en mode parseurs, les chiffres
+    globaux du tableau ci-dessous (détection, modalité, IC, extracteur − baseline).
+  - Les groupes de cette commande suivent la langue donnée par le Lot A2 (fr 161, ar 176,
+    tn-arabizi 163, tn-arabic 40), pas la langue déclarée par le jeu. Le tableau « par langue /
+    écriture déclarée » et la comparaison parseurs − règles viennent d'un script de mesure hors
+    dépôt qui appelle les mêmes fonctions (`read_annotation`, `predict_all`, `detection_block`,
+    `modality_block`, `paired_vs_baseline`).
+- **Analyse d'erreurs** : 40 erreurs tirées (graine 20261015) et classées dans
+  [`docs/lot-b_analyse_erreurs_silver.md`](docs/lot-b_analyse_erreurs_silver.md).
 - **Résultats** :
 
   | Mesure (540 textes) | Règles [IC 95 %] | Parseurs [IC 95 %] | Baseline |
