@@ -31,6 +31,9 @@ que neuf arbitrages humains restent à effectuer.
 
 ## 3. Décisions nécessitant confirmation
 
+> **Note historique :** cette section presente les decisions anterieures a l'accord d'Achref du 20/11/2026. Elle ne constitue pas l'etat scientifique actuel. Consulter la section 6 pour les validations recentes : 0054 et 0462 = OPINION validee ; 0289 = OPINION validee avec historique de restauration ; 0066 = AFFIRMATION sous reserve ; 0071 = EN_REVISION sans label final.
+
+
 - tarc-forum-0054 : proposition OPINION à valider.
 - tarc-forum-0066 : proposition AFFIRMATION à valider.
 - tarc-forum-0462 : proposition OPINION à valider.
