@@ -1,9 +1,10 @@
-"""Lot C — Model 2, palier Gold (EXP-C-014) : biais par langue et par source.
+"""Lot C — Model 2, palier Gold (EXP-C-014) : biais par langue, par source et par sujet.
 
 Aucun modèle n'est relancé : relit les prédictions du test v3 déjà sauvegardées par la mesure
 unique d'EXP-C-011 (`data/interim/lot_c/nli/silver_test/`) et les labels de `nli_v3_test.jsonl`,
-puis découpe par langue de l'affirmation, par site source et par article. Rien n'est réglé
-d'après ces chiffres.
+puis découpe par langue de l'affirmation, par site source, par article et, si le fichier du
+Lot A1 est présent, par sujet (catégorie thématique proposée à partir des titres ; lien par
+`article_id`). Rien n'est réglé d'après ces chiffres.
 
     python -X utf8 -m models.nli.gold_bias
 
@@ -13,6 +14,7 @@ d'articles seulement) ; le terminal n'affiche que des chiffres.
 
 from __future__ import annotations
 
+import csv
 import json
 import random
 from collections import Counter
@@ -32,6 +34,21 @@ MODELS = {
     "majorite": "predictions_v3_test_majorite.jsonl",
 }
 SEED, N_BOOT, MIN_N = 20261026, 1000, 10
+# Sujets des articles (Lot A1, privé) : catégories proposées à partir des titres
+SUBJECT_FILE = OUT_DIR / "nli_v4_articles_sujets_sources_categories.csv"
+
+
+def norm_article(article: str) -> str:
+    """Même normalisation que `models.nli.data.article_id` (« / » final retiré, minuscules)."""
+    return article.strip().rstrip("/").lower()
+
+
+def load_subjects(path=SUBJECT_FILE) -> dict[str, str]:
+    """article_id normalisé → catégorie thématique (vide si le fichier est absent)."""
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        return {norm_article(r["article_id"]): r["categorie_thematique"] for r in csv.DictReader(f)}
 
 
 def site(article: str) -> str:
@@ -112,6 +129,14 @@ def main() -> None:
         "site": lambda p: site(p["article_id"]),
         "article": lambda p: p["article_id"],
     }
+    subjects = load_subjects()
+    if subjects:
+        missing = {
+            p["article_id"] for p in pairs.values() if norm_article(p["article_id"]) not in subjects
+        }
+        if missing:
+            raise SystemExit(f"{len(missing)} articles du test sans sujet dans {SUBJECT_FILE.name}")
+        axes["sujet"] = lambda p: subjects[norm_article(p["article_id"])]
     out = {
         "exp_id": EXP_ID,
         "lot": "C",
@@ -123,23 +148,50 @@ def main() -> None:
         "bootstrap": {"n": N_BOOT, "seed": SEED},
         "min_n_interpretation": MIN_N,
         "groups": {},
+        "group_articles": {},
         "gaps": {},
     }
+    if subjects:
+        out["subject_source"] = (
+            f"{SUBJECT_FILE.name} (Lot A1) : catégories proposées par le Lot A1 à partir des titres"
+        )
     for axis, key in axes.items():
         groups = Counter(key(p) for p in pairs.values())
         out["groups"][axis] = {}
+        out["group_articles"][axis] = {}
         for g, _ in sorted(groups.items(), key=lambda kv: (-kv[1], kv[0])):
             ids = [i for i, p in pairs.items() if key(p) == g]
             gold = [pairs[i]["label"] for i in ids]
             out["groups"][axis][g] = {
                 name: describe(gold, [preds[name][i] for i in ids]) for name in MODELS
             }
-    for axis, (ga, gb) in {"langue": ("fr", "ar"), "site": ("tunifact.org", "nawaat.org")}.items():
-        ids_a = [i for i, p in pairs.items() if axes[axis](p) == ga]
-        ids_b = [i for i, p in pairs.items() if axes[axis](p) == gb]
+            out["group_articles"][axis][g] = len({pairs[i]["article_id"] for i in ids})
+
+    def ids_where(test) -> list[str]:
+        return [i for i, p in pairs.items() if test(p)]
+
+    comparisons = {
+        f"{axis}: {ga} - {gb}": (
+            ids_where(lambda p, a=axis, g=ga: axes[a](p) == g),
+            ids_where(lambda p, a=axis, g=gb: axes[a](p) == g),
+        )
+        for axis, (ga, gb) in {
+            "langue": ("fr", "ar"),
+            "site": ("tunifact.org", "nawaat.org"),
+        }.items()
+    }
+    # Sujet (fixé avant calcul) : chaque catégorie d'au moins MIN_N paires contre le reste du test
+    if "sujet" in axes:
+        for g, res in out["groups"]["sujet"].items():
+            if next(iter(res.values()))["n"] >= MIN_N:
+                comparisons[f"sujet: {g} - reste"] = (
+                    ids_where(lambda p, g=g: axes["sujet"](p) == g),
+                    ids_where(lambda p, g=g: axes["sujet"](p) != g),
+                )
+    for label, (ids_a, ids_b) in comparisons.items():
         if not ids_a or not ids_b:
             continue
-        out["gaps"][f"{axis}: {ga} - {gb}"] = {
+        out["gaps"][label] = {
             name: gap(
                 ([pairs[i]["label"] for i in ids_a], [preds[name][i] for i in ids_a]),
                 ([pairs[i]["label"] for i in ids_b], [preds[name][i] for i in ids_b]),
@@ -155,7 +207,8 @@ def main() -> None:
         for g, res in groups.items():
             r, z = res["principal_seed42"], res["zero-shot-fp32"]
             flag = "" if r["interpretable"] else " *"
-            print(f"  {g[:60]:60s} n={r['n']:2d}{flag}  labels={r['labels']}")
+            n_art = out["group_articles"][axis][g]
+            print(f"  {g[:60]:60s} n={r['n']:2d}{flag}  articles={n_art}  labels={r['labels']}")
             print(
                 f"      principal {r['accuracy']:.3f} {r['accuracy_ci95']} / {r['macro_f1']:.3f}"
                 f" | zero-shot {z['accuracy']:.3f} / {z['macro_f1']:.3f}"
@@ -167,7 +220,7 @@ def main() -> None:
         for name in ("principal_seed42", "zero-shot-fp32"):
             g = res[name]
             print(
-                f"  {k:30s} {name:17s} acc {g['accuracy']:+.3f} {g['accuracy_ci95']}"
+                f"  {k:45s} {name:17s} acc {g['accuracy']:+.3f} {g['accuracy_ci95']}"
                 f"  macro-F1 {g['macro_f1']:+.3f} {g['macro_f1_ci95']}"
                 + ("" if g["interpretable"] else "  (n < 10)")
             )

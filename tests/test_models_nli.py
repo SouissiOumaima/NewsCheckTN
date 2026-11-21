@@ -290,3 +290,18 @@ def test_bronze_par_le_contrat(monkeypatch):
     assert [r.stance for r in res] == [Stance.REFUTES, Stance.SUPPORTS]
     assert stance.backend_info()["backend"] == "bronze"
     stance.set_classifier(None)
+
+
+def test_gold_bias_sujets_lien_par_article(tmp_path):
+    from models.nli.gold_bias import load_subjects, norm_article
+
+    assert norm_article(" https://nawaat.org/2022/11/15/Article/ ") == (
+        "https://nawaat.org/2022/11/15/article"
+    )
+    assert load_subjects(tmp_path / "absent.csv") == {}
+    f = tmp_path / "sujets.csv"
+    f.write_text(
+        "\ufeffarticle_id,categorie_thematique\nhttps://nawaat.org/a/,Sport\ntunifact-938,Santé\n",
+        encoding="utf-8",
+    )
+    assert load_subjects(f) == {"https://nawaat.org/a": "Sport", "tunifact-938": "Santé"}
