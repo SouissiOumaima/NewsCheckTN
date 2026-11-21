@@ -410,33 +410,37 @@ Les principales divergences concernent la distinction entre OPINION et AUTRE.
 
 ### 5.3 Résultats après arbitrage
 
+Les 31 désaccords initiaux ont été examinés par arbitrage humain.
 
-
-Les 31 désaccords initiaux ont été examinés.
-
-
+La traçabilité des 100 textes distingue deux catégories :
+- ACCORD_INITIAL : 69 cas.
+- ARBITRAGE_HUMAIN : 31 cas.
 
 La consolidation des 100 textes présente :
 
-
-
 | Label final | Effectif |
-
 |---|---:|
-
 | AFFIRMATION | 8 |
-
 | OPINION | 33 |
-
 | AUTRE | 59 |
-
 | **Total** | **100** |
 
+Ces résultats concernent exclusivement le sous-ensemble doublement annoté
+de 100 textes et non la distribution des 600 phrases A1.
 
+Parmi les 31 désaccords initiaux, 27 concernent la distinction
+entre OPINION et AUTRE.
 
-Les labels arbitrés ne doivent pas être utilisés pour recalculer l'accord entre deux annotations indépendantes.
+La comparaison de ces 27 cas avec le corpus consolidé
+de 540 annotations a relevé :
+- 13 concordances.
+- 14 divergences.
 
+Cette analyse porte sur des cas sélectionnés pour leurs difficultés.
+Elle ne peut pas être généralisée à l'ensemble du corpus.
 
+Les labels arbitrés ne doivent pas être utilisés pour recalculer
+l'accord entre deux annotations indépendantes.
 
 ### 5.4 Révisions et décisions ouvertes
 
@@ -590,27 +594,17 @@ La présence de métadonnées ne garantit pas leur exactitude individuelle.
 
 ### 7.2 Reproductibilité
 
+Le manifeste de reproductibilité Silver A1 v1.0 est disponible :
 
+`docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md` (reprend le manifeste v1.0 du 15/11/2026 ; validation scientifique en attente).
 
-Les noms des corpus et partitions de référence sont documentés.
+Il centralise les références des corpus, les empreintes SHA-256 disponibles,
+les partitions et les contrôles documentés.
 
+Le contrôle canonique des 12 références SHA-256 du manifeste a été effectué le 15/11/2026 : 12/12 empreintes conformes. Ce contrôle confirme l'intégrité des fichiers vérifiés, mais ne valide pas à lui seul les versions logicielles ni les scripts de génération.
 
-
-Une reproductibilité scientifique renforcée nécessite encore de confirmer :
-
-
-
-- Les versions exactes des fichiers.
-
-- Les empreintes de contrôle.
-
-- Les paramètres et scripts de génération des partitions.
-
-- Les scripts et résultats d'audit.
-
-- La correspondance entre les corpus utilisés par les différents lots.
-
-
+La correspondance entre les corpus utilisés par les différents lots reste
+à clarifier.
 
 ### 7.3 Confidentialité
 
@@ -702,65 +696,35 @@ Les droits de redistribution des contenus Tunifact et des reformulations restent
 
 ## 9. Travaux restant à réaliser
 
+### Validation humaine et scientifique
 
+1. Obtenir la réponse d'Achref sur la traçabilité et la clôture des 31 arbitrages.
+2. Documenter précisément la version des annotations utilisée pour le Kappa initial, en distinguant les données indépendantes des corrections ultérieures.
+3. Confirmer la provenance et le processus de constitution des 540 annotations.
+4. Maintenir les trois propositions `tarc-forum-0054`, `tarc-forum-0066` et `tarc-forum-0462` en attente de décision humaine.
+5. Confirmer le guide d'annotation v1.1.
+6. Clarifier la cohérence des claims et des relations P266/P267.
 
-### 9.1 Validation humaine
+### Qualité scientifique
 
+7. Réaliser, si nécessaire, une analyse des doublons textuels et quasi-doublons.
+8. Compléter la revue sémantique des relations NLI.
+9. Examiner les risques de fuites textuelles et sémantiques entre partitions.
+10. Compléter la vérification de provenance individuelle.
 
+### Conformité et reproductibilité
 
-- Revue collective du rapport Bronze.
+11. Vérifier les licences et les droits de redistribution.
+12. Confirmer les règles de confidentialité.
+13. [x] Vérifier les empreintes des 12 références du manifeste : 12/12 PASS le 15/11/2026.
+14. Confirmer les versions et scripts de génération des partitions.
+15. Clarifier les correspondances éventuelles entre A1 et Lot C.
 
-- Décision sur les trois propositions de révision.
+### Finalisation des livrables
 
-- Validation du guide d'annotation v1.1.
-
-- Clarification du cas P266/P267.
-
-
-
-### 9.2 Contrôles scientifiques complémentaires
-
-
-
-- Recherche des doublons et quasi-doublons textuels.
-
-- Vérification sémantique des relations NLI.
-
-- Contrôle des fuites sémantiques entre partitions.
-
-- Vérification de la provenance individuelle.
-
-- Clarification de la relation entre les corpus A1 et Lot C.
-
-
-
-### 9.3 Conformité et reproductibilité
-
-
-
-- Vérification des licences applicables.
-
-- Revue des contraintes de confidentialité.
-
-- Confirmation des versions et empreintes des corpus.
-
-- Consolidation des éléments nécessaires à la reproduction des audits.
-
-
-
-### 9.4 Livrables Silver
-
-
-
-- Revue scientifique de la Data Card v1.0.
-
-- Revue du présent rapport.
-
-- Vérification de cohérence entre les deux documents.
-
-- Préparation d'une PR documentaire isolée après autorisation.
-
-
+16. Obtenir la revue scientifique collective de la Data Card et du rapport.
+17. Vérifier leur cohérence avec les résultats Bronze et le manifeste.
+18. Préparer une PR documentaire isolée après autorisation.
 
 ## 10. Conclusion scientifique
 

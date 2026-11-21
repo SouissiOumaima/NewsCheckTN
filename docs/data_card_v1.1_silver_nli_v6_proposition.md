@@ -358,7 +358,7 @@ individuelle des sources et des droits applicables.
 
 Les fichiers de référence et les statistiques des contrôles sont documentés.
 
-Un manifeste de reproductibilité Silver A1 v1.0 a été créé : `docs/manifeste_reproductibilite_silver_a1_v1.0.md` (référence historique ; proposition actualisée pour NLI V6 : `docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md`, en attente de validation scientifique). Il centralise les références des corpus, les empreintes SHA-256 disponibles, les partitions et les contrôles documentés.
+Le manifeste historique Silver A1 v1.0 du 15/11/2026 est repris dans sa version consolidée proposée pour NLI V6 : `docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md` (en attente de validation scientifique). Cette version centralise les références des corpus, les empreintes SHA-256 disponibles, les partitions et les contrôles documentés.
 
 Le contrôle canonique des 12 références SHA-256 du manifeste a été effectué le 15/11/2026 : 12/12 empreintes conformes. Ce contrôle confirme l'intégrité des fichiers vérifiés, mais ne valide pas à lui seul les versions logicielles ni les scripts de génération.
 

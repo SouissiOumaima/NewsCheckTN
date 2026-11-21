@@ -605,7 +605,7 @@ La présence de métadonnées ne garantit pas leur exactitude individuelle.
 
 Le manifeste de reproductibilité Silver A1 v1.0 est disponible :
 
-`docs/manifeste_reproductibilite_silver_a1_v1.0.md` (référence historique ; proposition actualisée pour NLI V6 : `docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md`, en attente de validation scientifique).
+`docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md` (version consolidée proposée pour NLI V6, reprenant le manifeste historique v1.0 du 15/11/2026 ; validation scientifique en attente).
 
 Il centralise les références des corpus, les empreintes SHA-256 disponibles,
 les partitions et les contrôles documentés.

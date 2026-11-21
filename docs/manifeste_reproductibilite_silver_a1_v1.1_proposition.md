@@ -234,7 +234,7 @@ Décisions ouvertes :
 Ces empreintes identifient des versions de travail.
 Elles ne constituent pas un gel officiel.
 
-## Actualisation ? Validation Achref du 20 novembre 2026
+## Actualisation — Validation Achref du 20 novembre 2026
 
 - Validation individuelle : 16 accords, 1 accord sous
   reserve, 1 cas en revision.

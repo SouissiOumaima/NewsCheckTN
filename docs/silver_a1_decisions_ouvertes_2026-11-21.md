@@ -67,7 +67,7 @@ SHA-256 corpus A1 600 :
 Aucun corpus officiel n'a été remplacé.
 Redistribution publique des données non autorisée.
 
-## 6. Actualisation ? accord d'Achref du 20/11/2026
+## 6. Actualisation — accord d'Achref du 20/11/2026
 
 **Statut : validation individuelle documentee ; gel scientifique collectif non effectue.**
 
