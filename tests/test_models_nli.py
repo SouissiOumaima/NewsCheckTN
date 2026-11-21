@@ -305,3 +305,132 @@ def test_gold_bias_sujets_lien_par_article(tmp_path):
         encoding="utf-8",
     )
     assert load_subjects(f) == {"https://nawaat.org/a": "Sport", "tunifact-938": "Santé"}
+
+
+# --- Palier Gold : tests sans modèle (abstention, biais, gabarits) ---
+
+
+def _rows(*items):
+    """(label, pred, confiance) → lignes au format de gold_abstention.predict."""
+    return [
+        {"pair_id": f"P{i}", "label": g, "pred": p, "confidence": c}
+        for i, (g, p, c) in enumerate(items)
+    ]
+
+
+def test_gold_abstention_apply_ne_change_que_les_decisions_peu_sures():
+    from models.nli.gold_abstention import apply
+
+    rows = _rows(
+        ("supports", "supports", 0.90),
+        ("refutes", "refutes", 0.50),
+        ("neutral", "neutral", 0.30),  # déjà neutre : jamais touché, même sous le seuil
+        ("supports", "refutes", 0.70),
+    )
+    assert apply(rows, 0.0) == ["supports", "refutes", "neutral", "refutes"]
+    assert apply(rows, 0.60) == ["supports", "neutral", "neutral", "refutes"]
+    assert apply(rows, 0.70) == ["supports", "neutral", "neutral", "refutes"]  # < strict
+    assert apply(rows, 0.95) == ["neutral"] * 4
+
+
+def test_gold_abstention_sweep_couverture_et_changements(monkeypatch):
+    from models.nli import gold_abstention as ga
+
+    monkeypatch.setattr(ga, "GRID", [0.0, 0.6])
+    rows = _rows(
+        ("supports", "supports", 0.90),
+        ("refutes", "refutes", 0.50),  # juste, mais passe à neutral à τ = 0.6
+        ("neutral", "supports", 0.55),  # fausse, corrigée par le seuil
+        ("neutral", "neutral", 0.80),
+    )
+    r0, r6 = ga.sweep(rows)
+    assert (r0["tau"], r0["coverage"], r0["changed_to_neutral"]) == (0.0, 0.75, 0)
+    assert r0["accuracy"] == 0.75 and r0["decisive_precision"] == round(2 / 3, 4)
+    assert (r6["coverage"], r6["changed_to_neutral"], r6["changed_were_correct"]) == (0.25, 2, 1)
+    assert r6["accuracy"] == 0.75 and r6["decisive_precision"] == 1.0
+
+
+def test_gold_abstention_choose_plus_petit_tau_dans_la_marge():
+    from models.nli.gold_abstention import choose
+
+    res = [
+        {"tau": 0.0, "macro_f1": 0.722},
+        {"tau": 0.6, "macro_f1": 0.730},
+        {"tau": 0.8, "macro_f1": 0.738},
+    ]
+    c = choose(res, 0.03)
+    assert c["best_tau"] == [0.8] and c["chosen_tau"] == 0.0 and c["no_abstention_in_margin"]
+    c = choose(res, 0.01)
+    assert c["equivalent_tau"] == [0.6, 0.8] and c["chosen_tau"] == 0.6
+    assert not c["no_abstention_in_margin"]
+    # marge exacte (0.738 − 0.03 = 0.708) : incluse malgré les arrondis flottants
+    assert (
+        choose([{"tau": 0.0, "macro_f1": 0.708}, {"tau": 0.5, "macro_f1": 0.738}], 0.03)[
+            "chosen_tau"
+        ]
+        == 0.0
+    )
+
+
+def test_gold_bias_site():
+    from models.nli.gold_bias import site
+
+    assert site("tunifact-938") == "tunifact.org"
+    assert site("https://www.nawaat.org/2022/11/15/article") == "nawaat.org"
+    assert site("https://nawaat.org/x") == "nawaat.org"
+    assert site("inconnu:E12") == "inconnu:E12"  # pas d'URL : identifiant gardé tel quel
+
+
+def test_gold_bias_gap_signe_ic_et_regle_des_10_paires():
+    from models.nli.gold_bias import gap
+
+    labs = ["supports", "refutes", "neutral"] * 4  # 12 paires
+    parfait = (labs, list(labs))
+    nul = (labs, ["supports"] * 12)
+    g = gap(parfait, nul)
+    assert g["accuracy"] > 0 and g["accuracy_ci95"][0] > 0 and g["interpretable"]
+    assert g["macro_f1"] > 0 and g["macro_f1_ci95"][0] > 0
+    assert gap(parfait, parfait)["accuracy"] == 0 and gap(parfait, parfait)["accuracy_ci95"] == [
+        0,
+        0,
+    ]
+    petit = (labs[:9], labs[:9])  # 9 paires < 10 : écart non interprétable
+    assert not gap(parfait, petit)["interpretable"]
+    assert gap(nul, parfait)["accuracy"] == -g["accuracy"]
+
+
+def test_gold_templates_refuse_d_ecraser(tmp_path, monkeypatch):
+    from models.nli import gold_templates as gt
+
+    test_file = tmp_path / "test.jsonl"
+    rows = [
+        {
+            "pair_id": f"P{i}",
+            "article_id": "tunifact-1",
+            "claim_lang": "fr",
+            "evidence_lang": "fr",
+            "label": "supports",
+            "claim": f"affirmation {i}",
+            "evidence": f"preuve {i}",
+        }
+        for i in range(56)
+    ]
+    test_file.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    gold = tmp_path / "gold"
+    gold.mkdir()
+    deja = gold / "paraphrases_v1.csv"
+    deja.write_text("travail commencé, à ne pas perdre", encoding="utf-8")
+    monkeypatch.setattr(gt, "TEST_FILE", test_file)
+    monkeypatch.setattr(gt, "GOLD_DIR", gold)
+
+    gt.main()
+    assert deja.read_text(encoding="utf-8") == "travail commencé, à ne pas perdre"
+    cree = (gold / "reecritures_tn_v1.csv").read_text(encoding="utf-8-sig").splitlines()
+    assert len(cree) == 57 and cree[0].startswith("pair_id,article_id")
+    avant = (gold / "reecritures_tn_v1.csv").read_bytes()
+    gt.main()  # seconde exécution : rien n'est réécrit
+    assert (gold / "reecritures_tn_v1.csv").read_bytes() == avant
+
+    test_file.write_text("\n".join(json.dumps(r) for r in rows[:55]), encoding="utf-8")
+    with pytest.raises(SystemExit, match="55 paires"):
+        gt.main()
