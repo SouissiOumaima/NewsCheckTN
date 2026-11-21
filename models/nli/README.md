@@ -17,6 +17,12 @@ Le Lot D s'en sert pour rendre le verdict.
 | `run_final.ps1` | relance finale avec les poids (configurations choisies) |
 | `measure_test.py` | mesure unique du test Silver (refuse une seconde exécution) |
 | `silver_errors.py` | CSV privé des erreurs Silver à relire |
+| `gold_bias.py` | Gold (EXP-C-014) : biais par langue, source et sujet, sur les prédictions Silver |
+| `gold_abstention.py` | Gold (EXP-C-015) : choix du seuil d'abstention sur la val seulement |
+| `gold_templates.py` | Gold (EXP-C-012 / 013) : gabarits privés à remplir, refuse d'écraser |
+| `gold_error_view.py` | Gold : vue privée des 22 erreurs Silver à valider, report des validations |
+| `gold_polarity.py` | Gold (EXP-C-016) : inversions de polarité, sur les prédictions Silver |
+| `gold_measure.py` | Gold (EXP-C-012 / 013) : mesure unique préparée, non lancée (refuse sans gel) |
 
 ## Palier Bronze (revue) : position par lexique
 
@@ -82,8 +88,9 @@ Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015, EXP-C-016) 
 
 - **Petit test** : 56 paires (25 fr, 31 ar, **0 tunisien**) ; IC 95 % de la macro-F1 du modèle
   affiné [0.689 ; 0.905], soit une largeur d'environ 0.22.
-- **Petite val** : 33 paires (une paire ≈ 3 points) ; 3 labels douteux (9 % de la val), corrigés
-  par le Lot A1 pour la v4 seulement.
+- **Petite val** : 33 paires (une paire ≈ 3 points) ; 3 labels douteux (9 % de la val). État
+  réel depuis la v5 du corpus : NLI-P035 corrigé (`neutral` → `refutes`), NLI-P037 conservé,
+  P297 pas encore appliqué par le Lot A1. La val v3 utilisée pour les choix n'est pas modifiée.
 - **Peu d'entraînement** : 174 paires ; l'affinage n'apporte pas de gain établi sur le zero-shot
   (+0.011, IC 95 % [−0.052 ; +0.071], p = 0.40 ; 3 paires différentes sur 56).
 - **Variance non mesurée** : les 3 graines donnent les mêmes prédictions (val et test).
@@ -147,5 +154,6 @@ compter environ 8 Go de mémoire ; un GPU (Colab) est beaucoup plus rapide.
   servent jamais à l'entraînement : le NLI et le verdict du Lot D sont évalués sur les mêmes.
 - **Paires en attente** (« Brouillon non valide » dans la remarque, sans validation confirmée
   ensuite) : mises de côté jusqu'à la confirmation du Lot A1.
-- Les chiffres **officiels** se font une seule fois, sur la version validée du corpus (v4) ;
-  la v3 sert à mettre au point le code.
+- Les chiffres **officiels** du Silver sont ceux de la **v3**, mesurés une seule fois (règle du
+  2026-11-10 : la v4 n'était pas là le 12/11 à midi) ; la v5 laisse le test v3 inchangé
+  (EXP-C-011).
