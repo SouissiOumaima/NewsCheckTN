@@ -102,9 +102,11 @@ Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015, EXP-C-016) 
   dans le test, 6 catégories, chacune de 1 ou 2 articles : un écart de sujet ne peut pas être
   séparé d'un effet d'article (EXP-C-014).
 - **Abstention** : aucun seuil de confiance retenu (τ = 0, choisi sur 33 paires de val, EXP-C-015).
-- **Analyse d'erreurs** : les catégories d'erreurs ont été **proposées par l'assistant (Claude)
-  et ne sont validées par aucun humain** (`categorie_validee` vide) ; 28 des 50 erreurs
-  analysées viennent de l'ablation.
+- **Analyse d'erreurs** : les 22 erreurs du modèle affiné et du zero-shot (12 test, 10 val) ont
+  été **validées par Membre 4 le 2026-11-22**, une par une, après explication de chaque cas par
+  un assistant IA (5 catégories changées sur 22) ; un seul annotateur, sans second avis. Les
+  28 erreurs de l'ablation (28 des 50 analysées) restent **proposées par l'assistant (Claude),
+  non validées**.
 - **Tunisien et paraphrases** (EXP-C-012, EXP-C-013) : jeux générés par IA, non encore mesurés ;
   sans relecture humaine, leurs résultats seront exploratoires.
 - **Corpus v3**, pas v4 (règle du 2026-11-10).
