@@ -58,9 +58,27 @@ Sans torch / transformers, ou si le modèle ne se charge pas, la réponse est «
 confiance 0 : l'API ne tombe jamais. Les tests forcent `NLI_BACKEND=stub` (`tests/conftest.py`) et
 ne téléchargent rien.
 
+## État du Gold
+
+Aucune de ces analyses ne relance de mesure sur le test : celles qui sont « mesurées » relisent
+les prédictions de la mesure unique d'EXP-C-011, ou n'utilisent que la val.
+
+| Expérience | Objet | État | Résultat ou blocage |
+|---|---|---|---|
+| EXP-C-014 | biais par langue, source et sujet | **mesuré** (prédictions Silver relues) | aucun écart établi ; sujet confondu avec l'article (catégories du Lot A1 tirées des titres) |
+| EXP-C-015 | seuil d'abstention | **mesuré** (val seulement) | aucun seuil retenu (τ = 0) |
+| EXP-C-016 | inversions de polarité (supports ↔ refutes) | **mesuré** (prédictions Silver relues) | 1 inversion sur 10 erreurs (affiné), 1 sur 11 (zero-shot), 16 sur 30 (Bronze) ; descriptif seulement |
+| EXP-C-012 | transfert vers le tunisien | **protocole seulement**, non mesuré | réécritures générées par IA ; en attente de l'accord de l'équipe sur la transmission externe et de la relecture humaine (Mouhib) ; fichier non figé |
+| EXP-C-013 | robustesse aux paraphrases | **protocole seulement**, non mesuré | paraphrases générées par IA ; en attente de l'accord de l'équipe sur la transmission externe et d'une relecture humaine ; fichier non figé |
+
+La mesure unique d'EXP-C-012 et d'EXP-C-013 est préparée, mais pas lancée :
+`python -X utf8 -m models.nli.gold_measure --exp tn|paraphrases --dry-run`. Le script refuse
+tant que le fichier n'est pas figé (SHA-256 reporté dans le code) et que le vérificateur est vide
+(sauf `--exploratoire`), et il refuse une seconde exécution.
+
 ## Limites (chiffrées)
 
-Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015) :
+Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015, EXP-C-016) :
 
 - **Petit test** : 56 paires (25 fr, 31 ar, **0 tunisien**) ; IC 95 % de la macro-F1 du modèle
   affiné [0.689 ; 0.905], soit une largeur d'environ 0.22.
@@ -73,7 +91,9 @@ Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015) :
   (0.427 ± 0.044).
 - **Test concentré** : 10 articles, dont 2 font 25 des 56 paires (45 %) ; 2 sites, dont un à
   8 paires ; aucun écart de langue ou de source n'est établi, faute d'effectifs (EXP-C-014).
-- **Aucun sujet** dans le corpus : biais par sujet non mesuré.
+- **Sujet** : catégories proposées par le Lot A1 à partir des titres (pas de second annotateur) ;
+  dans le test, 6 catégories, chacune de 1 ou 2 articles : un écart de sujet ne peut pas être
+  séparé d'un effet d'article (EXP-C-014).
 - **Abstention** : aucun seuil de confiance retenu (τ = 0, choisi sur 33 paires de val, EXP-C-015).
 - **Analyse d'erreurs** : les catégories d'erreurs ont été **proposées par l'assistant (Claude)
   et ne sont validées par aucun humain** (`categorie_validee` vide) ; 28 des 50 erreurs

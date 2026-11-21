@@ -434,3 +434,169 @@ def test_gold_templates_refuse_d_ecraser(tmp_path, monkeypatch):
     test_file.write_text("\n".join(json.dumps(r) for r in rows[:55]), encoding="utf-8")
     with pytest.raises(SystemExit, match="55 paires"):
         gt.main()
+
+
+# --- Palier Gold : polarité (EXP-C-016) et mesure unique préparée (EXP-C-012 / 013) ---
+
+
+def test_gold_polarity_types_d_erreur_et_wilson():
+    from models.nli.gold_polarity import error_type, polarity, wilson
+
+    assert error_type("supports", "supports") is None
+    assert error_type("supports", "refutes") == error_type("refutes", "supports") == "inversion"
+    assert error_type("refutes", "neutral") == "vers neutral"
+    assert error_type("neutral", "supports") == "depuis neutral"
+    gold = ["supports", "refutes", "refutes", "neutral", "supports"]
+    pred = ["refutes", "supports", "neutral", "neutral", "supports"]
+    r = polarity(gold, pred, ["a", "b", "c", "d", "e"])
+    assert r["errors"] == 3 and r["by_type"]["inversion"] == 2
+    assert r["inversions_by_direction"] == {"supports->refutes": 1, "refutes->supports": 1}
+    assert r["inversion_share"] == round(2 / 3, 4) and r["descriptive_only"]
+    assert r["confusion"]["refutes"]["neutral"] == 1
+    lo, hi = wilson(1, 10)
+    assert 0 < lo < 0.1 < hi < 0.5 and wilson(0, 0) is None
+
+
+GM_LABELS = ["supports", "refutes", "neutral"]
+GM_FIELDS = [
+    "pair_id",
+    "label",
+    "evidence",
+    "claim_paraphrase_1",
+    "claim_paraphrase_2",
+    "verificateur",
+    "verif_sens_identique",
+    "verif_label_tient",
+    "statut",
+]
+
+
+@pytest.fixture
+def gold_measure_env(tmp_path, monkeypatch):
+    """Faux test v3 (56 paires inventées), fausses prédictions d'origine, faux fichier figé."""
+    import copy
+    import csv
+
+    from models.nli import gold_measure as gm
+
+    test = [
+        {
+            "pair_id": f"P{i:02d}",
+            "label": GM_LABELS[i % 3],
+            "claim": f"affirmation {i}",
+            "evidence": f"preuve {i}",
+            "claim_lang": "fr" if i % 2 else "ar",
+            "evidence_lang": "fr" if i % 4 < 2 else "ar",
+        }
+        for i in range(56)
+    ]
+    (tmp_path / "test.jsonl").write_text("\n".join(json.dumps(p) for p in test), encoding="utf-8")
+    preds = tmp_path / "silver"
+    preds.mkdir()
+    for _, fname in gm.MODELS.values():  # prédictions d'origine : toutes justes
+        rows = [{"pair_id": p["pair_id"], "label": p["label"], "pred": p["label"]} for p in test]
+        (preds / fname).write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    gold = tmp_path / "gold"
+    gold.mkdir()
+    exps = copy.deepcopy(gm.EXPERIMENTS)
+    monkeypatch.setattr(gm, "TEST_FILE", tmp_path / "test.jsonl")
+    monkeypatch.setattr(gm, "PRED_DIR", preds)
+    monkeypatch.setattr(gm, "GOLD_DIR", gold)
+    monkeypatch.setattr(gm, "RESULTS", tmp_path / "results")
+    monkeypatch.setattr(gm, "EXPERIMENTS", exps)
+
+    def write(verificateur="", verif="", sha=True):
+        path = gold / exps["paraphrases"]["file"]
+        with open(path, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=GM_FIELDS)
+            w.writeheader()
+            for k, p in enumerate(test):
+                w.writerow(
+                    {
+                        "pair_id": p["pair_id"],
+                        "label": p["label"],
+                        "evidence": p["evidence"],
+                        "claim_paraphrase_1": f"reformulation {k}",
+                        "claim_paraphrase_2": "",
+                        "verificateur": verificateur,
+                        "verif_sens_identique": "non" if k == 0 else verif,
+                        "verif_label_tient": verif,
+                        "statut": "",
+                    }
+                )
+        exps["paraphrases"]["sha256"] = gm.sha256(path) if sha else None
+        return path
+
+    def fake(pairs):
+        """Faux prédicteur, sans modèle : une paire sur 4 bascule vers neutral."""
+        assert all(p["claim"].startswith("reformulation") for p in pairs)
+        return ["neutral" if k % 4 == 0 else p["label"] for k, p in enumerate(pairs)]
+
+    return gm, write, dict.fromkeys(gm.MODELS, fake), gold
+
+
+def test_gold_measure_refuse_sans_fichier_fige_ou_sans_sha(gold_measure_env):
+    gm, write, fakes, gold = gold_measure_env
+    with pytest.raises(SystemExit):
+        gm.main(["--exp", "paraphrases"], predictors=fakes)  # fichier pas encore figé
+    write(verificateur="X", verif="oui", sha=False)
+    assert any("non noté" in e for e in gm.checks("paraphrases", False))
+    path = write(verificateur="X", verif="oui")
+    path.write_text(path.read_text(encoding="utf-8-sig") + "\n", encoding="utf-8-sig")
+    assert any("SHA-256 différent" in e for e in gm.checks("paraphrases", False))
+    with pytest.raises(SystemExit):
+        gm.main(["--exp", "paraphrases"], predictors=fakes)
+    assert not list(gold.glob("MESURE_FAITE_*"))
+
+
+def test_gold_measure_refuse_un_label_ou_une_preuve_modifies(gold_measure_env):
+    gm, write, fakes, gold = gold_measure_env
+    path = write(verificateur="X", verif="oui")
+    text = path.read_text(encoding="utf-8-sig").replace("preuve 3,", "preuve changée,")
+    path.write_text(text, encoding="utf-8-sig")
+    gm.EXPERIMENTS["paraphrases"]["sha256"] = gm.sha256(path)
+    assert any("preuve ou label" in e for e in gm.checks("paraphrases", False))
+
+
+def test_gold_measure_verificateur_vide_refuse_sauf_exploratoire(gold_measure_env):
+    gm, write, fakes, gold = gold_measure_env
+    write()  # aucune ligne vérifiée
+    with pytest.raises(SystemExit):
+        gm.main(["--exp", "paraphrases"], predictors=fakes)
+    assert not gm.marker("paraphrases").exists()
+    gm.main(["--exp", "paraphrases", "--dry-run", "--exploratoire"], predictors=fakes)
+    assert not gm.marker("paraphrases").exists()  # --dry-run : rien n'est consommé
+
+    gm.main(["--exp", "paraphrases", "--exploratoire"], predictors=fakes)
+    assert json.loads(gm.marker("paraphrases").read_text(encoding="utf-8"))["exploratoire"]
+    out = next(gm.RESULTS.glob("lot-c_nli-gold_paraphrases_test_*.json"))
+    res = json.loads(out.read_text(encoding="utf-8"))["results"]
+    r = res["paraphrase_1"]
+    assert r["exploratoire"] and r["n_kept"] == 56 and r["non_verifiees"] == 56
+    assert res["paraphrase_2"]["measured"] is False and res["paraphrase_2"]["vides"] == 56
+    m = r["models"]["principal_seed42"]
+    # 14 paires basculent vers neutral, dont 4 déjà neutral : 10 changements sur 56
+    assert m["original"]["accuracy"] == 1.0 and m["change_rate"] == round(10 / 56, 4)
+    assert m["variant"]["accuracy"] == round(46 / 56, 4) and m["paired_diff_macro_f1"] < 0
+    assert set(m["by_claim_lang"]) == {"fr", "ar"}
+    assert (gold / "predictions_paraphrases_paraphrase_1_bronze.jsonl").exists()
+    # seconde exécution refusée, même avec --exploratoire
+    with pytest.raises(SystemExit):
+        gm.main(["--exp", "paraphrases", "--exploratoire"], predictors=fakes)
+
+
+def test_gold_measure_verifiees_ecartees_et_regle_des_40_paires(gold_measure_env):
+    gm, write, fakes, gold = gold_measure_env
+    write(verificateur="Relecteur", verif="oui")  # P00 a « non » : écartée
+    gm.main(["--exp", "paraphrases"], predictors=fakes)
+    out = next(gm.RESULTS.glob("*.json"))
+    res = json.loads(out.read_text(encoding="utf-8"))["results"]["paraphrase_1"]
+    assert (res["n_kept"], res["ecartees"], res["non_verifiees"]) == (55, 1, 0)
+    assert not res["exploratoire"]  # 55 paires ≥ 40, toutes vérifiées
+
+    rows = gm.read_frozen("paraphrases")
+    for r in rows[:20]:
+        r["statut"] = "ecarte"
+    keep, counts = gm.kept(rows, "claim_paraphrase_1")
+    # P00 (déjà écartée par son « non ») fait partie des 20 : 36 gardées, 20 écartées
+    assert len(keep) == 36 and counts["ecartees"] == 20  # < 40 : serait exploratoire
