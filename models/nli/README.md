@@ -74,10 +74,11 @@ les prédictions de la mesure unique d'EXP-C-011, ou n'utilisent que la val.
 | EXP-C-014 | biais par langue, source et sujet | **mesuré** (prédictions Silver relues) | aucun écart établi ; sujet confondu avec l'article (catégories du Lot A1 tirées des titres) |
 | EXP-C-015 | seuil d'abstention | **mesuré** (val seulement) | aucun seuil retenu (τ = 0) |
 | EXP-C-016 | inversions de polarité (supports ↔ refutes) | **mesuré** (prédictions Silver relues) | 1 inversion sur 10 erreurs (affiné), 1 sur 11 (zero-shot), 16 sur 30 (Bronze) ; descriptif seulement |
-| EXP-C-012 | transfert vers le tunisien | **protocole seulement**, non mesuré | réécritures générées par IA ; en attente de l'accord de l'équipe sur la transmission externe et de la relecture humaine (Mouhib) ; fichier non figé |
-| EXP-C-013 | robustesse aux paraphrases | **protocole seulement**, non mesuré | paraphrases générées par IA ; en attente de l'accord de l'équipe sur la transmission externe et d'une relecture humaine ; fichier non figé |
+| EXP-C-012 | transfert vers le tunisien | **protocole seulement**, non mesuré | réécritures générées par IA ; décision de l'équipe du 2026-11-22 (Achref) : « non à ce stade », en attente de la vérification des droits Tunifact (PR #37) et des conditions du service externe ; réécritures hors de toute évaluation ; fichier non figé |
+| EXP-C-013 | robustesse aux paraphrases | **protocole seulement**, non mesuré | paraphrases générées par IA ; même décision du 2026-11-22 : « non à ce stade » ; paraphrases hors de toute évaluation ; fichier non figé |
 
-La mesure unique d'EXP-C-012 et d'EXP-C-013 est préparée, mais pas lancée :
+La mesure unique d'EXP-C-012 et d'EXP-C-013 est préparée, mais pas lancée ; elle reste une suite
+possible seulement si l'équipe donne son accord :
 `python -X utf8 -m models.nli.gold_measure --exp tn|paraphrases --dry-run`. Le script refuse
 tant que le fichier n'est pas figé (SHA-256 reporté dans le code) et que le vérificateur est vide
 (sauf `--exploratoire`), et il refuse une seconde exécution.
@@ -107,8 +108,10 @@ Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015, EXP-C-016) 
   un assistant IA (5 catégories changées sur 22) ; un seul annotateur, sans second avis. Les
   28 erreurs de l'ablation (28 des 50 analysées) restent **proposées par l'assistant (Claude),
   non validées**.
-- **Tunisien et paraphrases** (EXP-C-012, EXP-C-013) : jeux générés par IA, non encore mesurés ;
-  sans relecture humaine, leurs résultats seront exploratoires.
+- **Tunisien et paraphrases** (EXP-C-012, EXP-C-013) : jeux générés par IA, non mesurés ; l'équipe
+  a répondu « non à ce stade » le 2026-11-22 (droits Tunifact, PR #37, et conditions du service
+  externe à vérifier) : le transfert vers le tunisien et la robustesse aux paraphrases restent
+  donc sans mesure.
 - **Corpus v3**, pas v4 (règle du 2026-11-10).
 
 ## Lancer
