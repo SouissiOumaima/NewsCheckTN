@@ -178,17 +178,28 @@ def measure(
     """Chiffres par variante et par modèle, et prédictions (pour les fichiers privés)."""
     cfg = EXPERIMENTS[exp]
     results, preds = {}, {}
+    # paires gardées de chaque variante, puis prédictions moteur par moteur (toutes les variantes
+    # d'un moteur à la suite) : `stance` ne garde qu'un moteur chargé à la fois, chacun n'est
+    # ainsi chargé qu'une fois
+    prepared = {}
     for variant, col in cfg["variants"].items():
         keep, counts = kept(rows, col)
         if not keep:
             results[variant] = {"n_kept": 0, **counts, "measured": False}
             continue
         ids = [r["pair_id"] for r in keep]
-        gold = [test[i]["label"] for i in ids]
         pairs = [
             dict(test[i], claim=r[col], claim_lang=cfg["claim_lang"] or test[i]["claim_lang"])
             for i, r in zip(ids, keep, strict=True)
         ]
+        prepared[variant] = (col, keep, counts, ids, pairs)
+    raw = {variant: {} for variant in prepared}
+    for name, predict in predictors.items():
+        for variant, (_, _, _, _, pairs) in prepared.items():
+            raw[variant][name] = predict(pairs)
+
+    for variant, (col, keep, counts, ids, _) in prepared.items():
+        gold = [test[i]["label"] for i in ids]
         res = {
             "n_kept": len(ids),
             **counts,
@@ -197,8 +208,8 @@ def measure(
             "models": {},
         }
         preds[variant] = {}
-        for name, predict in predictors.items():
-            var = predict(pairs)
+        for name in predictors:
+            var = raw[variant][name]
             orig = [original[name][i] for i in ids]
             preds[variant][name] = dict(zip(ids, var, strict=True))
             right = [k for k, (g, o) in enumerate(zip(gold, orig, strict=True)) if g == o]
@@ -251,26 +262,35 @@ def measure(
     return results, preds
 
 
-def backend_predictor(backend: str) -> Predictor:
-    """Prédictions par `predict_stances` avec le moteur demandé (chargé une seule fois)."""
+def backend_predictors(backends: dict[str, str]) -> dict[str, Predictor]:
+    """Un prédicteur par moteur (nom → NLI_BACKEND), tous par `predict_stances`.
+
+    `stance` ne garde qu'un moteur chargé à la fois (état global). Les prédicteurs partagent donc
+    le nom du moteur actif : dès qu'un prédicteur n'est pas celui qui est chargé, il change
+    NLI_BACKEND et vide le moteur courant, quel que soit l'ordre des appels. Le contrôle par
+    `backend_info` après chaque appel reste en place.
+    """
     from models.nli import evaluate as ev
     from models.nli import stance
 
-    loaded = {"done": False}
+    active = {"backend": None}
 
-    def predict(pairs: list[dict]) -> list[str]:
-        if not loaded["done"]:
-            os.environ["NLI_BACKEND"] = backend
-            os.environ.pop("NLI_MODEL", None)
-            stance.set_classifier(None)
-            loaded["done"] = True
-        out = [s for s, _ in ev.predict(pairs)]
-        info = stance.backend_info()
-        if info["status"] != "loaded" or info["backend"] != backend:
-            raise SystemExit(f"moteur {backend} non chargé : {info}")
-        return out
+    def make(backend: str) -> Predictor:
+        def predict(pairs: list[dict]) -> list[str]:
+            if active["backend"] != backend:
+                os.environ["NLI_BACKEND"] = backend
+                os.environ.pop("NLI_MODEL", None)
+                stance.set_classifier(None)
+                active["backend"] = backend
+            out = [s for s, _ in ev.predict(pairs)]
+            info = stance.backend_info()
+            if info["status"] != "loaded" or info["backend"] != backend:
+                raise SystemExit(f"moteur {backend} non chargé : {info}")
+            return out
 
-    return predict
+        return predict
+
+    return {name: make(backend) for name, backend in backends.items()}
 
 
 def main(argv: list[str] | None = None, predictors: dict[str, Predictor] | None = None) -> None:
@@ -312,7 +332,7 @@ def main(argv: list[str] | None = None, predictors: dict[str, Predictor] | None 
         for name, (_, fname) in MODELS.items()
     }
     if predictors is None:
-        predictors = {name: backend_predictor(b) for name, (b, _) in MODELS.items()}
+        predictors = backend_predictors({name: b for name, (b, _) in MODELS.items()})
     tagger = None
     if cfg["expected_tag"]:
         from normalization.tag_lang import tag_text

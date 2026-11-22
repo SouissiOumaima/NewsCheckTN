@@ -1,6 +1,7 @@
 """Tests Lot C — Model 2 (NLI) : contrat, préparation des données, évaluation."""
 
 import json
+import os
 
 import pytest
 
@@ -600,3 +601,117 @@ def test_gold_measure_verifiees_ecartees_et_regle_des_40_paires(gold_measure_env
     keep, counts = gm.kept(rows, "claim_paraphrase_1")
     # P00 (déjà écartée par son « non ») fait partie des 20 : 36 gardées, 20 écartées
     assert len(keep) == 36 and counts["ecartees"] == 20  # < 40 : serait exploratoire
+
+
+# --- gold_measure : changement de moteur entre variantes (revue d'Achref, PR #34) ---
+
+FAKE_PROBS = {  # faux moteurs : zero-shot → supports, affiné → refutes, Bronze → neutral
+    "zero-shot": {"entailment": 0.9, "neutral": 0.05, "contradiction": 0.05},
+    "fine-tuned": {"entailment": 0.05, "neutral": 0.05, "contradiction": 0.9},
+    "bronze": {"supports": 0.05, "refutes": 0.05, "neutral": 0.9},
+}
+EXPECTED_ENGINE_LABEL = {
+    "zero-shot-fp32": ("zero-shot", "supports"),
+    "principal_seed42": ("fine-tuned", "refutes"),
+    "bronze": ("bronze", "neutral"),
+}
+
+
+@pytest.fixture
+def fake_nli_engines(monkeypatch):
+    """Trois faux moteurs branchés dans `stance` (aucun modèle chargé, aucune donnée du corpus).
+
+    Renvoie le journal des appels (moteur, affirmation), le journal des chargements de modèle
+    (zero-shot / affiné) et le nombre de changements de moteur (`set_classifier(None)`).
+    """
+    calls, loads, switches = [], [], []
+
+    def classifier(engine):
+        def classify(pairs):
+            calls.extend((engine, hypothesis) for _premise, hypothesis in pairs)
+            return [dict(FAKE_PROBS[engine]) for _ in pairs]
+
+        return classify
+
+    def fake_load(name):
+        engine = "zero-shot" if name == stance.DEFAULT_MODEL else "fine-tuned"
+        loads.append(engine)
+        return classifier(engine)
+
+    real_set = stance.set_classifier
+
+    def spy_set(clf, name="test"):
+        if clf is None:
+            switches.append(os.environ.get("NLI_BACKEND"))
+        return real_set(clf, name)
+
+    monkeypatch.setattr(stance, "_load_zero_shot", fake_load)
+    monkeypatch.setattr(stance, "_bronze_classifier", classifier("bronze"))
+    monkeypatch.setattr(stance, "set_classifier", spy_set)
+    monkeypatch.setenv("NLI_BACKEND", "stub")  # valeur restaurée après le test
+    monkeypatch.delenv("NLI_MODEL", raising=False)
+    monkeypatch.setenv("NLI_FINETUNED_MODEL", "faux-checkpoint-affine")
+    real_set(None)
+    yield calls, loads, switches
+    real_set(None)
+
+
+def _switch_pairs(prefix, n=4):
+    return [
+        {
+            "pair_id": f"Q{i}",
+            "claim": f"{prefix} {i}",
+            "evidence": f"preuve {i}",
+            "claim_lang": "fr",
+        }
+        for i in range(n)
+    ]
+
+
+def test_gold_measure_changement_de_moteur_dans_n_importe_quel_ordre(fake_nli_engines):
+    """Cas de la revue : Bronze appelé en dernier sur la variante 1, puis zero-shot sur la 2."""
+    from models.nli import gold_measure as gm
+
+    calls, _loads, switches = fake_nli_engines
+    preds = gm.backend_predictors({n: b for n, (b, _) in gm.MODELS.items()})
+    # ordre « variante d'abord », celui qui bloquait : zs, affiné, Bronze, puis zs, affiné, Bronze
+    for prefix in ("variante1", "variante2"):
+        pairs = _switch_pairs(prefix)
+        for name in ("zero-shot-fp32", "principal_seed42", "bronze"):
+            engine, label = EXPECTED_ENGINE_LABEL[name]
+            start = len(calls)
+            assert preds[name](pairs) == [label] * len(pairs), (prefix, name)
+            assert {e for e, _ in calls[start:]} == {engine}  # le bon moteur a répondu
+            assert stance.backend_info()["backend"] == engine
+    assert len(switches) == 6  # un changement de moteur à chaque appel dans cet ordre
+
+
+def test_gold_measure_deux_variantes_trois_moteurs(fake_nli_engines, gold_measure_env):
+    """measure() avec deux variantes successives : chaque passage utilise le bon moteur."""
+    from models.nli.data import load_pairs
+
+    gm, write, _fakes, _gold = gold_measure_env
+    calls, loads, switches = fake_nli_engines
+    write(verificateur="Relecteur", verif="oui")  # P00 écartée (« non »), 55 gardées
+    rows = gm.read_frozen("paraphrases")
+    for r in rows:
+        r["claim_paraphrase_2"] = "autre " + r["claim_paraphrase_1"]  # seconde variante remplie
+    test = {p["pair_id"]: p for p in load_pairs(gm.TEST_FILE)}
+    original = {name: {i: p["label"] for i, p in test.items()} for name in gm.MODELS}
+
+    predictors = gm.backend_predictors({n: b for n, (b, _) in gm.MODELS.items()})
+    results, preds = gm.measure("paraphrases", rows, test, original, predictors, False)
+
+    for variant in ("paraphrase_1", "paraphrase_2"):
+        assert results[variant]["measured"] and results[variant]["n_kept"] == 55
+        for name, (_engine, label) in EXPECTED_ENGINE_LABEL.items():
+            assert set(preds[variant][name].values()) == {label}, (variant, name)
+    # chaque moteur a vu les deux variantes, et seulement des affirmations réécrites
+    for engine in ("zero-shot", "fine-tuned", "bronze"):
+        seen = {h.split(" ")[0] for e, h in calls if e == engine}
+        assert seen == {"reformulation", "autre"}, (engine, seen)
+        assert sum(e == engine for e, _ in calls) == 2 * 55
+    # moteur par moteur : chaque moteur n'est chargé qu'une fois
+    assert switches == ["zero-shot", "fine-tuned", "bronze"]
+    assert loads == ["zero-shot", "fine-tuned"]
+    assert results["agreement_paraphrases_1_2"]["bronze"]["agreement"] == 1.0
