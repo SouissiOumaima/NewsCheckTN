@@ -507,7 +507,9 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   mieux ? (4) Plus de données d'apprentissage aideraient-elles ? Aucune règle, aucun seuil du pipeline
   n'est réglé ici : mesure seulement.
 - **Données** :
-  - bootstrap : eval_30 (34 phrases, test gelé, consulté pour mesurer seulement) ; références
+  - bootstrap : eval_30 (34 phrases, test gelé, consulté pour mesurer seulement ; SHA-256
+    `1d0bcfaa4b2a01fbd428fb18240174e309ac9877dc474a4dc1399e15e9dd34ce`, identique à EXP-A2-011) ;
+    références
     adjugées du dev (EXP-A2-009), 100 textes en lettres arabes et 86 en lettres latines ;
   - graines et courbe : données d'EXP-A2-006 (Tunizi, TSAC, UD French-GSD), 73 601 textes arabizi
     préparés ; pour chaque graine, 10 % mis de côté pour la mesure (7 360) et le reste pour
