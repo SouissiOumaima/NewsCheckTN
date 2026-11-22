@@ -80,6 +80,9 @@ Précision : les critères portent sur la moyenne des 3 graines, voir avenant 2 
   aucune clé dans Git.
 - Mesure ajoutée : accord LLM / humain sur l'entraînement assisté (part des propositions corrigées),
   calculée après l'annotation.
+- Traçabilité : l'envoi des 20 textes TSAC (commentaires publics, aucune donnée privée) au service
+  externe, avec LLM_ALLOW_EXTERNAL=1, n'avait pas été signalé à l'équipe au moment des faits ; il
+  est consigné ici le 2026-11-22, à la demande de la relecture de #31.
 
 ### Note d'exécution — 2026-11-15 : assistance du LLM presque absente
 
