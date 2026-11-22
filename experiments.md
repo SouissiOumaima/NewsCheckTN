@@ -70,6 +70,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 | EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
+| EXP-A2-014 | 2026-11-15 | A2 | Silver : significativité, stabilité sur 3 graines, baseline neuronale, courbe d'apprentissage | `silver_stats bootstrap` (1 000 tirages, graine 20261115) ; `silver_stats seeds` : régression logistique livrée contre perceptron multicouche (64 neurones, mêmes n-grammes), graines 13 / 42 / 2026 ; `silver_stats curve` : 10 / 25 / 50 / 100 % | écart de macro-F1 et IC 95 % ; macro-F1 arabizi / français (moyenne ± écart-type) | eval_30 : +0.45 [+0.34 ; +0.55] contre l'alphabet seul, p < 0.001 ; régression logistique 0.834 ± 0.001 contre perceptron 0.800 ± 0.091, 0 fausse alerte sur 816 ; courbe 0.755 → 0.806 → 0.829 → 0.834 | régression logistique conservée ; gain significatif confirmé ; suite : textes courts proches du français |
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 | EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (P061–P600 : 540 textes synthétiques générés par un modèle de langue, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
@@ -496,6 +497,91 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - « Politique & institutions » regroupe exactement les 8 paires de nawaat.org (2 articles) : ce groupe est le même que celui du site, déjà jugé non interprétable.
 - **Analyse (sujet)** : aucun écart de sujet n'est établi. Les deux seules catégories interprétables sont chacune portées par un gros article (tunifact-938 : 14 paires sur 17 ; tunifact-933 : 11 sur 16), les deux articles où le principal ne fait aucune erreur : leur avantage apparent sur le reste reflète surtout ces deux articles, et l'effet de sujet ne peut pas être séparé de l'effet d'article (limite notée avant calcul). Les catégories viennent des titres seulement, sans second annotateur. Avec 56 paires, 10 articles et 6 catégories, le test ne permet pas de mesurer un biais par sujet.
 - **Décision / suite (sujet)** : rien n'est changé dans le modèle ; à reprendre dans la section Limitations (test trop petit et trop concentré pour les biais de source et de sujet) ; un test futur plus grand, échantillonné par article et par catégorie, serait nécessaire.
+
+### EXP-A2-014 — Silver : significativité, stabilité sur 3 graines, baseline neuronale, courbe d'apprentissage
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : compléter les exigences Silver. (1) L'écart entre le pipeline et les
+  baselines triviales d'EXP-A2-011 est-il significatif ? (2) Le modèle arabizi livré (EXP-A2-006)
+  est-il stable d'une graine à l'autre ? (3) Une baseline neuronale sur les mêmes n-grammes fait-elle
+  mieux ? (4) Plus de données d'apprentissage aideraient-elles ? Aucune règle, aucun seuil du pipeline
+  n'est réglé ici : mesure seulement.
+- **Données** :
+  - bootstrap : eval_30 (34 phrases, test gelé, consulté pour mesurer seulement ; SHA-256
+    `1d0bcfaa4b2a01fbd428fb18240174e309ac9877dc474a4dc1399e15e9dd34ce`, identique à EXP-A2-011) ;
+    références
+    adjugées du dev (EXP-A2-009), 100 textes en lettres arabes et 86 en lettres latines ;
+  - graines et courbe : données d'EXP-A2-006 (Tunizi, TSAC, UD French-GSD), 73 601 textes arabizi
+    préparés ; pour chaque graine, 10 % mis de côté pour la mesure (7 360) et le reste pour
+    l'apprentissage (66 241), plus environ 35 200 morceaux de phrases françaises (`train`). Choix du
+    seuil : UD French-GSD `dev` (1 476 phrases et leurs 5 premiers mots, 2 941 textes). Mesure : UD
+    French-GSD `test` (416 phrases et leurs 5 premiers mots, 816 textes), jamais utilisé pour choisir.
+- **Méthode / configuration** :
+  - `python -X utf8 -m normalization.silver_stats bootstrap` : bootstrap apparié, 1 000 tirages
+    avec remise des mêmes exemples pour le système et la baseline, graine 20261115 fixée avant le
+    calcul ; IC à 95 % par percentiles ; p unilatéral = part des tirages où le système ne fait pas
+    mieux ;
+  - `python -X utf8 -m normalization.silver_stats seeds` : préparation et étapes de
+    `train_langid` réutilisées telles quelles (nettoyage, 20 000 poids, règle du seuil : le plus
+    petit sans fausse alerte sur le français de `dev`) ; graines 13 (celle du modèle livré), 42 et
+    2026, fixées avant le calcul ; la graine change les 10 % mis de côté et le découpage du français.
+    Baseline neuronale : `MLPClassifier` de scikit-learn, une couche de 64 neurones, mêmes n-grammes
+    binaires (`min_df` = 5), arrêt anticipé sur 10 % de l'apprentissage (20 passages au plus), seuil
+    sur la probabilité choisi par la même règle ;
+  - `python -X utf8 -m normalization.silver_stats curve --seeds 13 42 2026` : régression logistique
+    sur 10, 25, 50 et 100 % de l'apprentissage ; même mise de côté pour toutes les parts.
+  - Aucun fichier de `normalization/resources/` n'est écrit : le modèle en service est inchangé.
+- **Code** : commit `0c589d2`, `normalization/silver_stats.py` ; `tests/test_silver_stats.py`
+  (8 tests) ; sorties gardées hors dépôt (`data/interim/langid/exp014_*.txt`, figure
+  `exp014_courbe.png`).
+- **Résultats** :
+  - bootstrap apparié (écart de macro-F1, IC 95 %) :
+
+    | Jeu | Système | Contre l'alphabet seul | Contre la majorité |
+    |---|---|---|---|
+    | eval_30 (N = 34) | 0.94 | 0.50 ; +0.45 [+0.34 ; +0.55] | 0.19 ; +0.75 [+0.62 ; +0.84] |
+    | dev, lettres arabes (N = 100) | 0.63 | 0.19 ; +0.44 [+0.36 ; +0.52] | 0.44 ; +0.19 [+0.07 ; +0.30] |
+    | dev, lettres latines (N = 86) | 0.83 | 0.16 ; +0.67 [+0.56 ; +0.78] | 0.45 ; +0.38 [+0.26 ; +0.48] |
+
+    p < 0.001 dans les six cas (aucun tirage sur 1 000 sans gain) ;
+  - 3 graines, mesure sur l'arabizi mis de côté et le français de `test` :
+
+    | Modèle | Macro-F1 | Rappel arabizi | Fausses alertes (sur 816) |
+    |---|---|---|---|
+    | régression logistique (livrée) | 0.834 ± 0.001 | 0.911 ± 0.001 | 0 |
+    | perceptron multicouche | 0.800 ± 0.091 | 0.878 ± 0.078 | 0 |
+
+    par graine (13 / 42 / 2026) : régression logistique 0.835 / 0.833 / 0.834 (seuil 5.0 à chaque
+    fois) ; perceptron 0.828 / 0.698 / 0.874 (seuil 0.999 à chaque fois) ;
+  - courbe d'apprentissage (régression logistique, 3 graines) : 10 % 0.755 ± 0.015 ; 25 % 0.806 ±
+    0.028 ; 50 % 0.829 ± 0.025 ; 100 % 0.834 ± 0.001 ; 0 fausse alerte à chaque point ;
+  - `ruff check` sans remarque ; 8 tests réussis.
+- **Analyse** :
+  - le gain du pipeline sur les baselines triviales est significatif partout, y compris sur le dev
+    en lettres arabes contre la majorité, où l'écart est le plus faible (+0.19, IC entièrement
+    au-dessus de 0) ;
+  - le modèle livré est stable (écart-type 0.001) ; le perceptron ne fait pas mieux en moyenne et
+    dépend fortement de la graine (0.70 à 0.87) : rien ne justifie de remplacer un modèle linéaire
+    lisible poids par poids ;
+  - le macro-F1 est tiré vers le bas par la classe française : les 9 % d'arabizi manqués sont classés
+    français (F1 français ≈ 0.71), alors que la précision de l'arabizi reste de 1.00 (F1 ≈ 0.95) ;
+  - la courbe plafonne après 50 % (+0.005) : ajouter de l'arabizi apporterait peu ;
+  - limites : le seuil du perceptron est au plafond de la grille (0.999) pour les trois graines ; la
+    sortie ne dit pas si ce seuil tient le critère sur le `dev` ou s'il s'agit du repli (0 fausse
+    alerte sur `test` dans les deux cas). La baseline « majorité » vaut 0.44 ici sur le dev en
+    lettres arabes contre 0.43 dans EXP-A2-011 (arrondi), consigné tel quel. eval_30 reste petit
+    (34 phrases) : ses IC sont larges.
+  - Vérification du 2026-11-22 (commit `cad5a23`, `python -X utf8 -m normalization.silver_stats
+    repli`, mêmes données, découpages et graines, seuls les seuils recalculés) : pour les graines 13
+    et 2026, aucun seuil de la grille ne donne zéro fausse alerte sur le français de dev
+    (`max_false_alarm` = 0.0), pour la régression logistique comme pour le perceptron ; le seuil
+    rapporté (5.0 et 0.999) est alors le plus haut de la grille, gardé par repli. Pour la graine 42,
+    il est choisi par le critère. Les chiffres ci-dessus restent ceux mesurés avec ces seuils ; une
+    grille plus large serait une nouvelle expérience.
+- **Décision / suite** : régression logistique conservée ; écarts significatifs retenus pour le
+  rapport (section 2.b) et la revue Silver. Suite : étudier les textes arabizi courts ou proches du
+  français ; modèle appris pour le tunisien en lettres arabes selon le protocole pré-inscrit
+  (`docs/lot-a2_modele_tn_protocole.md`), après la double annotation.
 
 ### EXP-B-011 — Mesure exploratoire sur silver_40 (détection, modalité, SPO, coréférence)
 - **Statut** : **exploratoire, n = 40, une annotation indépendante non garantie, SPO n = 10 dont
@@ -1386,7 +1472,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   devra être mesurée sur de nouvelles données (une presse de test neuve et un échantillon TSAC neuf
   annoté à deux, déjà prévu par EXP-A2-011). Suite : analyser la phrase en cause (mot responsable),
   puis préparer ce nouveau jeu de test.
-  Suite révisée (EXP-A2-014) : relecture humaine des 367 candidats selon des critères écrits
+  Suite révisée (expérience à venir, numérotée à son lancement) : relecture humaine des 367 candidats selon des critères écrits
   avant de commencer (garder les mots-outils et formes verbales dialectales ; rejeter noms
   propres, injures, mots d'arabe standard et fautes de frappe), sans regarder le dev ni les
   tests ; mesure sur un jeu neuf.
