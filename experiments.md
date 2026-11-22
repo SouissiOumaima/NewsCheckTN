@@ -27,6 +27,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-D-018 | 2026-11-22 | D | Gold : règle d'abstention R-abst (dev) | Falcon-H1-3B + JSON (comme EXP-D-015), NLI affiné du Lot C (EXP-C-011) au lieu de Bronze, 3 graines ; dev 20 affirmations + 10 phrases hors sujet ; R-abst appliquée après le LLM ; plan fixé avant mesure (commits fe97fdc, da06966, cf25004) | abstention justifiée ; bons verdicts avec preuve (dev, 30) | sans règle déjà **1.00** (12/12, 3 graines) ; R-abst appliquée **0 fois** ; exactitude 0.778 ± 0.051 (graine 42 : 0.733), couverture 0.533 ; avec preuve 10/18 (graine 42) | règle non adoptée (condition 1 impossible : plafond) ; test v2 sans R-abst |
 | EXP-D-017 | 2026-11-22 | D | Gold : LLM-juge local validé sur l'annotation humaine (dev) | Qwen2.5-3B-Instruct (Ollama), température 0, JSON ; 30 verdicts de Falcon (EXP-D-018, graine 42) en 2 moitiés de 15 ; prompts v1-v3 et candidat Qwen2.5-7B sur « mise au point », puis « mesure » une fois ; plan avant mesure (commits 3be7f11, 3d5df43, 0e83d36, 2a7e655) | kappa de Cohen juge / humain par étiquette ; validation si ≥ 0.60 | mesure (3B, v2) : fidélité **−0.03** [−0.47 ; 0.40], invention 0.00, pertinence 0.00 (mise au point : fidélité 0.31) | juge **non validé** pour les 3 étiquettes ; l'audit du test v2 reste humain |
+| EXP-D-016 | 2026-11-22 | D | Gold : audit humain des verdicts de Falcon sur le test v1 | 21 verdicts existants d'EXP-D-015 (graine 42), aucune nouvelle génération ; passages retrouvés par la recherche hybride refaite (citations vérifiées) ; annotation humaine selon le guide (commit 4e0ed92) | pertinence des citations, faits inventés, fidélité (descriptif) | justes 17/21 ; **fidèles 10/21** ; justes et fidèles **8/17** ; citations pertinentes 29/39 (0.74) ; faits inventés 6/21 ; 3 verdicts ne citent que des passages hors sujet | l'exactitude surestime la qualité : vérifier les citations ; audit à refaire sur le test v2 |
 | EXP-D-015 | 2026-11-19 | D | Silver : Falcon-H1-3B en local, format JSON imposé | comme EXP-D-014, seul changement : `LLM_RESPONSE_FORMAT=json` (Ollama, json_object) ; cache séparé ; plan fixé avant mesure (commit 325f28a) | exactitude / macro-F1 du verdict (test, 21) | **0.762 ± 0.048 / 0.600** (3 graines), valides 0.968, tunisien 5/5 ; contre gabarit +0.524, p = 0.0001 ; 2e passage d'un système Falcon-H1-3B sur le test | règle remplie : LLM de la démo et de l'intégration locales ; résultat officiel du Silver inchangé (Aya 8B) |
 | EXP-D-014 | 2026-11-19 | D | Silver : Falcon-H1-3B en local (Ollama, GTX 1650 4 Go) | GGUF Q4_K_M, 100 % GPU (2,1 Go), protocole d'EXP-D-010 (`--main-only`, 3 graines) ; plan fixé avant mesure | exactitude / macro-F1 / sorties valides (test, 21) | 0.651 ± 0.028 / 0.499, **valides 0.571** (9 réponses sans JSON sur 21) | règle non remplie (valides < 0.90) → EXP-D-015 |
 | EXP-D-013 | 2026-11-18 | D | Silver : Falcon-H1-7B contre Aya Expanse 8B | Colab T4, 4 bits, calcul float32 (float16 : inf / nan), protocole d'EXP-D-010 ; règle fixée avant mesure (commit 9433fca) | exactitude / macro-F1 (test, 21) | 0.698 ± 0.027 / **0.628 ± 0.083** ; abstention justifiée 1.00 (Aya 0.00) ; tunisien 0.6 | règle (exactitude > 0.730) non remplie : Aya 8B reste ; piste Gold (abstention) |
@@ -182,6 +183,46 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Décision** : juge **non validé** ; comme prévu au protocole (section 6), les trois étiquettes
   restent annotées à la main sur le test v2 (EXP-D-019). L'accord juge / humain y sera de nouveau
   rapporté, à titre descriptif.
+
+### EXP-D-016 — Gold : audit humain des verdicts de Falcon sur le test Tunifact v1
+- **Date** : 2026-11-22 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : mesurer, au-delà de l'exactitude, si les verdicts de Falcon sont fondés sur les
+  passages cités (protocole `docs/lot-d_protocole_gold.md`, sections 3 et 8 ; guide
+  `docs/lot-d_guide_annotation_verdict.md`). Audit **descriptif** : le test a déjà été vu deux fois
+  (EXP-D-010, EXP-D-015), rien n'est réglé à partir de ces chiffres.
+- **Données** : les 21 verdicts de Falcon-H1-3B + JSON (graine 42) d'EXP-D-015 sur Tunifact v1,
+  **sans nouvelle génération**. Les passages montrés au système, non enregistrés, ont été retrouvés en
+  refaisant la recherche hybride (déterministe, sans LLM) ; chaque passage cité fait partie des cinq
+  retrouvés (contrôle du script `rag_llm/gold_audit_test.py`, commit 4e0ed92).
+- **Annotation** : Hadil, avec l'outil d'annotation et le guide, sans le verdict de référence.
+- **Résultats** (21 verdicts ; 18 émis, 3 abstentions ; 39 passages cités) :
+
+  | Langue | n | Justes | Fidèles | Justes et fidèles | Citations pertinentes | Faits inventés | Tout cité hors sujet |
+  |--------|---|--------|---------|-------------------|-----------------------|----------------|----------------------|
+  | fr | 9 | 7 | 3 | 2 | 9 / 11 | 2 | 0 |
+  | ar | 7 | 5 | 4 | 3 | 14 / 19 | 2 | 1 |
+  | tn | 5 | 5 | 3 | 3 | 6 / 9 | 2 | 2 |
+  | **total** | **21** | **17** | **10** | **8** | **29 / 39 (0.74)** | **6** | **3** |
+
+- **Lecture** :
+  1. **Falcon a souvent raison pour de mauvaises raisons** : sur 17 verdicts justes, 9 ne sont pas
+     fidèles (explication contraire aux passages, chiffre déformé, passage hors sujet). Exemples :
+     tf-c11 (arabizi) « faux » juste, mais l'explication parle du « port de Tunis » en citant un
+     commentaire de forum sans rapport ; tf-c19 « faux » juste en citant des commentaires sur la
+     révolution ; tf-c01 et tf-c06 attribuent 3 000 ou 3 300 médecins aux deux passages alors qu'ils
+     diffèrent. L'exactitude de 0.81 surestime donc la qualité réelle des verdicts.
+  2. **La limite vue en démonstration se reproduit sur des données réelles** : tf-c14 (hausse de
+     l'essence, aucune preuve dans le corpus) reçoit « faux » en citant un message de forum sur des
+     cadeaux d'anniversaire. Sur le dev fictif (EXP-D-018), Falcon s'abstenait toujours dans ce cas :
+     le dev, trop simple, ne représentait pas ce risque.
+  3. Les abstentions sans citation (tf-c13, c15) décrivent des passages non cités : jugées
+     infidèles selon le guide.
+  4. Les cas en tunisien sont les plus touchés par les citations hors sujet (2 sur 5).
+  5. Limites : 21 verdicts, une seule annotatrice sur le test, test déjà vu ; chiffres descriptifs.
+- **Décision** : la pertinence des citations et la fidélité deviennent des mesures obligatoires du
+  test v2 (EXP-D-019), annotées à la main (juge non validé, EXP-D-017). Piste pour la suite, à
+  évaluer sur le dev puis le test v2 : refuser un verdict dont aucun passage cité n'est pertinent
+  (contrôle de pertinence avant le verdict).
 
 ### EXP-D-015 — Silver : Falcon-H1-3B en local avec format JSON imposé
 - **Date** : 2026-11-19 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
