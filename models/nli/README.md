@@ -17,6 +17,12 @@ Le Lot D s'en sert pour rendre le verdict.
 | `run_final.ps1` | relance finale avec les poids (configurations choisies) |
 | `measure_test.py` | mesure unique du test Silver (refuse une seconde exécution) |
 | `silver_errors.py` | CSV privé des erreurs Silver à relire |
+| `gold_bias.py` | Gold (EXP-C-014) : biais par langue, source et sujet, sur les prédictions Silver |
+| `gold_abstention.py` | Gold (EXP-C-015) : choix du seuil d'abstention sur la val seulement |
+| `gold_templates.py` | Gold (EXP-C-012 / 013) : gabarits privés à remplir, refuse d'écraser |
+| `gold_error_view.py` | Gold : vue privée des 22 erreurs Silver à valider, report des validations |
+| `gold_polarity.py` | Gold (EXP-C-016) : inversions de polarité, sur les prédictions Silver |
+| `gold_measure.py` | Gold (EXP-C-012 / 013) : mesure unique préparée, non lancée (refuse sans gel) |
 
 ## Palier Bronze (revue) : position par lexique
 
@@ -50,14 +56,63 @@ NLI_BACKEND=fine-tuned uvicorn api.main:app     # ou python pipeline.py, évalua
 Le checkpoint (1,1 Go) n'est pas versionné : par défaut
 `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/` (`CHECKPOINT_DIR` pour un autre
 dossier, `NLI_FINETUNED_MODEL` pour un autre chemin). Pour le recréer :
-`powershell -File models
-liun_final.ps1` (ou `python -m models.nli.train --version v3
+`powershell -File models/nli/run_final.ps1` (ou `python -m models.nli.train --version v3
 --seed 42 --lr 1e-5 --epochs 6 --keep-epoch 1`). S'il est absent, la réponse est « neutre »
 avec une confiance 0, comme pour les autres moteurs.
 
 Sans torch / transformers, ou si le modèle ne se charge pas, la réponse est « neutre » avec une
 confiance 0 : l'API ne tombe jamais. Les tests forcent `NLI_BACKEND=stub` (`tests/conftest.py`) et
 ne téléchargent rien.
+
+## État du Gold
+
+Aucune de ces analyses ne relance de mesure sur le test : celles qui sont « mesurées » relisent
+les prédictions de la mesure unique d'EXP-C-011, ou n'utilisent que la val.
+
+| Expérience | Objet | État | Résultat ou blocage |
+|---|---|---|---|
+| EXP-C-014 | biais par langue, source et sujet | **mesuré** (prédictions Silver relues) | aucun écart établi ; sujet confondu avec l'article (catégories du Lot A1 tirées des titres) |
+| EXP-C-015 | seuil d'abstention | **mesuré** (val seulement) | aucun seuil retenu (τ = 0) |
+| EXP-C-016 | inversions de polarité (supports ↔ refutes) | **mesuré** (prédictions Silver relues) | 1 inversion sur 10 erreurs (affiné), 1 sur 11 (zero-shot), 16 sur 30 (Bronze) ; descriptif seulement |
+| EXP-C-012 | transfert vers le tunisien | **protocole seulement**, non mesuré | réécritures générées par IA ; décision de l'équipe du 2026-11-22 (Achref) : « non à ce stade », en attente de la vérification des droits Tunifact (PR #37) et des conditions du service externe ; réécritures hors de toute évaluation ; fichier non figé |
+| EXP-C-013 | robustesse aux paraphrases | **protocole seulement**, non mesuré | paraphrases générées par IA ; même décision du 2026-11-22 : « non à ce stade » ; paraphrases hors de toute évaluation ; fichier non figé |
+
+La mesure unique d'EXP-C-012 et d'EXP-C-013 est préparée, mais pas lancée ; elle reste une suite
+possible seulement si l'équipe donne son accord :
+`python -X utf8 -m models.nli.gold_measure --exp tn|paraphrases --dry-run`. Le script refuse
+tant que le fichier n'est pas figé (SHA-256 reporté dans le code) et que le vérificateur est vide
+(sauf `--exploratoire`), et il refuse une seconde exécution.
+
+## Limites (chiffrées)
+
+Chiffres tirés d'`experiments.md` (EXP-C-011, EXP-C-014, EXP-C-015, EXP-C-016) :
+
+- **Petit test** : 56 paires (25 fr, 31 ar, **0 tunisien**) ; IC 95 % de la macro-F1 du modèle
+  affiné [0.689 ; 0.905], soit une largeur d'environ 0.22.
+- **Petite val** : 33 paires (une paire ≈ 3 points) ; 3 labels douteux (9 % de la val). État
+  réel depuis la v5 du corpus : NLI-P035 corrigé (`neutral` → `refutes`), NLI-P037 conservé,
+  P297 pas encore appliqué par le Lot A1. La val v3 utilisée pour les choix n'est pas modifiée.
+- **Peu d'entraînement** : 174 paires ; l'affinage n'apporte pas de gain établi sur le zero-shot
+  (+0.011, IC 95 % [−0.052 ; +0.071], p = 0.40 ; 3 paires différentes sur 56).
+- **Variance non mesurée** : les 3 graines donnent les mêmes prédictions (val et test).
+- **Ablation inachevée** : sans pré-entraînement NLI, le modèle apprenait encore à 6 époques
+  (0.427 ± 0.044).
+- **Test concentré** : 10 articles, dont 2 font 25 des 56 paires (45 %) ; 2 sites, dont un à
+  8 paires ; aucun écart de langue ou de source n'est établi, faute d'effectifs (EXP-C-014).
+- **Sujet** : catégories proposées par le Lot A1 à partir des titres (pas de second annotateur) ;
+  dans le test, 6 catégories, chacune de 1 ou 2 articles : un écart de sujet ne peut pas être
+  séparé d'un effet d'article (EXP-C-014).
+- **Abstention** : aucun seuil de confiance retenu (τ = 0, choisi sur 33 paires de val, EXP-C-015).
+- **Analyse d'erreurs** : les 22 erreurs du modèle affiné et du zero-shot (12 test, 10 val) ont
+  été **validées par Membre 4 le 2026-11-22**, une par une, après explication de chaque cas par
+  un assistant IA (5 catégories changées sur 22) ; un seul annotateur, sans second avis. Les
+  28 erreurs de l'ablation (28 des 50 analysées) restent **proposées par l'assistant (Claude),
+  non validées**.
+- **Tunisien et paraphrases** (EXP-C-012, EXP-C-013) : jeux générés par IA, non mesurés ; l'équipe
+  a répondu « non à ce stade » le 2026-11-22 (droits Tunifact, PR #37, et conditions du service
+  externe à vérifier) : le transfert vers le tunisien et la robustesse aux paraphrases restent
+  donc sans mesure.
+- **Corpus v3**, pas v4 (règle du 2026-11-10).
 
 ## Lancer
 
@@ -104,5 +159,6 @@ compter environ 8 Go de mémoire ; un GPU (Colab) est beaucoup plus rapide.
   servent jamais à l'entraînement : le NLI et le verdict du Lot D sont évalués sur les mêmes.
 - **Paires en attente** (« Brouillon non valide » dans la remarque, sans validation confirmée
   ensuite) : mises de côté jusqu'à la confirmation du Lot A1.
-- Les chiffres **officiels** se font une seule fois, sur la version validée du corpus (v4) ;
-  la v3 sert à mettre au point le code.
+- Les chiffres **officiels** du Silver sont ceux de la **v3**, mesurés une seule fois (règle du
+  2026-11-10 : la v4 n'était pas là le 12/11 à midi) ; la v5 laisse le test v3 inchangé
+  (EXP-C-011).

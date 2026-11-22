@@ -25,10 +25,14 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
+| EXP-C-016 | 2026-11-22 | C | NLI (Model 2) palier Gold : inversions de polarité (supports ↔ refutes) | prédictions Silver d'EXP-C-011 relues, sans inférence ; protocole écrit avant calcul ; règle : < 20 erreurs = descriptif | erreurs par type (test, n = 56) | inversions : principal 1 / 10 erreurs, zero-shot 1 / 11 (même paire NLI-P010), Bronze 16 / 30 ; erreurs des modèles surtout vers « neutral » (7 / 10, 9 / 11) | aucune conclusion sur un taux (trop peu d'erreurs) ; à rapprocher, qualitativement, d'EXP-D-011 (autre unité) |
 | EXP-D-010 | 2026-11-15 | D | Silver officiel : verdict par LLM ouvert ≤ 8 Md contraint aux preuves | CohereLabs/aya-expanse-8b (4 bits, Colab T4), même prompt v1 et mêmes contrôles qu'EXP-D-009, température 0.3, 3 graines locales (13, 42, 2026) ; recherche hybride (EXP-D-008) ; 4 ablations ; bootstrap apparié 10 000 tirages ; aucune donnée envoyée à une API | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.730 ± 0.028 / 0.410 ± 0.016 (graine 42 : 0.714 / 0.401) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.429, IC95 [0.143 ; 0.714], p = 0.004) et majorité 0.524 / 0.172 (exactitude +0.19, p = 0.055 ; macro-F1 +0.23, p = 0.004) ; couverture 1.00, abstention justifiée 0.00 ; tunisien 0.8 ; 0 citation invalide | résultat officiel du Silver ; exact mais jamais d'abstention (3 affirmations sans preuve jugées « faux ») ; suite : contrôle de pertinence avant le LLM, abstention évaluée (Gold) |
 | EXP-D-009 | 2026-11-15 | D | Comparaison (non officiel) : verdict par LLM contraint, API Gemini | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | comparaison seulement (modèle > 8 Md, données envoyées à une API) ; officiel : EXP-D-010 ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
 | EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
-
+| EXP-C-015 | 2026-11-18 | C | NLI (Model 2) palier Gold : seuil d'abstention (« neutral » sous τ) | règle fixée avant calcul ; affiné choisi sur la val (33), zero-shot sur train + val (207) ; critère macro-F1, marge 0.03 / 0.01, plus petit τ ; test non lu | macro-F1 sur les données de choix | affiné : τ = 0 (meilleur 0.738 à τ = 0.80 contre 0.722 sans seuil, dans la marge) ; zero-shot : τ = 0 (0.722 à τ = 0.65 contre 0.714) | aucun seuil retenu ; rien à transmettre au Lot D ni à mesurer |
+| EXP-C-014 | 2026-11-18 | C | NLI (Model 2) palier Gold : biais par langue, source et sujet | prédictions Silver d'EXP-C-011 relues, sans nouvelle inférence ; groupes fixés avant calcul ; bootstrap 1000 tirages, graine 20261026 ; règle n ≥ 10 | accuracy et macro-F1 par groupe (test, n = 56) | principal fr 0.760 / ar 0.871 (acc.), écart −0.111 [−0.311 ; +0.090] ; tunifact.org 0.833 (48) / nawaat.org 0.750 (8) ; 2 articles = 25 paires sur 56, 0 erreur du principal sur eux ; sujet (22/11, catégories du Lot A1 tirées des titres) : 2 catégories ≥ 10 paires, Environnement & sciences − reste +0.087 [−0.115 ; +0.275], Société & migrations − reste +0.075 [−0.125 ; +0.263] | aucun écart établi (IC larges) ; test trop concentré pour un biais de source ou de sujet (sujet confondu avec l'article) |
+| EXP-C-013 | 2026-11-18 | C | NLI (Model 2) palier Gold : robustesse aux paraphrases | protocole seulement : paraphrases humaines des 56 affirmations du test, même preuve et même label, double vérification, gel SHA-256 avant une mesure unique | taux de changement de prédiction ; macro-F1 | non mesuré | paraphrases générées par IA (Claude) le 18/11 ; protocole seulement, non à ce stade (22/11), hors évaluation |
+| EXP-C-012 | 2026-11-18 | C | NLI (Model 2) palier Gold : transfert vers le tunisien (question de recherche) | protocole seulement : 56 affirmations du test réécrites en tunisien (lettres arabes obligatoire, arabizi en bonus) par des humains, même preuve et même label, double vérification, gel SHA-256 avant une mesure unique | macro-F1 ; écart apparié tunisien − original | non mesuré | réécritures générées par IA (Claude) le 18/11 ; protocole seulement, non à ce stade (22/11), hors évaluation |
 | EXP-C-011 | 2026-11-10 | C | NLI (Model 2) palier Silver : fine-tuning mDeBERTa-v3 xnli | protocole fixé avant mesure : hyperparamètres choisis sur val seulement, 3 graines, ablation mDeBERTa-v3-base sans XNLI ; règle v3 / v4 fixée le 10/11 | macro-F1 (test, n = 56) | principal 0.809 ± 0.000 (3 graines) vs zero-shot float32 0.798 (+0.011, IC95 [−0.052 ; +0.071], p = 0.40), Bronze 0.471, majorité 0.194 ; fr 0.745 / ar 0.841 ; ablation sans XNLI 0.427 ± 0.044 | composant Silver : modèle affiné (graine 42), déclaré équivalent au zero-shot (gardé comme backend) ; chiffres v3 (pas de v4 au 12/11) |
 | EXP-C-009 | 2026-10-26 | C | NLI (Model 2) palier Bronze : position par lexique | règles (recouvrement, nombres, marqueurs de démenti, négation) ; seuils 0.35 / 0.4 choisis sur train + val ; corpus NLI A1 v3 | macro-F1 (test, n = 56) | 0.471 [IC95 0.33–0.59] vs 0.194 classe majoritaire ; fr 0.50 / ar 0.40 ; ablation TF-IDF 0.405, TF-IDF + lexique 0.534 | composant Bronze de la démo (NLI_BACKEND=bronze par défaut) |
 | EXP-C-008 | 2026-10-26 | C | NLI (Model 2) : baseline sans entraînement | mDeBERTa-v3-base xnli (zero-shot), corpus NLI A1 v3, test gelé 56 paires | macro-F1 (test) | 0.798 [IC95 0.67–0.89] ; acc 0.804 ; fr 0.78 / ar 0.78 ; articles Lot D 0.77 | référence hors démo (backend `zero-shot` optionnel) ; chiffres officiels sur v4 |
@@ -68,10 +72,431 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
 | EXP-A2-014 | 2026-11-15 | A2 | Silver : significativité, stabilité sur 3 graines, baseline neuronale, courbe d'apprentissage | `silver_stats bootstrap` (1 000 tirages, graine 20261115) ; `silver_stats seeds` : régression logistique livrée contre perceptron multicouche (64 neurones, mêmes n-grammes), graines 13 / 42 / 2026 ; `silver_stats curve` : 10 / 25 / 50 / 100 % | écart de macro-F1 et IC 95 % ; macro-F1 arabizi / français (moyenne ± écart-type) | eval_30 : +0.45 [+0.34 ; +0.55] contre l'alphabet seul, p < 0.001 ; régression logistique 0.834 ± 0.001 contre perceptron 0.800 ± 0.091, 0 fausse alerte sur 816 ; courbe 0.755 → 0.806 → 0.829 → 0.834 | régression logistique conservée ; gain significatif confirmé ; suite : textes courts proches du français |
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
-| EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (540 textes, P061–P600, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
+| EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (P061–P600 : 540 textes synthétiques générés par un modèle de langue, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
+| EXP-B-013 | 2026-11-20 (XLM-R : 2026-11-21) | B | Question de recherche 1 : extracteur gelé contre le TF-IDF et XLM-R + LoRA du Lot C (112 textes synthétiques du test du Lot C dans P061–P600) | extracteur gelé (mesure sur `a48e447`), modes règles et parseurs, unité texte ; TF-IDF d'EXP-C-010 reproduit (0.6435) ; XLM-R : 3 graines (42, 123, 2026), prédictions exportées par le Lot C ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 binaire de détection | Lot B 0.803 vs TF-IDF 0.825 vs XLM-R 0.851 ± 0.015 vs baseline 0.345 ; **tn (60)** : Lot B 0.707, TF-IDF 0.817, XLM-R 0.816 ± 0.030, Lot B − XLM-R −0.109 ± 0.030, non établi pour aucune graine ; tn en lettres arabes (18) : −0.365 ± 0.032, établi pour les 3 graines | aucune différence globale établie ; Lot B nettement derrière en tunisien en lettres arabes ; un seul annotateur |
+| EXP-B-014 | 2026-11-20 | B | Robustesse (INV) du système gelé : 7 perturbations à sens conservé sur P061–P600 (540 textes synthétiques) | une perturbation par texte et par type, graine 20261015, empreinte `c8b2a266…` ; modes règles et parseurs ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | taux de changement de `is_claim` / `modality` ; Δ macro-F1 de détection | ponctuation −0.137 [−0.178 ; −0.097] (12 % de changements), presque tout sur les questions sans mot interrogatif du lexique (39 sur 40 contre 0 sur 10) ; fautes −0.019 ; casse et diacritiques 0 ; langue A2 changée par l'arabizi 11.6 % | reconnaissance des questions dépendante du « ? » ; lexique interrogatif de 6 entrées ; non corrigé (système gelé) |
 
 ## Entrées
+
+### EXP-C-016 — NLI (Model 2), palier Gold : inversions de polarité (supports ↔ refutes) sur les prédictions Silver déjà sauvegardées
+- **Date** : 2026-11-22 (protocole écrit avant tout calcul)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : le Lot D (PR #32, EXP-D-011, branche `lot-d-silver-nli`) observe que 5 des 10 erreurs restantes de son verdict par gabarit avec le NLI affiné sont des inversions « vrai / faux ». On vérifie si le NLI seul, sur le test NLI du Lot C, fait surtout des inversions de polarité (« supports » au lieu de « refutes » ou l'inverse) ou surtout des erreurs vers et depuis « neutral ». Aucune hypothèse de sens fixée à l'avance.
+- **Données** : test v3 gelé (56 paires, mêmes `pair_id` qu'EXP-C-011). **Aucune inférence** : on relit seulement les prédictions sauvegardées par la mesure unique du 2026-11-14 (`data/interim/lot_c/nli/silver_test/`, privé). Rien n'est réglé d'après ces chiffres.
+- **Modèles décrits** : principal (graine 42 ; les graines 123 et 2026 ont les mêmes prédictions), zero-shot float32, règles Bronze (prédictions reconstituées d'EXP-C-009, comme dans EXP-C-011).
+- **Définitions et mesures (fixées avant calcul)** :
+  - matrice de confusion 3 × 3 (ligne = label de référence, colonne = prédiction) pour chaque modèle ;
+  - inversion de polarité : erreur dont la référence et la prédiction sont « supports » et « refutes », dans un sens ou dans l'autre ; les autres erreurs vont vers « neutral » (le modèle s'abstient à tort) ou viennent de « neutral » (il tranche à tort) ;
+  - pour chaque modèle : nombre d'erreurs, nombre d'inversions (supports → refutes, refutes → supports), part des inversions parmi les erreurs, avec un intervalle de Wilson à 95 % donné à titre indicatif ;
+  - principal contre zero-shot : paires où ils diffèrent, et type d'erreur de chacun sur ces paires.
+- **Règle de lecture (fixée avant calcul)** : avec moins de 20 erreurs pour un modèle, ses chiffres sont **descriptifs seulement**, sans conclusion sur un taux d'inversion. Comparaison avec le Lot D **qualitative seulement** : unités différentes (paires NLI contre verdicts d'affirmations), entrées différentes (preuves gold contre passages retrouvés puis gabarit de verdict).
+- **Code** : `python -X utf8 -m models.nli.gold_polarity` ; écrit `evaluation/results/lot-c_nli-gold_polarite_test_<date>.json` (comptes et identifiants de paires seulement, aucun texte, non versionné).
+- **Résultats (2026-11-22)** : `evaluation/results/lot-c_nli-gold_polarite_test_20261122.json` ; contrôle : les diagonales redonnent les accuracies d'EXP-C-011 (principal 46 / 56 = 0.821, zero-shot 45 / 56 = 0.804, Bronze 26 / 56 = 0.464). Matrices de confusion (ligne = référence ; colonnes supports / refutes / neutral) :
+
+  | Référence | principal | zero-shot float32 | règles Bronze |
+  |---|---|---|---|
+  | supports (23) | 21 / 0 / 2 | 19 / 0 / 4 | 10 / 11 / 2 |
+  | refutes (19) | 1 / 13 / 5 | 1 / 13 / 5 | 5 / 7 / 7 |
+  | neutral (14) | 1 / 1 / 12 | 0 / 1 / 13 | 2 / 3 / 9 |
+
+  | Modèle | erreurs | inversions (s → r / r → s) | vers neutral | depuis neutral | part des inversions [Wilson 95 %, indicatif] |
+  |---|---|---|---|---|---|
+  | principal | 10 | **1** (0 / 1) | 7 | 2 | 0.10 [0.02 ; 0.40] (descriptif, < 20 erreurs) |
+  | zero-shot float32 | 11 | **1** (0 / 1) | 9 | 1 | 0.09 [0.02 ; 0.38] (descriptif, < 20 erreurs) |
+  | règles Bronze | 30 | **16** (11 / 5) | 9 | 5 | 0.53 [0.36 ; 0.70] |
+
+  - la seule inversion du principal et du zero-shot est la même paire, NLI-P010 (référence refutes, prédiction supports), classée « recouvrement trompeur (même sujet, autre fait) » dans l'analyse d'erreurs d'EXP-C-011 (catégorie proposée par Claude, validée par Membre 4 le 2026-11-22) ;
+  - principal et zero-shot ne diffèrent que sur 3 paires : NLI-P004 (principal faux, « depuis neutral »), P188 et P207 (zero-shot faux, « vers neutral ») ; aucune ne change le nombre d'inversions.
+- **Analyse** : sur le test NLI du Lot C, avec des preuves gold, les erreurs des deux modèles mDeBERTa vont surtout **vers « neutral »** (7 sur 10 pour le principal, 9 sur 11 pour le zero-shot) ; une seule inversion de polarité chacun. Les inversions sont en revanche la première erreur des règles Bronze (16 sur 30). Avec 10 et 11 erreurs, ce ne sont que des cas, pas des taux (règle fixée avant calcul) : on ne conclut pas sur un taux d'inversion du NLI affiné. Ce résultat ne contredit pas l'observation du Lot D, qui porte sur une autre unité (verdict d'une affirmation, vrai / faux) et d'autres entrées (passages retrouvés automatiquement, puis gabarit de verdict qui agrège plusieurs positions) ; une hypothèse à vérifier côté Lot D est que ses inversions viennent des passages retrouvés ou de l'agrégation, plutôt que du NLI seul sur une preuve correcte.
+- **Décision / suite** : aucun changement du modèle ; résultat transmis au Lot D pour sa discussion d'EXP-D-011 ; pour l'étudier, il faudrait les positions du NLI sur les passages du Lot D (paires affirmation / passage retrouvé), qui ne sont pas dans les données du Lot C.
+
+### EXP-B-014 — Robustesse (INV) du système gelé : perturbations à sens conservé
+- **Date** : 2026-11-20
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : mesurer la stabilité de l'extracteur gelé face à des perturbations
+  de surface qui ne changent pas le sens (critère Gold « INV »). **Mesure seulement** : aucune règle
+  n'est modifiée à partir de ces résultats.
+- **Données** : test gelé P061–P600 d'EXP-B-010 (540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C ; hors dépôt), SHA-256
+  `5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b`.
+- **Méthode / configuration** :
+  - Une perturbation par texte et par type ; graine 20261015, un générateur par type. Un texte
+    auquel un type ne s'applique pas est exclu pour ce type :
+    - P1 casse (lettres latines en minuscules) : 155 textes ;
+    - P2 ponctuation retirée (sauf apostrophe et tiret entre deux lettres, séparateur décimal
+      entre deux chiffres) : 341 ;
+    - P3 faute de frappe (une lettre supprimée ou doublée dans un mot de 4 lettres ou plus, sans
+      chiffre) : 534 ;
+    - P4 élongation (lettre latine triplée ; tatweel dans un mot arabe) : 532 ;
+    - P5 diacritiques arabes retirés : 9 (les textes sans diacritiques sont exclus) ;
+    - P6 variantes arabizi (7→h, 9→q, 3→a, 5→kh, ou kh→5, q→9 ; tn-arabizi et tn-mixte) : 146 ;
+    - P7 « !! » ou émoji en fin de texte : 540.
+  - Aucun nombre n'est modifié par les perturbations. Empreinte SHA-256 de l'ensemble des
+    perturbations : `c8b2a26662634bd4972c23a9ea9b95f0b094963fc6b51f917bff6b4d40730c34`.
+  - Mesures, en mode règles et en mode parseurs, à l'unité texte (même décision que
+    `evaluate_double.predict_text`) : taux de changement de `is_claim` et de `modality` (IC
+    bootstrap, graine 20261015, 1000 tirages) ; macro-F1 de détection et exactitude de modalité
+    avant / après, différence appariée (graine 42, 2000 tirages) ; changement de la langue
+    détectée par le Lot A2 ; par groupe de langue déclaré, groupes de moins de 15 textes signalés.
+  - Décomposition de P2 sur les 50 textes qui contenaient un point d'interrogation : (a) un mot
+    interrogatif des lexiques `[questions]` reste présent après perturbation, (b) aucun.
+- **Code** : mesure sur `a48e447` (`git diff 1826244 a48e447 -- linguistic_analysis` ne touche que
+  `MODEL_CARD.md`) ; script `notebooks/lot_b_linguistic/mesures/inv_robustesse.py`.
+- **Commande reproductible** (depuis la racine du dépôt ; test et sortie hors dépôt) :
+
+  ```bash
+  python -X utf8 notebooks/lot_b_linguistic/mesures/inv_robustesse.py \
+      --gold <test_P061_P600.tsv> --out-dir <dossier hors dépôt> \
+      --expect-gold-sha256 5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b \
+      --expect-perturbations-sha256 c8b2a26662634bd4972c23a9ea9b95f0b094963fc6b51f917bff6b4d40730c34
+  ```
+
+  Sorties : `inv_resultats.json`, `inv_resultats.md`, `p2_decompose.csv` (identifiants, labels et
+  chiffres ; aucun texte). Contrôle : les textes d'origine redonnent EXP-B-010 (règles 0.771 /
+  0.733, parseurs 0.775 / 0.731).
+- **Résultats** (global ; mode règles, puis parseurs quand ils diffèrent) :
+
+  | Type | n | Changement `is_claim` | Changement `modality` | Δ macro-F1 détection | Δ exactitude modalité |
+  |---|---|---|---|---|---|
+  | P1 casse | 155 | 0.0 % | 0.0 % | +0.000 | +0.000 |
+  | P2 ponctuation | 341 | 12.0 % [8.8 ; 15.2] | 12.0 % [8.8 ; 15.2] | **−0.137 [−0.178 ; −0.097]** | **−0.114 [−0.150 ; −0.082]** |
+  | P3 faute | 534 | 1.9 % [0.7 ; 3.0] ; parseurs 2.2 % | 4.7 % [3.0 ; 6.4] ; parseurs 5.4 % | **−0.019 [−0.034 ; −0.006]** ; parseurs −0.023 | **−0.041 [−0.060 ; −0.024]** |
+  | P4 élongation | 532 | 0.9 % [0.2 ; 1.7] | 2.8 % [1.5 ; 4.1] | −0.007 [−0.018 ; +0.001] | **−0.024 [−0.039 ; −0.011]** |
+  | P5 diacritiques ⚠ | 9 | 0.0 % | 0.0 % | +0.000 | +0.000 |
+  | P6 arabizi | 146 | 1.4 % [0.0 ; 3.4] | 2.7 % [0.7 ; 5.5] ; parseurs 6.2 % [2.7 ; 10.3] | +0.000 [−0.023 ; +0.023] | −0.014 [−0.041 ; +0.014] ; parseurs **−0.048 [−0.089 ; −0.014]** |
+  | P7 fin | 540 | 1.7 % [0.7 ; 2.8] | 0.0 % | **−0.016 [−0.030 ; −0.004]** | +0.000 |
+
+  En gras : IC à 95 % qui exclut 0. ⚠ : moins de 15 textes, non interprétable.
+  - **Par langue** (mode règles) : la baisse de P2 est établie en fr (−0.103), ar (−0.074) et
+    tn-arabizi (−0.315 [−0.475 ; −0.172]) ; tn-arabe (14 textes, −0.501) n'est pas interprétable.
+    P7 : baisse établie en tn-arabizi seulement (−0.050 [−0.092 ; −0.016]). P3 : baisse établie en
+    fr en mode parseurs seulement (−0.045 [−0.097 ; −0.003]).
+  - **Langue du Lot A2** : inchangée pour P1, P2, P5 et P7 ; changée pour 9 textes sur 534 (P3),
+    4 sur 532 (P4) et 17 sur 146 (P6, 11.6 % [6.8 ; 17.1]). Ces changements modifient la décision
+    dans 3 couples (texte, type) en mode règles et 8 en mode parseurs.
+  - **Causes** (110 couples instables) : marqueur non reconnu après perturbation 75 (règles) et
+    77 (parseurs) ; segmentation ou nombre de phrases candidates 10 ; langue du Lot A2 3 et 8.
+  - **P2 décomposé** (50 textes avec point d'interrogation, tous gold `interrogatif`) :
+    - (a) mot interrogatif du lexique encore présent, toujours en tête : 10 textes, **0
+      changement sur 10** dans les deux modes (moins de 15 textes : non interprétable) ;
+    - (b) aucun mot interrogatif du lexique : 40 textes, `is_claim` changé 39 fois sur 40 (97.5 %
+      [92.5 ; 100]), modalité 40 sur 40, dans les deux modes ;
+    - sur les 291 autres textes de P2, 2 changements (0.7 %).
+- **Analyse** :
+  - La casse et les diacritiques ne changent rien. Fautes de frappe, élongations et fin de texte
+    donnent des baisses faibles (au plus −0.05), parfois établies.
+  - **La reconnaissance des questions repose presque entièrement sur le point d'interrogation ;
+    le lexique interrogatif ne compte que 6 entrées (fr 2, ar 1, tn 3) ; limite de couverture,
+    non corrigée (système gelé).**
+  - Observation : dans P061–P600, les questions sont regroupées en blocs d'identifiants
+    consécutifs (38 des 50 questions dans 4 blocs : P236–P245, P345–P354, P450–P459, P537–P544).
+    Ces blocs viennent de la génération par catégorie (textes synthétiques, voir EXP-B-010).
+  - **Limites** : un seul annotateur ; une seule perturbation par texte et par type, une seule
+    graine ; « sens conservé » non vérifié par une personne (retirer « ? » d'une question sans mot
+    interrogatif ne le conserve pas toujours) ; causes classées automatiquement à partir des
+    catégories d'indices.
+- **Décision / suite** : résultat de robustesse du Lot B pour le palier Gold, reporté dans
+  `linguistic_analysis/MODEL_CARD.md` (§6.4). Aucune correction : une extension du lexique
+  interrogatif serait à mesurer sur un autre jeu.
+
+### EXP-B-013 — Question de recherche 1 : extracteur gelé du Lot B contre le TF-IDF du Lot C
+- **Date** : 2026-11-20
+- **Auteur / Lot** : Membre 3 / Lot B
+- **Objectif / hypothèse** : comparer, sur des textes vierges pour les deux lots, la détection
+  d'affirmations de l'extracteur à règles (Lot B), du Model 1 TF-IDF (Lot C, EXP-C-010) et de
+  XLM-R + LoRA (Lot C, EXP-C-003 ; ajouté le 2026-11-21).
+  Numéro EXP-B-012 réservé à la première mesure sur eval_100.
+- **Données** :
+  - Gold : test P061–P600 d'EXP-B-010 (540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C), SHA-256
+    `5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b`.
+  - Textes : les **112** identifiants du test gelé du Lot C
+    (`data/splits/claim_detection_multiclass_600_seed42.json`, 120 identifiants) présents dans
+    P061–P600. AFFIRMATION 59, AUTRE 37, OPINION 16 ; 8 textes marqués « doute ».
+  - Source commune : `claim_detection_600.xlsx` (SHA-256
+    `e59096862bb9e012e15f3ee55c4947dae53b0dbb516ba85edad76e098f307b0b`, hors dépôt). Le fichier
+    du Lot C est régénéré par `data/prepare_claim_detection_dataset.py` (600 lignes). Contrôle :
+    les 540 textes communs avec le gold ont la même empreinte (espaces normalisés), le même label
+    et la même modalité ; 112 sur 112 pour les textes mesurés.
+  - XLM-R + LoRA (ajout du 2026-11-21) : export privé du Lot C (hors dépôt), nouvelle inférence
+    des adaptateurs sauvegardés des graines 42, 123 et 2026, sans réentraînement ni réglage ;
+    texte brut, troncature à 256 jetons, argmax sur AFFIRMATION / OPINION / AUTRE. Un fichier
+    `id,label_predit` par graine, restreint aux 112 identifiants (aucun texte). Contrôles avant
+    la mesure :
+    - `claim_detection_600.jsonl` fourni identique octet pour octet au fichier régénéré ci-dessus
+      (SHA-256 `fbf35df619ed1b7af7aef7d85e3b0a7772414a3bba5df57aa1967d4e0aef37cd`, 600 identifiants
+      dans le même ordre ; label, modalité, langue, écriture et texte identiques) ;
+    - split fourni : même contenu JSON que celui du dépôt (graine et 120 `test_ids` dans le même
+      ordre). Les empreintes brutes diffèrent par les seules fins de ligne : dépôt (LF)
+      `9a25686286ccb3271ca98fe9b03046e2a0cb55cf6e5b7f43ab467669b5a8cee0`, fichier et manifeste du
+      Lot C (CRLF) `cabe7f9e4c116616ccc69c5da838fead08254474455932c434d5e45995f6f566` ; identiques
+      après conversion CRLF → LF ;
+    - les 3 fichiers de prédictions contiennent exactement les 112 identifiants mesurés (aucun
+      doublon, aucun manquant) ;
+    - empreintes SHA-256 des fichiers de prédictions :
+      - graine 42 : `fe4b669e4f7a43ae0f50c2c56645061f9843731d24dad43242aa1a858894bdbf` ;
+      - graine 123 : `e904b2f7eb57d7f245f278fa3ac539e324e617f4def417724d3debe03a79e842` ;
+      - graine 2026 : `292ed05da0d213ca5b7912b2330eefc94fa1ebc2b07342ec521e27df1d9ec9cf`.
+    - Selon le manifeste du Lot C, la macro-F1 à 3 classes rejouée sur les 120 textes est égale à
+      celle des métriques sauvegardées pour chaque graine (écart 0.0).
+- **Méthode / configuration** :
+  - Reproduction d'EXP-C-010 avec sa commande (venv séparé, scikit-learn 1.9.1) : macro-F1
+    **0.6435** sur les 120 textes, comme l'entrée d'origine.
+  - Lot B : `is_claim` au niveau du texte (`evaluate_double.predict_text`), modes règles et
+    parseurs (spaCy FR, Stanza AR chargés). Lot C : prédiction TF-IDF ramenée à AFFIRMATION /
+    non-AFFIRMATION. Baseline « tout = affirmation ».
+  - Macro-F1 binaire, IC bootstrap (graine 20261015, 1000 tirages) ; différences appariées
+    (graine 42, 2000 tirages) ; groupes de langue déclarés ; groupes de moins de 15 textes
+    signalés.
+- **Code** : mesure sur `a48e447` (`linguistic_analysis/` identique à `1826244` hors
+  `MODEL_CARD.md`) ; script `notebooks/lot_b_linguistic/mesures/qr1_compare.py`.
+- **Commandes reproductibles** (depuis la racine du dépôt ; données et sorties hors dépôt) :
+
+  ```bash
+  # 1. Fichier du Lot C (venv avec openpyxl)
+  python data/prepare_claim_detection_dataset.py <claim_detection_600.xlsx> <claim_detection_600.jsonl>
+  # 2. Prédictions TF-IDF : commande d'EXP-C-010 (venv avec scikit-learn)
+  python models/baselines/claim_detection_multiclass_tfidf.py <claim_detection_600.jsonl> \
+      --split-file data/splits/claim_detection_multiclass_600_seed42.json \
+      --output <tfidf_test.json> --save-model <tfidf.joblib>
+  # 3. Comparaison
+  python -X utf8 notebooks/lot_b_linguistic/mesures/qr1_compare.py \
+      --gold <test_P061_P600.tsv> --ids data/splits/claim_detection_multiclass_600_seed42.json \
+      --tfidf <tfidf_test.json> --out-dir <dossier hors dépôt> \
+      --expect-gold-sha256 5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b
+  # 4. Comparaison avec XLM-R (fichiers id,label_predit du Lot C, une graine par fichier)
+  python -X utf8 notebooks/lot_b_linguistic/mesures/qr1_compare.py \
+      --gold <test_P061_P600.tsv> --ids data/splits/claim_detection_multiclass_600_seed42.json \
+      --tfidf <tfidf_test.json> \
+      --xlmr <xlmr_lora_seed42_P061_P600_test112.csv> <xlmr_lora_seed123_P061_P600_test112.csv> \
+             <xlmr_lora_seed2026_P061_P600_test112.csv> \
+      --out-dir <dossier hors dépôt> \
+      --expect-gold-sha256 5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b
+  ```
+
+  La ligne « tn (60) » regroupe les trois écritures du tunisien ; elle est calculée hors dépôt avec
+  les fonctions du script (`measure_block`, mêmes graines et nombres de tirages).
+
+- **Résultats** (macro-F1 binaire [IC 95 %] ; règles et parseurs identiques, aucun désaccord sur
+  les 112 textes) :
+
+  | Groupe | n (affirmations) | Lot B | TF-IDF Lot C | Baseline | Lot B − TF-IDF |
+  |---|---|---|---|---|---|
+  | global | 112 (59) | 0.803 [0.725 ; 0.874] | 0.825 [0.742 ; 0.893] | 0.345 | −0.023 [−0.124 ; +0.076] |
+  | fr | 23 (14) | 0.852 [0.662 ; 1.000] | 0.795 [0.555 ; 0.951] | 0.378 | +0.057 [−0.138 ; +0.270] |
+  | ar | 29 (17) | 0.964 [0.875 ; 1.000] | 0.847 [0.678 ; 0.964] | 0.370 | +0.117 [+0.000 ; +0.271] |
+  | tn, lettres arabes | 18 (9) | 0.542 [0.308 ; 0.766] | 0.778 [0.550 ; 0.944] | 0.333 | −0.236 [−0.554 ; +0.105] |
+  | tn, arabizi | 28 (11) | 0.678 [0.490 ; 0.854] | 0.750 [0.569 ; 0.893] | 0.282 | −0.072 [−0.301 ; +0.142] |
+  | tn, mixte ⚠ | 14 (8) | 0.925 [0.754 ; 1.000] | 1.000 [1.000 ; 1.000] | 0.364 | −0.075 [−0.286 ; +0.000] |
+
+  - Lot B − baseline : +0.458 [+0.378 ; +0.531] ; TF-IDF − baseline : +0.480 [+0.399 ; +0.549].
+  - ⚠ : moins de 15 textes, non interprétable.
+
+- **Résultats XLM-R + LoRA** (ajout du 2026-11-21 ; macro-F1 binaire [IC 95 %] par graine, puis
+  moyenne ± écart-type sur les 3 graines ; Lot B en mode règles, identique au mode parseurs) :
+
+  | Groupe | n (aff.) | Lot B | TF-IDF | XLM-R 42 | XLM-R 123 | XLM-R 2026 | XLM-R moyenne | Baseline |
+  |---|---|---|---|---|---|---|---|---|
+  | global | 112 (59) | 0.803 | 0.825 | 0.864 [0.792 ; 0.924] | 0.855 [0.782 ; 0.919] | 0.835 [0.762 ; 0.902] | 0.851 ± 0.015 | 0.345 |
+  | fr | 23 (14) | 0.852 | 0.795 | 0.904 [0.744 ; 1.000] | 0.904 [0.744 ; 1.000] | 0.904 [0.744 ; 1.000] | 0.904 ± 0.000 | 0.378 |
+  | ar | 29 (17) | 0.964 | 0.847 | 0.892 [0.757 ; 1.000] | 0.854 [0.695 ; 0.964] | 0.892 [0.752 ; 1.000] | 0.879 ± 0.022 | 0.370 |
+  | **tn (toutes écritures)** | **60 (28)** | **0.707 [0.576 ; 0.808]** | **0.817 [0.715 ; 0.916]** | **0.833 [0.729 ; 0.927]** | **0.833 [0.731 ; 0.917]** | **0.782 [0.666 ; 0.882]** | **0.816 ± 0.030** | **0.318** |
+  | tn, lettres arabes | 18 (9) | 0.542 | 0.778 | 0.889 [0.714 ; 1.000] | 0.944 [0.804 ; 1.000] | 0.888 [0.714 ; 1.000] | 0.907 ± 0.032 | 0.333 |
+  | tn, arabizi | 28 (11) | 0.678 | 0.750 | 0.785 [0.607 ; 0.928] | 0.747 [0.562 ; 0.893] | 0.713 [0.520 ; 0.857] | 0.748 ± 0.036 | 0.282 |
+  | tn, mixte ⚠ | 14 (8) | 0.925 | 1.000 | 0.844 [0.562 ; 1.000] | 0.844 [0.562 ; 1.000] | 0.754 [0.440 ; 1.000] | 0.814 ± 0.052 | 0.364 |
+
+  Différence appariée **Lot B − XLM-R** [IC 95 %] (`*` : IC excluant 0) :
+
+  | Groupe | Graine 42 | Graine 123 | Graine 2026 | Moyenne ± écart-type |
+  |---|---|---|---|---|
+  | global | −0.061 [−0.150 ; +0.018] | −0.052 [−0.144 ; +0.036] | −0.032 [−0.120 ; +0.055] | −0.049 ± 0.015 |
+  | fr | −0.053 [−0.199 ; +0.000] | −0.053 [−0.199 ; +0.000] | −0.053 [−0.199 ; +0.000] | −0.053 ± 0.000 |
+  | ar | +0.072 [−0.070 ; +0.229] | +0.110 [−0.041 ; +0.276] | +0.072 [−0.071 ; +0.220] | +0.085 ± 0.022 |
+  | **tn (toutes écritures)** | **−0.126 [−0.262 ; +0.000]** | **−0.127 [−0.266 ; +0.011]** | **−0.075 [−0.215 ; +0.060]** | **−0.109 ± 0.030** |
+  | tn, lettres arabes | −0.347 [−0.597 ; −0.085] `*` | −0.402 [−0.660 ; −0.139] `*` | −0.346 [−0.581 ; −0.126] `*` | −0.365 ± 0.032 |
+  | tn, arabizi | −0.106 [−0.297 ; +0.072] | −0.069 [−0.279 ; +0.121] | −0.035 [−0.250 ; +0.178] | −0.070 ± 0.036 |
+  | tn, mixte ⚠ | +0.081 [+0.000 ; +0.292] | +0.081 [+0.000 ; +0.292] | +0.171 [+0.000 ; +0.467] | +0.111 ± 0.052 |
+
+  - Rappel sur les 60 textes tn : Lot B − TF-IDF −0.110 [−0.266 ; +0.041] ; Lot B − baseline
+    +0.389 [+0.263 ; +0.495] ; TF-IDF − baseline +0.498 [+0.389 ; +0.602].
+  - XLM-R − baseline : établi pour chaque graine au global, en fr, en ar, en tn et dans chaque
+    sous-groupe tn, sauf tn-mixte graine 2026 (+0.391 [+0.000 ; +0.591], ⚠ < 15 textes).
+  - En fr, les 3 graines donnent les mêmes prédictions binaires sur les 23 textes.
+- **Analyse** :
+  - Les deux systèmes dépassent nettement la baseline. **La différence Lot B − TF-IDF n'est pas
+    établie**, ni au global ni dans aucun groupe (en ar, la borne basse de l'IC est à 0).
+  - Observation : dans P061–P600, les questions sont regroupées en blocs d'identifiants
+    consécutifs (voir EXP-B-014) : ils viennent de la génération par catégorie (textes
+    synthétiques, voir EXP-B-010). Tous les scores ci-dessus sont probablement optimistes.
+  - **Limites** : un seul annotateur ; unité texte (eval_100 mesurera à l'unité phrase) ;
+    tâche binaire (le TF-IDF prédit 3 classes ; sa macro-F1 à 3 classes, 0.643, n'est pas
+    comparable) ; le Model 1 a été entraîné sur 428 autres textes de P061–P600 (même source et
+    même style) ; 18 à 29 textes par groupe.
+- **Analyse XLM-R** (question de recherche : le tunisien) :
+  - **Tunisien, 60 textes** : XLM-R 0.816 ± 0.030 contre Lot B 0.707. L'écart Lot B − XLM-R
+    (−0.109 ± 0.030) va dans le même sens pour les 3 graines, mais **n'est établi pour aucune** :
+    l'IC touche 0 (graine 42) ou le contient (graines 123 et 2026).
+  - **Tunisien en lettres arabes** (18 textes) : seul groupe où l'écart est établi, pour les 3
+    graines (−0.365 ± 0.032). C'est le groupe déjà le plus faible du Lot B (EXP-B-010) ; le Lot A2
+    en classe une partie comme arabe standard et aucun parseur ne le couvre.
+  - Arabizi : écart non établi (−0.070 ± 0.036). Mixte : moins de 15 textes, non interprétable.
+  - Global, fr, ar : aucune différence établie. En ar, le Lot B est devant pour les 3 graines
+    (+0.085 ± 0.022), sans que ce soit établi.
+  - L'écart-type entre graines (0.015 au global, 0.030 en tn) est petit devant la largeur des IC
+    (environ ± 0.07 à ± 0.14) : l'incertitude vient surtout du petit nombre de textes.
+  - **Limite de traçabilité signalée par le Lot C** : le script d'entraînement garde les
+    identifiants de test fixes et fait varier train / validation selon la graine. Les métriques
+    sauvegardées à l'entraînement indiquent 120 textes de test pour chaque graine, mais ne
+    contiennent ni les identifiants ni l'empreinte du split utilisé. Le split historique n'est
+    donc identifié que par ses identifiants (fichier du dépôt), **sans empreinte d'origine** ;
+    l'égalité des tailles (120) ne prouve pas l'identité des fichiers. L'égalité entre macro-F1
+    rejouée et macro-F1 sauvegardée (manifeste du Lot C) est un indice, pas une preuve.
+  - Mêmes limites que ci-dessus : un seul annotateur ; unité texte ; XLM-R entraîné sur 428 autres
+    textes de P061–P600 (même source et même style), ce qui l'avantage par rapport au Lot B.
+- **Décision / suite** : comparaison XLM-R faite (export du Lot C du 2026-11-21). Réponse
+  provisoire à la question de recherche 1 : sur le tunisien, l'extracteur à règles ne fait pas
+  mieux que les classifieurs du Lot C ; il est nettement derrière en lettres arabes. Aucune règle
+  n'est modifiée (système gelé). Mesure de référence à venir : eval_100.
+
+### EXP-C-015 — NLI (Model 2), palier Gold : abstention par seuil de confiance (protocole et choix du seuil, sans le test)
+- **Date** : 2026-11-18 (protocole et règle de choix écrits avant tout calcul de probabilité)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : quand le NLI n'est pas assez sûr de lui, répondre « neutral » plutôt que « supports » ou « refutes » limite-t-il les positions fausses qui faussent le verdict ? On choisit ici le seuil ; son effet sera mesuré plus tard, une seule fois, sur des jeux jamais vus.
+- **Règle d'abstention** : la confiance est celle que `predict_stances` renvoie déjà à l'API et au Lot D (probabilité de la classe prédite, softmax du modèle, chargement float32). Si la classe prédite est « supports » ou « refutes » et que sa confiance est strictement inférieure au seuil τ, la sortie devient « neutral » ; une prédiction « neutral » ne change jamais.
+- **Données de choix (le test v3 n'est pas utilisé)** :
+  - modèle affiné (principal, graine 42, EXP-C-011) : la val v3 seulement (33 paires), car il a appris sur le train ;
+  - zero-shot float32 : train + val v3 (174 + 33 = 207 paires), qu'il n'a jamais vues.
+- **Grille (fixée avant calcul)** : τ ∈ {0 (pas d'abstention), 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95} ; la confiance de la classe prédite étant au moins 1/3, tout τ ≤ 0.33 équivaut à τ = 0.
+- **Règle de choix (fixée avant calcul)** :
+  - critère : macro-F1 sur les 3 classes fixes (comme EXP-C-011), après application du seuil, sur les données de choix du modèle ;
+  - marge d'équivalence : 0.03 pour le modèle affiné (val de 33 paires, une paire ≈ 3 points), 0.01 pour le zero-shot (207 paires, environ deux paires) ; tout τ dont la macro-F1 est à moins de cette marge de la meilleure est jugé équivalent ;
+  - parmi les équivalents, on garde **le plus petit τ** (le moins d'abstention, le plus proche du système actuel) ; si τ = 0 est dans la marge, on conclut qu'un seuil n'apporte rien sur les données de choix, et il n'y a rien à mesurer ensuite pour ce modèle.
+- **Rapporté pour chaque τ, sans servir au choix** : accuracy, F1 par classe, couverture (part des paires où le modèle répond « supports » ou « refutes »), précision de ces réponses, nombre de prédictions changées en « neutral » et combien étaient justes avant.
+- **Seuil transmis au Lot D** : seul le seuil du **modèle affiné (checkpoint graine 42)** sera transmis au Lot D ; celui du zero-shot est calculé comme comparaison seulement.
+- **Lien avec le Lot D** : le verdict officiel (Aya Expanse 8B, EXP-D-010) **ne reçoit pas** les positions du NLI : les lui donner comme indices faisait passer l'exactitude de 0.714 à 0.619 (EXP-D-011, branche `lot-d-silver-nli`, non encore fusionnée). La règle prévue avec la responsable du Lot D (Hadil) s'applique donc **après** Aya : si aucun des passages cités par Aya n'est jugé « supports » ou « refutes » par le NLI affiné avec une confiance ≥ τ, le verdict devient « preuves insuffisantes ». Pour mémoire, le verdict par gabarit (`rag_llm/verdict.py`, repli sans GPU) ignore déjà les positions de confiance inférieure à `MIN_CONFIDENCE = 0.6`, et un τ ≤ 0.6 ne le change pas.
+- **Code** : `python -X utf8 -m models.nli.gold_abstention` ; probabilités privées dans `data/interim/lot_c/nli/gold/` (non versionné), chiffres dans `evaluation/results/lot-c_nli-gold_abstention_val_<date>.json` (non versionné, comme les autres résultats) ; commit `a270105`.
+- **Mesure prévue (plus tard, une seule fois, τ gelé et noté ici avant)** : sur les jeux d'EXP-C-012 (tunisien) et d'EXP-C-013 (paraphrases), avec et sans le seuil ; sur le verdict du Lot D seulement si sa responsable accepte, avec un protocole noté avant. Rien d'autre n'est mesuré.
+- **Résultats (2026-11-18, données de choix seulement, test non lu)** : `evaluation/results/lot-c_nli-gold_abstention_val_20261118.json` ; probabilités privées dans `data/interim/lot_c/nli/gold/`. Contrôles : sans seuil, le modèle affiné redonne exactement les 33 prédictions de val de son journal (macro-F1 0.722, comme EXP-C-011) ; le zero-shot float32 redonne 0.692 sur la val seule.
+
+  | τ | affiné, val (33) : macro-F1 / couverture / → neutral (justes avant) | zero-shot, train + val (207) : macro-F1 / couverture / → neutral (justes avant) |
+  |---|---|---|
+  | 0 (aucune abstention) | **0.722** / 0.697 / 0 | **0.714** / 0.758 / 0 |
+  | 0.40–0.45 | 0.722 / 0.697 / 0 | 0.714–0.705 / 0.758–0.739 / 0–4 (3) |
+  | 0.50–0.60 | 0.723 / 0.667 / 1 (0) | 0.701–0.715 / 0.725–0.705 / 7–11 (4–5) |
+  | 0.65 | 0.688 / 0.636 / 2 (1) | 0.722 / 0.686 / 15 (6) |
+  | 0.70–0.75 | 0.714 / 0.606 / 3 (1) | 0.711–0.701 / 0.657–0.647 / 21–23 (10–12) |
+  | 0.80 | 0.738 / 0.515 / 6 (2) | 0.683 / 0.618 / 29 (17) |
+  | 0.85 | 0.714 / 0.455 / 8 (3) | 0.668 / 0.556 / 42 (25) |
+  | 0.90 | 0.611 / 0.364 / 11 (6) | 0.659 / 0.512 / 51 (31) |
+  | 0.95 | 0.506 / 0.242 / 15 (9) | 0.652 / 0.473 / 59 (35) |
+
+  - **modèle affiné : τ choisi = 0 (pas d'abstention)**. Meilleure macro-F1 0.738 à τ = 0.80 (6 réponses changées en « neutral », dont 2 étaient justes), soit +0.016, dans la marge de 0.03 (moins d'une paire sur 33) ; τ = 0 est dans la marge, donc la règle garde τ = 0 ;
+  - **zero-shot : τ choisi = 0**. Meilleure 0.722 à τ = 0.65 (+0.008, dans la marge de 0.01) ; au-dessus, la macro-F1 baisse ;
+  - la précision des réponses « supports » / « refutes » monte avec τ (affiné 0.65 → 0.76 à τ = 0.80 ; zero-shot 0.79 → 0.91 à τ = 0.95), mais au prix de réponses justes perdues : sur ces données, le gain de précision ne compense pas la perte selon le critère fixé.
+- **Décision** : conformément à la règle fixée avant calcul, **aucun seuil d'abstention n'est retenu** pour le NLI (τ = 0 pour les deux modèles) ; rien n'est transmis au Lot D, et il n'y a rien à mesurer ensuite sur les jeux d'EXP-C-012 et d'EXP-C-013 ni sur le verdict. Le NLI reste tel quel ; l'abstention du système reste celle du Lot D (pertinence des passages, `MIN_CONFIDENCE` du gabarit). Limite : la val ne compte que 33 paires ; un seuil vers 0.80 pourrait aider sur des données plus grandes, sans que ces données permettent de le dire.
+
+### EXP-C-013 — NLI (Model 2), palier Gold : robustesse aux paraphrases (protocole, non mesuré)
+- **Date** : 2026-11-18 (protocole écrit avant la construction du jeu et avant toute mesure)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : une reformulation de l'affirmation, dans la même langue, qui garde le même fait change-t-elle la position prédite ? Test d'invariance (« INV paraphrases » du cahier des charges) : idéalement, aucune prédiction ne change.
+- **Données (à construire)** : les 56 paires du test v3 (mêmes `pair_id` qu'EXP-C-011) ; pour chacune, une paraphrase de l'affirmation dans sa langue d'origine (fr ou ar), obligatoire, et une seconde en bonus ; la preuve et le label ne changent pas. Gabarit privé : `data/interim/lot_c/nli/gold/paraphrases_v1.csv` (créé par `python -X utf8 -m models.nli.gold_templates`, non versionné).
+- **Règles de construction** :
+  - paraphrases écrites par des humains ; changements permis : ordre des mots, synonymes, voix active / passive, découpage de la phrase ; interdits : ajouter ou retirer une information, changer un nombre, une date, un nom ou la modalité (« selon X », conditionnel) ;
+  - une autre personne vérifie chaque paraphrase (`verif_sens_identique`, `verif_label_tient`) ; une paraphrase avec un « non » est écartée (`statut = ecarte`) et le nombre d'écartées est rapporté ;
+  - aide d'une IA possible seulement si elle est déclarée ligne par ligne (`ia_utilisee` : outil et rôle) et relue et corrigée par un humain ;
+  - aucun modèle n'est lancé sur les paraphrases avant le gel.
+- **Gel** : une fois le fichier rempli et vérifié, il est copié en `paraphrases_v1_gele.csv` (privé) et son SHA-256 est noté ici **avant** la mesure ; une seule mesure, par un script qui refuse une seconde exécution.
+- **Modèles mesurés** : principal (graine 42), zero-shot float32 et règles Bronze, avec `predict_stances` (même code que l'API) ; aucun réglage. Les prédictions sur les affirmations d'origine sont celles déjà sauvegardées par EXP-C-011 (pas de nouvelle inférence sur le test d'origine).
+- **Métriques** :
+  - taux de changement : part des paires gardées dont la prédiction sur la paraphrase diffère de celle sur l'original, sur toutes les paires gardées et sur celles qui étaient justes au départ ;
+  - macro-F1 et accuracy sur les paraphrases, et écart apparié paraphrase − original sur les mêmes paires (bootstrap apparié, 1000 tirages, graine 20261026) ;
+  - par langue d'origine (fr / ar) ; avec 2 paraphrases, chacune est comptée séparément et l'accord entre les deux est rapporté.
+- **Règle de lecture** : si moins de 40 paires sont gardées, le résultat est déclaré exploratoire.
+- **Mise à jour du protocole (2026-11-18, avant toute mesure et avant tout gel)** : faute de temps de l'équipe, les paraphrases sont **générées par IA** : une par affirmation, écrite par l'assistant (Claude), dans la langue d'origine, en gardant le sens, les nombres, les dates et les noms propres ; colonne `auteur_paraphrase_1` = « IA : Claude », `ia_utilisee` renseignée ; aucune seconde paraphrase. Le vérificateur reste vide pour l'instant. **Sans relecture humaine ligne par ligne, le résultat sera déclaré exploratoire**, quel que soit le nombre de paires. Rien n'est mesuré ni gelé avant l'accord explicite de Membre 4.
+- **Transmission externe** : les paraphrases ont été générées avec un service externe (Claude) à partir du fichier du test v3 (affirmations, preuves et labels), sans accord explicite de l'équipe demandé avant ; accord demandé le 2026-11-22 ; fichiers privés (`data/interim/lot_c/nli/gold/`), non publiés ; compatibilité avec l'audit des droits Tunifact (PR #37) à vérifier. La génération a été faite hors du code du projet (dans une conversation avec Claude) : le réglage `LLM_ALLOW_EXTERNAL`, qui ne contrôle que les appels faits par le code, n'a donc pas joué.
+- **Transmission (précisions du 2026-11-22)** : éléments transmis = les affirmations, les preuves et les labels des 56 paires du test v3 (fichier complet lu par Claude Code) ; date = 2026-11-18 ; service = Claude Code, utilisé avec l'abonnement Claude Pro ; option d'utilisation des conversations pour l'entraînement (qui couvre aussi les sessions de codage) activée à cette date, désactivée le 2026-11-22 (ce qui ne garantit pas que les contenus déjà transmis soient supprimés ou exclus de toute réutilisation, point à clarifier auprès du service) ; fichier `reecritures_tn_v1.csv` (réécritures en tunisien, avec aussi les affirmations d'origine, les preuves et les labels des 56 paires du test v3) envoyé le 2026-11-22 à un membre de l'équipe pour relecture, avant la décision, avec demande de ne pas le relire ni le partager. `paraphrases_v1.csv` n'a pas été partagé. Voir aussi la ligne « Transmission à Claude Code » d'EXP-C-011.
+- **Mesure préparée (2026-11-22, non lancée)** : `python -X utf8 -m models.nli.gold_measure --exp paraphrases` (`--dry-run` pour les vérifications seules). Le script refuse de tourner si le SHA-256 du fichier figé n'est pas reporté dans le code ou ne correspond pas, si le fichier n'a pas exactement les 56 paires du test v3 avec la même preuve et le même label, si une ligne n'a pas de vérificateur (sauf `--exploratoire`, résultat alors marqué exploratoire et mesure unique consommée quand même), ou si la mesure a déjà été faite (marqueur écrit avant la première inférence). Testé seulement sur des données inventées ; le 2026-11-22, le `--dry-run` refuse, car le fichier n'est pas encore figé.
+- **Décision du 2026-11-22** : l'équipe (Achref) a répondu « non à ce stade », en attente de la vérification des droits Tunifact (PR #37) et des conditions du service externe ; les paraphrases restent hors de toute évaluation ; la mesure n'est pas lancée et reste une suite possible si l'équipe donne son accord. Avis maintenu par Achref le 2026-11-22 ; décision collective avec l'équipe et l'encadrant après vérification des droits ; aucun nouveau partage.
+- **Résultats** : non mesuré.
+
+### EXP-C-012 — NLI (Model 2), palier Gold : transfert vers des affirmations en tunisien (protocole, non mesuré)
+- **Date** : 2026-11-18 (protocole écrit avant la construction du jeu et avant toute mesure)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Question de recherche (cahier des charges)** : le NLI multilingue transfère-t-il vers des paires affirmation tunisienne / preuve française ou arabe ? Mesure : la perte de performance quand seule la langue de l'affirmation change (mêmes faits, même preuve, même label). Le corpus NLI v3 (et la v4 décrite par le Lot A1 le 2026-11-15) ne contient aucune paire tunisienne : le jeu doit être construit.
+- **Données (à construire)** : les 56 paires du test v3 (mêmes `pair_id` qu'EXP-C-011 ; choix de Membre 4 du 2026-11-18, la val restant propre pour le seuil d'abstention) ; l'affirmation de chaque paire est réécrite en tunisien **en lettres arabes (obligatoire)** et **en arabizi (bonus, si le temps le permet)** ; la preuve (fr ou ar) et le label ne changent pas. Les paires du train sont exclues (vues par le modèle affiné). Gabarit privé : `data/interim/lot_c/nli/gold/reecritures_tn_v1.csv` (créé par `python -X utf8 -m models.nli.gold_templates`, non versionné).
+- **Règles de construction** :
+  - réécriture par une personne tunisophone (nom dans `auteur_tn_arabe` / `auteur_arabizi`) ; traduction faite ou relue par un humain dans tous les cas ;
+  - garder exactement les nombres, les dates, les noms propres et la modalité (« selon X », conditionnel) ; ne rien ajouter ni retirer ;
+  - vérification par une **autre** personne tunisophone (`verificateur`) : `verif_sens_identique` et `verif_label_tient` ; une réécriture avec un « non » est écartée (`statut = ecarte`), et le nombre d'écartées est rapporté ;
+  - aide d'une IA possible seulement si elle est déclarée ligne par ligne (`ia_utilisee` : outil et rôle) et relue et corrigée par un humain ;
+  - contrôle par `normalization.tag_lang` (Lot A2) : part des réécritures reconnues `tn` et écriture détectée, **rapportée seulement**, sans écarter de paire (le jugement humain prime) ;
+  - aucun modèle n'est lancé sur les réécritures avant le gel.
+- **Gel** : une fois le fichier rempli et vérifié, il est copié en `reecritures_tn_v1_gele.csv` (privé) et son SHA-256 est noté ici **avant** la mesure ; une seule mesure, par un script qui refuse une seconde exécution.
+- **Modèles mesurés** : principal (graine 42), zero-shot float32 et règles Bronze, avec `predict_stances` (même code que l'API) ; aucun réglage, aucun seuil choisi sur ce jeu. Les prédictions sur les affirmations d'origine sont celles déjà sauvegardées par EXP-C-011 (pas de nouvelle inférence sur le test d'origine). Bonus, seulement s'il est décidé et noté ici avant le gel : translittération de l'arabizi en lettres arabes par le Lot A2 avant le NLI, comme ablation.
+- **Métriques** :
+  - macro-F1 et accuracy par variante (original, tunisien en lettres arabes, arabizi), sur les mêmes paires gardées, avec IC 95 % par bootstrap ;
+  - écart apparié tunisien − original sur les mêmes paires (bootstrap apparié, 1000 tirages, graine 20261026) ;
+  - taux de changement de prédiction entre l'original et sa réécriture ;
+  - par langue de la preuve (fr / ar) : affirmation tunisienne / preuve française et affirmation tunisienne / preuve arabe ;
+  - accord de `tag_lang` avec la variante prévue.
+- **Règle de lecture** : si moins de 40 paires sont gardées pour une variante, son résultat est déclaré exploratoire ; un écart dont l'IC 95 % contient 0 est déclaré non établi.
+- **Mise à jour du protocole (2026-11-18, avant toute mesure et avant tout gel)** : faute de temps de l'équipe, les réécritures en tunisien sont **générées par IA** : écrites par l'assistant (Claude) en lettres arabes (et en arabizi), en gardant les nombres, les dates et les noms propres ; colonnes d'auteur = « IA : Claude », `ia_utilisee` renseignée. Une IA n'est pas locutrice native du tunisien : ses réécritures peuvent être trop proches de l'arabe standard ou contenir des tournures peu naturelles. Relecture prévue par Mouhib, ligne par ligne (`verif_sens_identique`, `verif_label_tient` : oui / non). **Sans cette relecture humaine, le résultat sera déclaré exploratoire** et ne répondra pas à lui seul à la question de recherche. Rien n'est mesuré ni gelé avant l'accord explicite de Membre 4.
+- **Transmission externe** : les réécritures en tunisien ont été générées avec un service externe (Claude) à partir du fichier du test v3 (affirmations, preuves et labels), sans accord explicite de l'équipe demandé avant ; accord demandé le 2026-11-22 ; fichiers privés (`data/interim/lot_c/nli/gold/`), non publiés ; compatibilité avec l'audit des droits Tunifact (PR #37) à vérifier. La génération a été faite hors du code du projet (dans une conversation avec Claude) : le réglage `LLM_ALLOW_EXTERNAL`, qui ne contrôle que les appels faits par le code, n'a donc pas joué.
+- **Transmission (précisions du 2026-11-22)** : éléments transmis = les affirmations, les preuves et les labels des 56 paires du test v3 (fichier complet lu par Claude Code) ; date = 2026-11-18 ; service = Claude Code, utilisé avec l'abonnement Claude Pro ; option d'utilisation des conversations pour l'entraînement (qui couvre aussi les sessions de codage) activée à cette date, désactivée le 2026-11-22 (ce qui ne garantit pas que les contenus déjà transmis soient supprimés ou exclus de toute réutilisation, point à clarifier auprès du service) ; fichier `reecritures_tn_v1.csv` (réécritures en tunisien, avec aussi les affirmations d'origine, les preuves et les labels des 56 paires du test v3) envoyé le 2026-11-22 à un membre de l'équipe pour relecture, avant la décision, avec demande de ne pas le relire ni le partager. Voir aussi la ligne « Transmission à Claude Code » d'EXP-C-011.
+- **Mesure préparée (2026-11-22, non lancée)** : `python -X utf8 -m models.nli.gold_measure --exp tn` (`--dry-run` pour les vérifications seules). Le script refuse de tourner si le SHA-256 du fichier figé n'est pas reporté dans le code ou ne correspond pas, si le fichier n'a pas exactement les 56 paires du test v3 avec la même preuve et le même label, si une ligne n'a pas de vérificateur (sauf `--exploratoire`, résultat alors marqué exploratoire et mesure unique consommée quand même), ou si la mesure a déjà été faite (marqueur écrit avant la première inférence). Testé seulement sur des données inventées ; le 2026-11-22, le `--dry-run` refuse, car le fichier n'est pas encore figé.
+- **Décision du 2026-11-22** : l'équipe (Achref) a répondu « non à ce stade », en attente de la vérification des droits Tunifact (PR #37) et des conditions du service externe ; les réécritures en tunisien restent hors de toute évaluation ; la mesure n'est pas lancée et reste une suite possible si l'équipe donne son accord. Avis maintenu par Achref le 2026-11-22 ; décision collective avec l'équipe et l'encadrant après vérification des droits ; aucun nouveau partage.
+- **Résultats** : non mesuré.
+
+### EXP-C-014 — NLI (Model 2), palier Gold : biais par langue et par source (prédictions Silver déjà sauvegardées)
+- **Date** : 2026-11-18 (protocole écrit avant tout calcul)
+- **Auteur / Lot** : Membre 4 (Wiem) / Lot C
+- **Objectif / hypothèse** : le NLI retenu au Silver (EXP-C-011) se trompe-t-il davantage pour une langue ou pour une source que pour les autres ? Aucune hypothèse de sens fixée à l'avance ; il s'agit de décrire les écarts et leur incertitude, avec les effectifs.
+- **Données** : test v3 gelé (56 paires, mêmes `pair_id` qu'EXP-C-011). **Aucun modèle n'est relancé** : on relit seulement les prédictions déjà sauvegardées par la mesure unique du 2026-11-14 (`data/interim/lot_c/nli/silver_test/`, privé) et les labels de référence de `nli_v3_test.jsonl`. Rien n'est choisi d'après ces chiffres : aucun réglage, aucun seuil.
+- **Modèles décrits** : principal (graine 42 ; les graines 123 et 2026 ont les mêmes prédictions), zero-shot float32, règles Bronze (reconstituées, EXP-C-011), classe majoritaire.
+- **Groupes (fixés avant calcul)** :
+  - langue de l'affirmation (`claim_lang`) : fr, ar ; tunisien : 0 paire dans la v3, traité par EXP-C-012 ;
+  - source, à deux niveaux : site (préfixe de `article_id` : `tunifact-*` → tunifact.org, URL → domaine de l'URL) et article (`article_id`) ;
+  - sujet : **reporté**, faute de champ sujet dans la v3 (demandé au Lot A1).
+- **Métriques** : pour chaque groupe et chaque modèle, effectif, répartition des labels de référence, accuracy et macro-F1 (3 classes fixes, comme EXP-C-011 : une classe absente du groupe compte 0, ce qui fait baisser la macro-F1 des petits groupes ; l'accuracy est donc la mesure principale par article), IC 95 % par bootstrap (1000 tirages, graine 20261026) ; écart entre groupes (fr − ar ; entre sites) avec IC 95 % par bootstrap rééchantillonnant chaque groupe séparément.
+- **Règle de lecture (fixée avant calcul)** : un écart n'est discuté que si les deux groupes ont au moins 10 paires ; en dessous, les chiffres sont donnés à titre descriptif seulement ; un écart dont l'IC 95 % contient 0 est déclaré non établi.
+- **Code** : `python -X utf8 -m models.nli.gold_bias` ; écrit `evaluation/results/lot-c_nli-gold_biais_test_<date>.json` (chiffres et identifiants d'articles seulement, aucun texte du corpus) ; commit `5d217a9` (langue et source), `faa7e5e` (biais par sujet).
+- **Résultats (2026-11-18)** : `evaluation/results/lot-c_nli-gold_biais_test_20261118.json` ; contrôle : les chiffres par langue redonnent ceux d'EXP-C-011 (principal fr 0.745 / ar 0.841, zero-shot 0.779 / 0.776 en macro-F1). Accuracy [IC 95 %] / macro-F1 :
+
+  | Groupe | n (supports / refutes / neutral) | principal | zero-shot float32 | Bronze (acc.) | majorité (acc.) |
+  |---|---|---|---|---|---|
+  | ar | 31 (13 / 13 / 5) | 0.871 [0.742 ; 0.968] / 0.841 | 0.806 / 0.776 | 0.419 | 0.419 |
+  | fr | 25 (10 / 6 / 9) | 0.760 [0.560 ; 0.920] / 0.745 | 0.800 / 0.779 | 0.520 | 0.400 |
+  | tunifact.org | 48 (19 / 17 / 12) | 0.833 [0.729 ; 0.917] / 0.821 | 0.812 / 0.807 | 0.438 | 0.396 |
+  | nawaat.org (n < 10) | 8 (4 / 2 / 2) | 0.750 [0.500 ; 1.000] / 0.730 | 0.750 / 0.730 | 0.625 | 0.500 |
+
+  - écart fr − ar : principal −0.111 d'accuracy (IC 95 % [−0.311 ; +0.090]), −0.096 de macro-F1 ([−0.370 ; +0.147]) ; zero-shot −0.006 ([−0.223 ; +0.195]) ; **non établi** (IC contenant 0) ;
+  - écart tunifact.org − nawaat.org : principal +0.083 ([−0.208 ; +0.396]) ; nawaat.org n'a que 8 paires : **non interprétable** selon la règle ;
+  - par article (10 articles) : seuls deux ont au moins 10 paires, tunifact-938 (14) et tunifact-933 (11), avec une accuracy du principal de 1.000 sur les deux (zero-shot 0.929 et 0.909) ; les 8 autres ont de 3 à 5 paires (descriptif seulement, accuracy du principal de 0.333 à 1.000) ; la macro-F1 de tunifact-933 (0.667 pour une accuracy de 1.000) illustre l'effet d'une classe absente (aucune paire « neutral ») ;
+  - observation descriptive, **non prévue au protocole** (donc non testée) : les 10 erreurs du principal sont toutes hors des deux gros articles ; sur les 31 paires des 8 autres articles, son accuracy est de 21 / 31 = 0.677. La performance globale dépend donc beaucoup de deux articles qui font 25 des 56 paires (45 %).
+- **Analyse** : aucun écart de langue ni de source n'est établi ; ce n'est pas une preuve d'absence de biais, car les IC sont larges (environ ±0.2 par groupe). Le principal fait mieux en arabe et moins bien en français que le zero-shot, comme déjà noté dans EXP-C-011, mais sans écart significatif. Le test est trop concentré (2 articles = 45 % des paires, 2 sites dont un à 8 paires) pour mesurer un biais de source.
+- **Décision / suite** : à reprendre dans la section Limitations ; biais par sujet quand le Lot A1 aura fourni le sujet de chaque article ; le tunisien sera traité par EXP-C-012.
+- **Complément — biais par sujet : protocole (écrit le 2026-11-22, avant tout calcul sur les prédictions)** :
+  - sujets : `nli_v4_articles_sujets_sources_categories.csv` (Lot A1, privé, SHA-256 `3cf40c0b…31668160`), colonne `categorie_thematique` ; **catégories proposées par le Lot A1 à partir des titres** des articles (`base_categorisation` = « Titre de l'article » pour les 49 articles), non vérifiées sur le contenu ni par un second annotateur ;
+  - lien : `article_id` des paires du test v3 (`nli_v3_test.jsonl` ; la v5 n'a pas ce champ), comparé à l'`article_id` du CSV après retrait du « / » final et passage en minuscules (même normalisation que `models.nli.data.article_id`). Contrôle fait avant d'écrire ce protocole, sur les effectifs seulement (ni labels ni prédictions) : les 56 paires trouvent leur article ; 6 catégories sur 12 sont présentes dans le test, chacune avec 1 ou 2 articles ;
+  - mêmes prédictions (aucune nouvelle inférence), mêmes modèles, métriques, bootstrap (1000 tirages, graine 20261026) et règle n ≥ 10 que ci-dessus ; pour chaque catégorie, on donne aussi le nombre d'articles ;
+  - comparaisons fixées à l'avance : chaque catégorie d'au moins 10 paires contre le reste du test (toutes les autres catégories réunies), bootstrap séparé dans chaque groupe ; un écart dont l'IC 95 % contient 0 est déclaré non établi ; pas de correction pour comparaisons multiples (peu de comparaisons, lecture exploratoire) ; **aucune conclusion pour une catégorie de moins de 10 paires** ;
+  - limite connue avant calcul : avec 1 ou 2 articles par catégorie, un écart de sujet ne peut pas être séparé d'un effet d'article (voir l'observation sur les deux gros articles ci-dessus) ;
+  - code : `python -X utf8 -m models.nli.gold_bias` (axe « sujet » ajouté ; les axes langue, site et article sont recalculés à l'identique) ; commit `faa7e5e`.
+- **Complément — biais par sujet : résultats (2026-11-22)** : `evaluation/results/lot-c_nli-gold_biais_test_20261122.json` ; contrôle : les groupes langue, site et article et les écarts fr − ar et tunifact.org − nawaat.org sont identiques à ceux du fichier du 2026-11-18. Catégories **proposées par le Lot A1 à partir des titres**. Accuracy [IC 95 %] / macro-F1 [IC 95 %] :
+
+  | Catégorie (proposée par le Lot A1) | n (supports / refutes / neutral) | articles | principal | zero-shot float32 (acc.) | Bronze (acc.) | majorité (acc.) |
+  |---|---|---|---|---|---|---|
+  | Environnement & sciences | 17 (6 / 6 / 5) | 2 (tunifact-938 : 14, tunifact-937 : 3) | 0.882 [0.706 ; 1.000] / 0.882 [0.658 ; 1.000] | 0.824 | 0.412 | 0.353 |
+  | Société & migrations | 16 (8 / 5 / 3) | 2 (tunifact-933 : 11, tunifact-698 : 5) | 0.875 [0.688 ; 1.000] / 0.832 [0.574 ; 1.000] | 0.875 | 0.500 | 0.500 |
+  | Politique & institutions (n < 10) | 8 (4 / 2 / 2) | 2 | 0.750 / 0.730 | 0.750 | 0.625 | 0.500 |
+  | Économie & emploi (n < 10) | 7 (3 / 3 / 1) | 2 | 0.571 / 0.567 | 0.571 | 0.286 | 0.429 |
+  | Santé (n < 10) | 5 (1 / 2 / 2) | 1 | 1.000 / 1.000 | 1.000 | 0.400 | 0.200 |
+  | Éducation (n < 10) | 3 (1 / 1 / 1) | 1 | 0.667 / 0.556 | 0.667 | 0.667 | 0.333 |
+
+  - écarts fixés à l'avance (catégorie − reste du test) : Environnement & sciences, principal +0.087 d'accuracy (IC 95 % [−0.115 ; +0.275]), +0.102 de macro-F1 ([−0.151 ; +0.297]) ; zero-shot +0.029 ([−0.174 ; +0.241]) ; Société & migrations, principal +0.075 ([−0.125 ; +0.263]), macro-F1 +0.036 ([−0.251 ; +0.272]) ; zero-shot +0.100 ([−0.113 ; +0.300]) ; **tous non établis** (IC contenant 0) ;
+  - 4 catégories sur 6 ont moins de 10 paires (3 à 8) : chiffres descriptifs seulement, **aucune conclusion** ; 6 des 12 catégories du CSV n'ont aucune paire dans le test ;
+  - « Politique & institutions » regroupe exactement les 8 paires de nawaat.org (2 articles) : ce groupe est le même que celui du site, déjà jugé non interprétable.
+- **Analyse (sujet)** : aucun écart de sujet n'est établi. Les deux seules catégories interprétables sont chacune portées par un gros article (tunifact-938 : 14 paires sur 17 ; tunifact-933 : 11 sur 16), les deux articles où le principal ne fait aucune erreur : leur avantage apparent sur le reste reflète surtout ces deux articles, et l'effet de sujet ne peut pas être séparé de l'effet d'article (limite notée avant calcul). Les catégories viennent des titres seulement, sans second annotateur. Avec 56 paires, 10 articles et 6 catégories, le test ne permet pas de mesurer un biais par sujet.
+- **Décision / suite (sujet)** : rien n'est changé dans le modèle ; à reprendre dans la section Limitations (test trop petit et trop concentré pour les biais de source et de sujet) ; un test futur plus grand, échantillonné par article et par catégorie, serait nécessaire.
 
 ### EXP-A2-014 — Silver : significativité, stabilité sur 3 graines, baseline neuronale, courbe d'apprentissage
 - **Date** : 2026-11-15
@@ -307,7 +732,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   qui n'a servi ni à écrire ni à régler les règles. Hypothèse : l'écart à la baseline mesuré sur
   le pilote (EXP-B-009) se confirme.
 - **Données** :
-  - Lignes P061 à P600 du jeu de 600 phrases du Lot A1 : **540 textes**, extraits de
+  - Lignes P061 à P600 du jeu de 600 phrases : **540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C**. Extraits de
     `claim_detection_600.xlsx` vers un fichier tabulé hors dépôt (`id`, `texte`, `label`,
     `modalite`, `doute`, `source`, `langue`, `script`).
   - **SHA-256 du fichier mesuré** :
@@ -320,6 +745,10 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     hypothétique 39, conditionnel 20.
   - Langue et écriture déclarées par le jeu : fr 140, ar 135, tn en arabizi 135, tn en lettres
     arabes 81, tn mixte 49.
+  - **Provenance (déclarée par le Lot C le 2026-11-21)** : P061–P600 = 540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C.
+    Les blocs de questions consécutifs relèvent de cette structure du corpus. Le champ `source`
+    du fichier (« original ») ne prouve pas une provenance naturelle. Scores probablement
+    optimistes ; sur textes réels, voir EXP-B-009 et, à venir, eval_100.
   - **Indépendance** : jeu vierge pour le Lot B.
     - Aucun fichier du Lot B, sur aucune branche, ne cite ces identifiants. La seule occurrence
       est un test synthétique de plage d'identifiants.
@@ -341,6 +770,27 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   `main` `5d93800` fusionné). `git diff 1826244 c6ed6ad -- linguistic_analysis` ne touche que
   `MODEL_CARD.md`. Fonctions de mesure : `linguistic_analysis/evaluate_double.py` (lecture,
   prédiction par texte, métriques, bootstrap), avec un seul fichier d'annotation.
+- **Commande reproductible** (depuis la racine du dépôt ; fichier de test et sortie hors dépôt ;
+  le même fichier est passé comme annotateur A et B, puisqu'il n'y a qu'une annotation) :
+
+  ```bash
+  python -X utf8 -m linguistic_analysis.evaluate_double \
+      --a <test_P061_P600.tsv> --b <test_P061_P600.tsv> --name-a A --name-b A_bis \
+      --exp-id EXP-B-010 --out-dir <dossier hors dépôt> \
+      --seed 20261015 --resamples 1000 --paired-seed 42 --paired-resamples 2000
+  ```
+
+  - Vérifier d'abord le SHA-256 du fichier (ci-dessus).
+  - Vérifiée le 2026-11-20 sur `a48e447` (diff nul avec `1826244` dans `linguistic_analysis/` hors
+    `MODEL_CARD.md`) : elle redonne à l'identique, en mode règles et en mode parseurs, les chiffres
+    globaux du tableau ci-dessous (détection, modalité, IC, extracteur − baseline).
+  - Les groupes de cette commande suivent la langue donnée par le Lot A2 (fr 161, ar 176,
+    tn-arabizi 163, tn-arabic 40), pas la langue déclarée par le jeu. Le tableau « par langue /
+    écriture déclarée » et la comparaison parseurs − règles viennent d'un script de mesure hors
+    dépôt qui appelle les mêmes fonctions (`read_annotation`, `predict_all`, `detection_block`,
+    `modality_block`, `paired_vs_baseline`).
+- **Analyse d'erreurs** : 40 erreurs tirées (graine 20261015) et classées dans
+  [`docs/lot-b_analyse_erreurs_silver.md`](docs/lot-b_analyse_erreurs_silver.md).
 - **Résultats** :
 
   | Mesure (540 textes) | Règles [IC 95 %] | Parseurs [IC 95 %] | Baseline |
@@ -386,7 +836,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     baseline est **établi**, avec un IC loin de 0.
   - Les scores sont plus élevés que sur le pilote (macro-F1 de détection 0.60–0.74), surtout en
     tunisien arabizi. Ce jeu semble formé de phrases plus courtes et plus nettes que les messages
-    du pilote. Ce point reste à vérifier : nombre de phrases par texte.
+    du pilote. Explication probable : ce sont des textes synthétiques (voir « Provenance »), et non
+    des messages réels.
   - L'erreur dominante reste **le défaut `assertif`** pour les opinions, les souhaits et une partie
     du discours rapporté. C'est cohérent avec l'ablation d'EXP-B-009.
   - Le tunisien en lettres arabes est le groupe le plus faible. Le Lot A2 en classe 41 sur 81 comme
@@ -694,7 +1145,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   contraint (3 graines) ; relire les preuves en langue croisée encore manquées ; test élargi.
 
 ### EXP-C-011 — NLI (Model 2), palier Silver : fine-tuning de mDeBERTa-v3 (protocole fixé avant mesure)
-- **Date** : 2026-11-10 (protocole et règle de version) ; résultats à compléter
+- **Date** : 2026-11-10 (protocole et règle de version) ; 2026-11-14 (grille, mesure unique du test, décision, intégration) ; résultats complétés ; revue Silver le 2026-11-16
 - **Auteur / Lot** : Membre 4 (Wiem) / Lot C
 - **Objectif / hypothèse** : affiner sur le train du corpus A1 le modèle NLI d'EXP-C-008 améliore-t-il la macro-F1 par rapport à ce modèle sans entraînement (0.798), aux règles Bronze d'EXP-C-009 (0.471) et à la classe majoritaire (0.194) ?
 - **Données** : corpus NLI du Lot A1 (privé, non versionné). Règle de version fixée le 2026-11-10, avant tout entraînement et toute mesure :
@@ -783,24 +1234,28 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - il est déclaré **statistiquement équivalent au zero-shot float32** (+0.011, IC 95 % [−0.052 ; +0.071], p = 0.40) : on ne revendique pas de gain de l'affinage sur le zero-shot ; le zero-shot reste disponible comme backend (`NLI_BACKEND=zero-shot`) ;
   - données : la v4 n'étant pas arrivée le jeudi 2026-11-12 à midi, les chiffres Silver sont ceux de la v3, selon la règle fixée le 2026-11-10 ;
   - suite : analyse d'erreurs (CSV privé, catégories proposées, validation manuelle par Membre 4) ; intégration du modèle affiné comme nouveau backend (`NLI_BACKEND`), avec tests et vérification de l'API et du verdict du Lot D.
+- **Statut de l'analyse d'erreurs (mis à jour le 2026-11-22, à lire avant les paragraphes suivants)** : **22 erreurs (modèle principal et zero-shot, 12 test + 10 val) validées par Wiem le 2026-11-22, une par une, après explication de chaque cas par un assistant IA ; 5 catégories changées ; les 28 erreurs de l'ablation restent proposées par l'assistant, non validées.** Fichiers privés : `data/interim/lot_c/nli/validation_erreurs_22.csv` (réponse de Membre 4 recopiée telle quelle : « ok » ou nom de catégorie ; aucun « ? ») et `erreurs_silver_v3.csv` (colonne `categorie_validee`, 22 lignes sur 50, reportée par `python -X utf8 -m models.nli.gold_error_view --merge`). Accord brut entre la proposition de l'assistant et la validation : 17 / 22. Sur les **50 erreurs**, **28 viennent de l'ablation** (`microsoft/mdeberta-v3-base`, graine 42, test) ; seules **22** concernent le modèle Silver retenu ou le zero-shot (12 sur le test, 10 sur la val), et le modèle Silver seul ne fait que 10 erreurs sur le test. Les deux paragraphes suivants (2026-11-14) décrivent la proposition de l'assistant ; le premier tableau donne maintenant les catégories validées.
+- **Transmission à Claude Code** : Claude Code (abonnement Claude Pro) est utilisé pour le développement du Lot C depuis le début du projet et a lu des fichiers privés du corpus (données d'entraînement, val et test, prédictions, labels) ; le 2026-11-22, la validation des erreurs a affiché les affirmations, preuves et labels de 22 paires (12 test, 10 val) ; l'option d'entraînement était activée pendant toute cette période et a été désactivée le 2026-11-22 vers 01:55, ce qui ne garantit pas que les contenus déjà transmis soient supprimés.
 - **Analyse d'erreurs (préparée le 2026-11-14, catégories proposées, à valider par Membre 4)** : `python -m models.nli.silver_errors` écrit `data/interim/lot_c/nli/erreurs_silver_v3.csv` (privé), avec une colonne `categorie_validee` vide. Le test ne compte que **12 erreurs** distinctes (principal 10, dont 9 communes avec le zero-shot ; zero-shot 11) : l'objectif de 30 erreurs ne peut pas être atteint sur le test avec ces deux modèles ; on y ajoute les **10 erreurs de la val** (principal et zero-shot float32), soit 22 erreurs, analysées en entier ; pour dépasser 30, une section séparée (colonne `modele`) ajoute les **28 erreurs de l'ablation (graine 42) sur le test**, soit **50 erreurs** en tout. L'ablation prédit « supports » pour 48 paires sur 56 ; catégories proposées pour elle : recouvrement trompeur 11, négation 6, démenti implicite 4, nombres 4, méta-affirmation 2, marqueur de démenti trompeur 1. Paires « annotation à vérifier » (toutes dans la val, signalées au Lot A1, aucun label modifié) : NLI-P035, NLI-P037, P297. Catégories : celles du Bronze quand c'est possible, plus « confirmation implicite non détectée », « méta-affirmation », « preuve dans l'autre langue » et « annotation à vérifier ». Proposition initiale (principal / zero-shot) sur le test : nombres mal comparés 3, démenti implicite non détecté 3, paraphrase non reconnue 2, recouvrement trompeur 1, confirmation implicite 1, méta-affirmation 1, négation 1 ; sur la val : annotation à vérifier 3, recouvrement trompeur 2, et 1 pour chacune des autres. Chiffres finaux : paragraphe suivant.
-- **Analyse d'erreurs — catégories finales (2026-11-14)** : colonne `categorie_finale` du CSV, remplie par relecture de chacune des 50 lignes par Claude (Membre 4 n'a pas encore rempli `categorie_validee`, qui reste vide) ; catégorie proposée gardée pour 49 lignes, une seule correction (P236 de l'ablation : chiffre absent de la preuve → recouvrement trompeur, comme P278 et P293, et non nombres mal comparés). Une erreur commune au principal et au zero-shot compte une fois dans chacune des deux colonnes.
+- **Analyse d'erreurs — catégories finales (2026-11-14)** : colonne `categorie_finale` du CSV, remplie par relecture de chacune des 50 lignes par Claude ; catégorie proposée gardée pour 49 lignes, une seule correction (P236 de l'ablation : chiffre absent de la preuve → recouvrement trompeur, comme P278 et P293, et non nombres mal comparés). Pour les 22 erreurs du principal et du zero-shot, cette catégorie a ensuite été validée par Membre 4 le 2026-11-22 (voir le statut) : le premier tableau donne les **catégories validées** ; le second (ablation) donne toujours les catégories proposées, non validées. Une erreur commune au principal et au zero-shot compte une fois dans chacune des deux colonnes.
 
-  | Catégorie finale | principal (19 : 10 test, 9 val) | zero-shot float32 (21 : 11 test, 10 val) | exemples typiques |
+  | Catégorie validée (Membre 4, 2026-11-22) | principal (19 : 10 test, 9 val) | zero-shot float32 (21 : 11 test, 10 val) | exemples typiques |
   |---|---|---|---|
-  | nombres mal comparés | 4 (3 test) | 3 (2 test) | NLI-P004, P255, NLI-P012 |
   | démenti implicite non détecté | 4 (3 test) | 4 (3 test) | NLI-P006, NLI-P007, P140 |
-  | recouvrement trompeur (même sujet, autre fait) | 3 (1 test) | 3 (1 test) | NLI-P010, NLI-P053, P145 |
-  | annotation à vérifier | 3 (0 test) | 3 (0 test) | NLI-P035, NLI-P037, P297 |
+  | recouvrement trompeur (même sujet, autre fait) | 4 (2 test) | 4 (2 test) | NLI-P010, NLI-P012, NLI-P037, P145 |
+  | nombres mal comparés | 3 (2 test) | 2 (1 test) | NLI-P004, P255, P274 |
+  | annotation à vérifier | 3 (0 test) | 3 (0 test) | NLI-P035, NLI-P053, P297 |
+  | méta-affirmation (« selon X », « X a vérifié ») | 0 | 3 (2 test) | P188, P207, P279 |
+  | confirmation implicite non détectée | 2 (2 test) | 2 (2 test) | NLI-P057, P276 |
   | négation mal interprétée | 2 (1 test) | 2 (1 test) | P277, P300 |
-  | paraphrase non reconnue (recouvrement faible) | 1 (1 test) | 2 (2 test) | P276, P207 |
-  | méta-affirmation (« selon X », « X a vérifié ») | 0 | 2 (1 test) | P188, P279 |
-  | confirmation implicite non détectée | 1 (1 test) | 1 (1 test) | NLI-P057 |
   | preuve dans l'autre langue (fr / ar) | 1 (0 test) | 1 (0 test) | P299 |
+  | paraphrase non reconnue (recouvrement faible) | 0 | 0 | aucune (les 2 proposées ont été changées) |
 
-  Sur 22 paires en erreur, 18 sont communes aux deux modèles ; le principal corrige les 2 méta-affirmations et P207, et se trompe seul sur NLI-P004 (nombres).
+  Sur 22 paires en erreur, 18 sont communes aux deux modèles ; le principal corrige les 3 méta-affirmations (P188, P207, P279), et se trompe seul sur NLI-P004 (nombres).
 
-  | Catégorie finale | ablation graine 42 (28, test) | exemples typiques |
+  Changements par rapport à la proposition de l'assistant (5 sur 22) : NLI-P037 (val) annotation à vérifier → recouvrement trompeur (le Lot A1 a conservé `neutral`) ; NLI-P012 (test) nombres mal comparés → recouvrement trompeur ; P207 (test) paraphrase non reconnue → méta-affirmation ; P276 (test) paraphrase non reconnue → confirmation implicite non détectée ; NLI-P053 (val) recouvrement trompeur → annotation à vérifier.
+
+  | Catégorie finale (proposée par l'assistant, non validée) | ablation graine 42 (28, test) | exemples typiques |
   |---|---|---|
   | recouvrement trompeur (même sujet, autre fait) | 12 | NLI-P011, P231, P278 |
   | négation mal interprétée | 6 | NLI-P074, P209, P232 |
@@ -809,8 +1264,18 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   | méta-affirmation (« selon X », « X a vérifié ») | 2 | P189, P252 |
   | marqueur de démenti trompeur | 1 | NLI-P005 |
 
-  Lecture : les erreurs du principal et du zero-shot viennent surtout de ce qu'il faut **comparer** (nombres, dates) ou **déduire** (démenti d'une rumeur sans reprendre son contenu, confirmation implicite) ; 3 des 9 erreurs de val tiennent sans doute au label (signalées au Lot A1). L'ablation, qui prédit « supports » pour 48 paires sur 56, échoue surtout dès que la preuve parle du même sujet (recouvrement trompeur, 12) ou contient une négation (6) : sans pré-entraînement NLI, 174 paires ne suffisent pas à apprendre la négation. Effectifs petits : ces chiffres décrivent des cas, pas des taux.
+  Lecture : les erreurs du principal et du zero-shot viennent surtout de ce qu'il faut **comparer** (nombres, dates) ou **déduire** (démenti d'une rumeur sans reprendre son contenu, confirmation implicite), ou de preuves qui parlent du même sujet mais d'un autre fait (recouvrement trompeur) ; 3 des 9 erreurs de val du principal tiennent sans doute au label (NLI-P035, NLI-P053, P297 ; NLI-P053 reste à signaler au Lot A1). L'ablation, qui prédit « supports » pour 48 paires sur 56, échoue surtout dès que la preuve parle du même sujet (recouvrement trompeur, 12) ou contient une négation (6) : sans pré-entraînement NLI, 174 paires ne suffisent pas à apprendre la négation. Effectifs petits : ces chiffres décrivent des cas, pas des taux.
 - **Intégration (2026-11-14)** : nouveau moteur `NLI_BACKEND=fine-tuned` dans `models/nli/stance.py` (checkpoint Silver graine 42 par défaut ; `CHECKPOINT_DIR` / `NLI_FINETUNED_MODEL` pour un autre chemin ; float32 ; checkpoint absent → « neutre », confiance 0) ; le moteur par défaut reste `bronze` et `zero-shot` reste disponible. L'API (`/nli`, `/verdict`, `/verdict/detail`, `/check`), le pipeline et le verdict du Lot D passent tous par `predict_stances` : aucun changement de leur code. Tests : sélection du checkpoint, surcharge par variable, repli « neutre », passage par l'API (faux modèle, CI légère) ; suite complète 641 passés. Vérification avec le vrai checkpoint : routes de l'API en 200, `backend_info` = `fine-tuned` ; verdict du Lot D sur le jeu de développement **fictif** (n = 20, pas le test gelé du Lot D, aucun fichier écrit) : macro-F1 0.503 avec le modèle affiné, 0.530 avec le zero-shot, 0.524 avec les règles du Lot D (écarts d'une ou deux affirmations sur 20 : non interprétables).
+- **Suite pour la v4 — labels douteux de la val (source : mail du Lot A1, Ghofrane, 2026-11-15)** : décisions du Lot A1 sur les 3 paires « annotation à vérifier », à appliquer dans la v4 seulement ; **la v3 reste inchangée** et tous les chiffres ci-dessus restent ceux de la v3 :
+  - NLI-P035 : label v3 `neutral` → `refutes` ;
+  - NLI-P037 : `neutral` conservé ;
+  - P297 : affirmation à reformuler (nouvelle formulation dans le corpus du Lot A1, hors dépôt), label `refutes` → `supports`.
+- **À signaler au Lot A1 (ajouté le 2026-11-22)** : **NLI-P053 (val)**, classée « annotation à vérifier » par Membre 4 lors de la validation des erreurs : label v3 `neutral` discutable (la preuve indique qu'aucune activité n'a eu lieu après 2013, ce qui invalide la convention, et TuniFact classe l'information comme vraie) ; pas encore transmise au Lot A1 ; aucun label modifié dans le dépôt ni dans les données du Lot C.
+- **Livraison v5 du corpus (2026-11-22, contrôlée le jour même ; aucun nouveau découpage, aucun entraînement, aucune mesure)** : le Lot A1 a livré `nli_corpus_300_consolide_v5_prive.jsonl` (SHA-256 `234b4528d798bb1ef827a841dbb83af9f50be70d9b38160097502df038ec08a3`) et `nli_v4_articles_sujets_sources_categories.csv` (SHA-256 `3cf40c0bcbf243096d1e66a35cb7b350615d71489e9b4089129f65ce31668160` ; 49 articles, source, 12 catégories thématiques), privés, dans `data/interim/lot_c/nli/` (ignorés par git, vérifié par `git check-ignore`). SHA-256 recalculés : identiques aux valeurs annoncées. Contrôles (identifiants et comptes seulement, aucun texte affiché) :
+  - **test inchangé** : les 56 paires du test v3 sont dans la v5 avec exactement la même affirmation, la même preuve et le même label (0 différence) ; aucune n'y est marquée « Brouillon non valide » ; découpage gelé (`59582eb7…`) et test privé (`f8f12d7f…`) inchangés ;
+  - de la v3 à la v5 (mêmes 300 `pair_id`, 37 brouillons de part et d'autre ; la v5 n'a pas de champ `article_id`) : **NLI-P035 (val) `neutral` → `refutes`**, conformément à la décision du Lot A1 du 2026-11-15 ; NLI-P004 (test) : seule la remarque change (justification du label réécrite, avec validation humaine explicite), affirmation, preuve et label identiques ; aucune autre différence. Cohérent avec le Lot A1, pour qui seule NLI-P035 change par rapport à la v4 ;
+  - P297 est identique dans la v3 et la v5 : la reformulation annoncée le 2026-11-15 n'est pas appliquée (à signaler au Lot A1) ;
+  - conséquence : selon la définition du 2026-11-10, le test gelé n'est pas changé ; P035 est dans la val, qui a servi au choix des hyperparamètres avec l'ancien label (une paire sur 33) ; ce choix n'est pas refait. **Les chiffres Silver ci-dessus (v3) restent valables** ; rien n'est réentraîné ni re-mesuré.
 
 ### EXP-B-009 — Réanalyse du pilote (macro-F1, bootstrap apparié) et ablation des composants
 - **Date** : 2026-11-14
