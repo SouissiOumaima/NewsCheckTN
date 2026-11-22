@@ -17,10 +17,13 @@ la mesure (chemins et empreintes SHA-256 seulement). Format du manifeste :
     }
 Fichiers de prédictions (écrits par l'entraînement final, une fois) : une ligne par texte,
 « numéro<TAB>étiquette », numéros 1..N dans l'ordre du jeu ; étiquettes tn / ar pour le test et
-la presse, fr / ar / tn pour eval_30. Presse : une phrase par ligne (UTF-8).
+la presse, fr / ar / tn / unk pour eval_30 (unk compte comme une erreur). Presse : une phrase
+par ligne (UTF-8).
 
-Le script refuse de tourner si une empreinte ne correspond pas, et refuse un 2e passage dans le
-même dossier de sortie sans --deuxieme-passage (le passage est alors déclaré comme tel).
+Le script refuse de tourner si une empreinte ne correspond pas, et refuse un 2e passage sans
+--deuxieme-passage (le passage est alors déclaré comme tel). Le verrou est à un emplacement FIXE
+hors dépôt (LOCK_PATH), qu'aucune option ne change ; limite résiduelle : supprimer ce fichier à
+la main permettrait une relance non déclarée (écrit dans EXP-A2-020).
 """
 
 from __future__ import annotations
@@ -34,7 +37,7 @@ from pathlib import Path
 
 from common.schemas import Lang
 from normalization.annotation import read_annotations
-from normalization.evaluate import DEFAULT_DATASET, load_examples, scores
+from normalization.evaluate import DEFAULT_DATASET, REPO, load_examples, scores
 from normalization.gold_common import (
     BOOTSTRAP_DRAWS,
     SEED,
@@ -62,7 +65,10 @@ MIN_RECALL_TN = 0.70
 MIN_PRECISION_TN = 0.90
 MAX_FALSE_ALARMS = 0.01
 EVAL30_MACRO_F1_PROTOCOLE = 0.94
-LOCK_NAME = "lot-a2_gold_final_passage.json"
+# Verrou du passage unique : emplacement fixe, hors dépôt, sans option pour le changer.
+# Sur le poste du responsable : C:\projects\esprim\NewsCheckTN_out\verrou_gold_final.json
+LOCK_PATH = REPO.parent / "NewsCheckTN_out" / "verrou_gold_final.json"
+EVAL30_LABELS = {"fr", "ar", "tn", "unk"}  # unk possible (texte sans lettre) : compté faux
 
 
 # ---------------------------------------------------------------------------
@@ -217,9 +223,9 @@ def verdict(result: dict, statut_reference: str) -> dict:
 # Passage unique
 # ---------------------------------------------------------------------------
 
-def acquire_passage(out_dir: Path, second: bool, manifest_sha: str) -> int:
+def acquire_passage(lock: Path, second: bool, manifest_sha: str) -> int:
     """1er passage, ou 2e déclaré avec --deuxieme-passage ; jamais un 3e."""
-    lock = out_dir / LOCK_NAME
+    lock.parent.mkdir(parents=True, exist_ok=True)
     done = json.loads(lock.read_text(encoding="utf-8"))["passages"] if lock.exists() else []
     if not done and second:
         raise RefusGold("--deuxieme-passage demandé alors qu'aucun passage n'a eu lieu")
@@ -274,12 +280,12 @@ def run(argv: list[str] | None = None) -> None:
         test_preds[s] = load_predictions(f"prédictions test graine {s}", files["test"], N_TEST,
                                          {"tn", "ar"})
         eval_preds[s] = load_predictions(f"prédictions eval_30 graine {s}", files["eval_30"],
-                                         len(eval_examples), {"fr", "ar", "tn"})
+                                         len(eval_examples), EVAL30_LABELS)
         if press_preds is not None:
             press_preds[s] = load_predictions(f"prédictions presse graine {s}", files["presse"],
                                               len(press_texts), {"tn", "ar"})
     manifest_sha = sha256_file(args.manifeste)
-    number = acquire_passage(out_dir, args.deuxieme_passage, manifest_sha)
+    number = acquire_passage(LOCK_PATH, args.deuxieme_passage, manifest_sha)
 
     result = criteria(rows, test_preds, eval_examples, eval_preds, press_texts, press_preds)
     decision = verdict(result, manifest["statut_reference"])

@@ -1,0 +1,39 @@
+{
+  "_notes": {
+    "role": "Modèle de manifeste pour python -X utf8 -m normalization.gold_final (EXP-A2-020). Copier ce fichier HORS du dépôt, le remplir, consigner son SHA-256 dans EXP-A2-020 AVANT la mesure.",
+    "reference_test": "référence du test gelé (300 lignes, aucune « ? ») ; SHA-256 du fichier donné par : python -X utf8 -m normalization.gold_agreement reference --fichier <référence>",
+    "statut_reference": "« adjugee » si deux annotations adjugées ; « annotateur1_seul » sinon (conclusion forcée à « indicatif », §8 du protocole Gold)",
+    "graines": "chemins et SHA-256 copiés du JSON lot-a2_gold_predictions_<date>.json écrit par normalization.gold_predict_local ; supprimer la clé « presse » de chaque graine si la presse n'est pas mesurée",
+    "presse": "valeurs copiées du JSON lot-a2_gold_presse_<date>.json écrit par normalization.gold_presse tirer ; mettre null si aucune année autre que 2022 n'est disponible (critère 3 non mesuré)",
+    "confidentialite": "le manifeste rempli contient des chemins locaux : il ne va pas dans le dépôt ; seules les empreintes vont dans experiments.md"
+  },
+  "reference_test": {
+    "chemin": "<chemin de la référence du test, hors dépôt>",
+    "sha256": "<SHA-256 du fichier de référence>"
+  },
+  "statut_reference": "<adjugee | annotateur1_seul>",
+  "graines": {
+    "1": {
+      "test": {"chemin": "<.../predictions_test_graine1.tsv>", "sha256": "<SHA-256>"},
+      "eval_30": {"chemin": "<.../predictions_eval_30_graine1.tsv>", "sha256": "<SHA-256>"},
+      "presse": {"chemin": "<.../predictions_presse_graine1.tsv>", "sha256": "<SHA-256>"}
+    },
+    "2": {
+      "test": {"chemin": "<.../predictions_test_graine2.tsv>", "sha256": "<SHA-256>"},
+      "eval_30": {"chemin": "<.../predictions_eval_30_graine2.tsv>", "sha256": "<SHA-256>"},
+      "presse": {"chemin": "<.../predictions_presse_graine2.tsv>", "sha256": "<SHA-256>"}
+    },
+    "3": {
+      "test": {"chemin": "<.../predictions_test_graine3.tsv>", "sha256": "<SHA-256>"},
+      "eval_30": {"chemin": "<.../predictions_eval_30_graine3.tsv>", "sha256": "<SHA-256>"},
+      "presse": {"chemin": "<.../predictions_presse_graine3.tsv>", "sha256": "<SHA-256>"}
+    }
+  },
+  "presse": {
+    "chemin": "<.../presse_ara_news_<année>_10K_300.txt>",
+    "sha256": "<SHA-256 de l'échantillon>",
+    "annee": "<année>",
+    "url": "<https://downloads.wortschatz-leipzig.de/corpora/ara_news_<année>_10K.tar.gz>",
+    "sha256_archive": "<SHA-256 de l'archive>"
+  }
+}

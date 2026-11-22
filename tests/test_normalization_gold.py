@@ -13,7 +13,9 @@ import pytest
 from normalization import baseline_fasttext as ft
 from normalization import gold_agreement as ga
 from normalization import gold_final as fin
+from normalization import gold_kaggle_inputs as ki
 from normalization import gold_leakage as lk
+from normalization import gold_predict_local as pl
 from normalization import gold_presse as pr
 from normalization import gold_robustness as inv
 from normalization.evaluate import REPO
@@ -573,17 +575,202 @@ def test_final_criteres_non_atteints():
 
 
 def test_final_passage_unique(tmp_path):
-    assert fin.acquire_passage(tmp_path, False, "a" * 64) == 1
+    lock = tmp_path / "verrou" / "verrou_gold_final.json"
+    assert fin.acquire_passage(lock, False, "a" * 64) == 1
     with pytest.raises(RefusGold, match="déjà faite"):
-        fin.acquire_passage(tmp_path, False, "a" * 64)
-    assert fin.acquire_passage(tmp_path, True, "a" * 64) == 2
+        fin.acquire_passage(lock, False, "a" * 64)
+    assert fin.acquire_passage(lock, True, "a" * 64) == 2
     with pytest.raises(RefusGold, match="deux passages"):
-        fin.acquire_passage(tmp_path, True, "a" * 64)
+        fin.acquire_passage(lock, True, "a" * 64)
 
 
 def test_final_deuxieme_passage_refuse_sans_premier(tmp_path):
     with pytest.raises(RefusGold, match="aucun passage"):
-        fin.acquire_passage(tmp_path, True, "a" * 64)
+        fin.acquire_passage(tmp_path / "verrou.json", True, "a" * 64)
+
+
+def test_final_verrou_fixe_hors_depot():
+    assert fin.LOCK_PATH == REPO.parent / "NewsCheckTN_out" / "verrou_gold_final.json"
+    assert not fin.LOCK_PATH.resolve().is_relative_to(REPO.resolve())
+
+
+def test_final_eval_30_accepte_unk(tmp_path):
+    entry = _predictions(tmp_path / "p.tsv", ["fr", "unk", "tn"])
+    assert fin.load_predictions("p", entry, 3, fin.EVAL30_LABELS) == ["fr", "unk", "tn"]
+
+
+def test_final_modele_de_manifeste_valide():
+    template = REPO / "docs" / "lot-a2_gold_manifeste_modele.json"
+    manifest = json.loads(template.read_text(encoding="utf-8"))
+    assert set(manifest) - {"_notes"} == {"reference_test", "statut_reference", "graines",
+                                          "presse"}
+    assert sorted(manifest["graines"]) == list(fin.SEEDS)
+    for files in manifest["graines"].values():
+        assert set(files) == {"test", "eval_30", "presse"}
+
+
+def test_final_modele_de_manifeste_passe_load_manifest(tmp_path):
+    template = REPO / "docs" / "lot-a2_gold_manifeste_modele.json"
+    manifest = json.loads(template.read_text(encoding="utf-8"))
+    manifest["statut_reference"] = "annotateur1_seul"
+    path = tmp_path / "manifeste.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    assert fin.load_manifest(path)["statut_reference"] == "annotateur1_seul"
+
+
+# ---------------------------------------------------------------------------
+# Entrées de l'entraînement final (gold_kaggle_inputs), textes factices
+# ---------------------------------------------------------------------------
+
+def test_entrees_train_exclut_f_et_x():
+    rows = ki.train_rows([("t", "3lech"), ("a", SANS_LA), ("f", "Il fait beau"), ("x", "ok")])
+    assert [r[0] for r in rows] == [1, 0]
+    assert all(r[1] in (0, 1) for r in rows)
+
+
+def test_entrees_consulte_seulement_arabe_standard_en_lettres_arabes():
+    rows = ki.prediction_rows("factice", [SANS_LA, "Il fait beau aujourd'hui"])
+    assert rows[0][1] == "ar" and rows[0][2] == 1
+    assert rows[1][1] == "fr" and rows[1][2] == 0
+
+
+def test_entrees_refusent_une_tabulation():
+    with pytest.raises(RefusGold, match="tabulation"):
+        ki.prediction_rows("factice", ["texte\tavec tabulation"])
+
+
+def test_entrees_test_sans_etiquette(tmp_path, monkeypatch):
+    monkeypatch.setattr(ki, "N_TRAIN", 2)
+    summary = ki.build([("t", "3lech"), ("a", SANS_LA)], [SANS_LA, "3lech ya5i"],
+                       ["Il fait beau"], None, tmp_path)
+    header = (tmp_path / "final_test.tsv").read_text(encoding="utf-8").splitlines()[0]
+    assert header == "numero\tregles\tconsulte\ttext"
+    assert "presse" not in summary and summary["test"]["n"] == 2
+    assert "3lech" not in json.dumps(summary, ensure_ascii=False)
+
+
+def test_entrees_refusent_un_mauvais_effectif(tmp_path):
+    with pytest.raises(RefusGold, match="au lieu de 800"):
+        ki.build([("t", "3lech")], [], [], None, tmp_path)
+
+
+def test_entrees_ne_s_ecrasent_pas(tmp_path, monkeypatch):
+    monkeypatch.setattr(ki, "N_TRAIN", 1)
+    ki.build([("t", "3lech")], [SANS_LA], ["Il fait beau"], None, tmp_path)
+    with pytest.raises(RefusGold, match="existe déjà"):
+        ki.build([("t", "3lech")], [SANS_LA], ["Il fait beau"], None, tmp_path)
+
+
+def test_entrees_refusent_out_dir_dans_depot():
+    with pytest.raises(RefusGold, match="dans le dépôt"):
+        ki.run(["--out-dir", str(REPO / "gold_sortie")])
+
+
+# ---------------------------------------------------------------------------
+# Prédiction locale (gold_predict_local), faux modèle
+# ---------------------------------------------------------------------------
+
+def _summary(train_sha: str) -> dict:
+    return {"config": dict(pl.EXPECTED_CONFIG), "entrainement": {"sha256": train_sha},
+            "modeles": {s: {"fichiers": {}} for s in pl.SEEDS}}
+
+
+def test_prediction_cascade():
+    assert pl.cascade_label("tn", 0, None, True) == "tn"
+    assert pl.cascade_label("ar", 1, 0.30, True) == "tn"
+    assert pl.cascade_label("ar", 1, 0.29, True) == "ar"
+    assert pl.cascade_label("fr", 0, None, False) == "fr"
+    assert pl.cascade_label("fr", 0, None, True) == "ar"
+    assert pl.cascade_label("unk", 0, None, False) == "unk"
+
+
+def test_prediction_refuse_une_probabilite_manquante():
+    with pytest.raises(ValueError):
+        pl.cascade_label("ar", 1, None, True)
+
+
+def test_prediction_modele_appele_sur_les_seuls_consultes():
+    seen: list[list[str]] = []
+
+    def scorer(texts):
+        seen.append(texts)
+        return [0.9] * len(texts)
+    rows = [(1, "tn", 0, "a"), (2, "ar", 1, "b"), (3, "fr", 0, "c")]
+    assert pl.predict_set(rows, scorer, binary=False) == ["tn", "tn", "fr"]
+    assert seen == [["b"]]
+
+
+def test_prediction_resume_configuration_figee():
+    pl.check_summary(_summary("s" * 64), "s" * 64)
+    changed = _summary("s" * 64)
+    changed["config"]["lr"] = 5e-5
+    with pytest.raises(RefusGold, match="configuration différente"):
+        pl.check_summary(changed, "s" * 64)
+
+
+def test_prediction_resume_autre_entrainement():
+    with pytest.raises(RefusGold, match="autre final_train"):
+        pl.check_summary(_summary("s" * 64), "t" * 64)
+
+
+def test_prediction_empreintes_du_modele(tmp_path):
+    folder = tmp_path / "graine1"
+    folder.mkdir()
+    (folder / "config.json").write_text("{}", encoding="utf-8")
+    good = {"config.json": fin.sha256_file(folder / "config.json")}
+    pl.check_model_dir("1", folder, good)
+    with pytest.raises(RefusGold, match="empreinte différente"):
+        pl.check_model_dir("1", folder, {"config.json": "0" * 64})
+    with pytest.raises(RefusGold, match="fichiers du modèle"):
+        pl.check_model_dir("1", folder, {**good, "model.safetensors": "0" * 64})
+
+
+def test_prediction_bout_en_bout_faux_modele(tmp_path, monkeypatch):
+    monkeypatch.setattr(ki, "N_TRAIN", 1)
+    inputs = tmp_path / "entrees"
+    inputs.mkdir()
+    summary = ki.build([("t", "3lech")], [SANS_LA, "3lech ya5i"], ["Il fait beau", SANS_LA],
+                       None, inputs)
+    (inputs / "final_inputs.json").write_text(json.dumps({"fichiers": summary}),
+                                              encoding="utf-8")
+    info, sets = pl.load_inputs(inputs)
+    assert set(sets) == {"test", "eval_30"}
+    out = tmp_path / "sortie"
+    out.mkdir()
+    result = pl.predict_all(sets, {s: (lambda texts: [0.9] * len(texts)) for s in pl.SEEDS}, out)
+    entry = result["1"]["test"]
+    lines = (out / "predictions_test_graine1.tsv").read_text(encoding="utf-8").splitlines()
+    assert entry["n"] == len(lines) == 2 and all(line.split("\t")[1] in ("tn", "ar")
+                                                 for line in lines)
+    assert entry["sha256"] == fin.sha256_file(out / "predictions_test_graine1.tsv")
+    with pytest.raises(RefusGold, match="existe déjà"):
+        pl.predict_all(sets, {"1": lambda texts: [0.9] * len(texts)}, out)
+
+
+def test_prediction_entrees_alterees(tmp_path, monkeypatch):
+    monkeypatch.setattr(ki, "N_TRAIN", 1)
+    summary = ki.build([("t", "3lech")], [SANS_LA], ["Il fait beau"], None, tmp_path)
+    (tmp_path / "final_inputs.json").write_text(json.dumps({"fichiers": summary}),
+                                                encoding="utf-8")
+    with (tmp_path / "final_test.tsv").open("a", encoding="utf-8") as handle:
+        handle.write("2\tar\t1\tligne ajoutée\n")
+    with pytest.raises(RefusGold, match="empreinte différente"):
+        pl.load_inputs(tmp_path)
+
+
+def test_prediction_refuse_out_dir_dans_depot(tmp_path):
+    args = ["--entrees", str(tmp_path), "--resume", str(tmp_path / "r.json"),
+            "--modele-graine1", "a", "--modele-graine2", "b", "--modele-graine3", "c",
+            "--out-dir", str(REPO / "gold_sortie")]
+    with pytest.raises(RefusGold, match="dans le dépôt"):
+        pl.run(args)
+
+
+def test_prediction_sans_torch_a_l_import():
+    # import paresseux : torch et transformers ne sont importés que dans load_scorer
+    source = (REPO / "normalization" / "gold_predict_local.py").read_text(encoding="utf-8")
+    header = source.split("def load_scorer")[0]
+    assert "import torch" not in header and "import transformers" not in header
 
 
 def test_final_manifeste_incomplet(tmp_path):
