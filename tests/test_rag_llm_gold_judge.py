@@ -101,3 +101,28 @@ def test_temperature_zero_pour_le_juge(monkeypatch):
     before = gj.lv.TEMPERATURE
     gj.JudgeGenerator().generate([], 42)
     assert seen["t"] == 0.0 and gj.lv.TEMPERATURE == before
+
+
+def test_prompt_v2_cles_explicites_et_format_plat():
+    system = gj.build_messages(ROW, "Clés :\n{{CLES}}")[0]["content"]
+    assert '"pertinence_P1"' in system and '"pertinence_P5"' in system
+    assert '"verdict_fidele"' in system and "{{CLES}}" not in system
+    v1 = gj.build_messages(ROW, "règles v1")[0]["content"]
+    assert v1 == "règles v1"  # le prompt v1 reste identique (cache et résultats inchangés)
+    raw = json.dumps(
+        {
+            "raison": "...",
+            "sens_explication": "contredite",
+            "pertinence_P1": "oui",
+            "pertinence_P5": "Non",
+            "fait_invente": "non",
+            "verdict_fidele": "non",
+        }
+    )
+    lab, err = gj.parse_judge(raw, ROW)
+    assert err is None
+    assert lab[("dev-c01", "pertinence:P1")] == "pertinent"
+    assert lab[("dev-c01", "pertinence:P5")] == "non_pertinent"
+    assert lab[("dev-c01", "invente")] == "non" and lab[("dev-c01", "fidelite")] == "infidele"
+    _, err = gj.parse_judge('{"fait_invente": "oui", "verdict_fidele": "invente"}', ROW)
+    assert err == "etiquettes_manquantes"

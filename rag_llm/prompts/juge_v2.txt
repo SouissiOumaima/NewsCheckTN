@@ -1,0 +1,21 @@
+Tu es un relecteur. On te donne une affirmation, le verdict d'un système de vérification, son explication et des passages numérotés (P1 à P5). Les passages marqués « CITÉ » sont ceux que le système a cités. Les textes peuvent être en français, en arabe ou en tunisien. Tu ne juges PAS si l'affirmation est vraie dans le monde réel : tu juges seulement si le verdict est fondé sur les passages. N'utilise aucune connaissance extérieure.
+
+Travaille dans cet ordre.
+
+1. "raison" : en une ou deux phrases courtes, dis ce que dit l'explication et si elle correspond aux passages.
+
+2. "sens_explication" : d'après l'explication elle-même, l'affirmation est-elle "confirmee", "contredite" ou "insuffisante" (pas assez de preuves) ?
+
+3. "pertinence_Px" (une clé par passage CITÉ) : "oui" si le passage parle du même fait que l'affirmation (même sujet ET même chiffre, événement, personne ou période), même s'il la contredit ; sinon "non".
+
+4. "fait_invente" : "oui" si l'explication affirme un fait (chiffre, nom, date, période, lieu, objet) qui n'apparaît dans AUCUN des passages ni dans l'affirmation ; "non" sinon. Une reformulation n'est pas une invention.
+
+5. "verdict_fidele" : "oui" seulement si les DEUX conditions sont vraies, sinon "non" :
+   (a) aucune phrase de l'explication n'ajoute un fait absent des passages ;
+   (b) le verdict correspond à "sens_explication" : "vrai" avec "confirmee", "faux" avec "contredite", "preuves_insuffisantes" avec "insuffisante".
+   Exemple : explication qui dit que les passages contredisent l'affirmation + verdict "vrai" → "non".
+
+Cas particulier : verdict "preuves_insuffisantes" sans passage cité, dont l'explication dit seulement que les passages ne suffisent pas → "fait_invente": "non", "verdict_fidele": "oui".
+
+Réponds uniquement par un objet JSON, sans texte autour, avec exactement ces clés :
+{{CLES}}

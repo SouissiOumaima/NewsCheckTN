@@ -46,6 +46,8 @@ LABELS = {
 }
 SPLIT_SEED = 42
 JUDGE_SEED = 42
+KEYS_PLACEHOLDER = "{{CLES}}"
+YES_NO = {"oui": True, "non": False}
 KAPPA_MIN = 0.60
 REPLICATIONS = 10_000
 HUMAN_HADIL = RESULTS_DIR / "lot-d_annotation_hadil_dev_annote.csv"
@@ -103,10 +105,20 @@ def build_messages(row: dict, system_prompt: str) -> list[dict]:
             mark = " (CITÉ)" if p in cits else ""
             lines.append(f"{p}{mark} : {row[p]}")
     lines.append(f"Passages cités : {', '.join(cits) if cits else 'aucun'}")
+    if KEYS_PLACEHOLDER in system_prompt:  # prompt v2 et suivants : clés attendues explicites
+        system_prompt = system_prompt.replace(KEYS_PLACEHOLDER, expected_keys_template(row))
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": "\n".join(lines)},
     ]
+
+
+def expected_keys_template(row: dict) -> str:
+    """Gabarit JSON des clés attendues pour ce verdict (format plat, prompt v2)."""
+    keys = {"raison": "...", "sens_explication": "confirmee | contredite | insuffisante"}
+    keys.update({f"pertinence_{p}": "oui | non" for p in cited(row)})
+    keys.update({"fait_invente": "oui | non", "verdict_fidele": "oui | non"})
+    return json.dumps(keys, ensure_ascii=False)
 
 
 def parse_judge(raw: str, row: dict) -> tuple[dict[tuple[str, str], str], str | None]:
@@ -118,7 +130,22 @@ def parse_judge(raw: str, row: dict) -> tuple[dict[tuple[str, str], str], str | 
         data = json.loads(m.group(0))
     except json.JSONDecodeError:
         return {}, "json_invalide"
+    if not isinstance(data, dict):
+        return {}, "json_invalide"
     cid, out = row["claim_id"], {}
+    if "verdict_fidele" in data or "fait_invente" in data:  # format plat (prompt v2)
+        for p in cited(row):
+            v = YES_NO.get(str(data.get(f"pertinence_{p}", "")).strip().lower())
+            if v is not None:
+                out[(cid, f"pertinence:{p}")] = "pertinent" if v else "non_pertinent"
+        v = YES_NO.get(str(data.get("fait_invente", "")).strip().lower())
+        if v is not None:
+            out[(cid, "invente")] = "oui" if v else "non"
+        v = YES_NO.get(str(data.get("verdict_fidele", "")).strip().lower())
+        if v is not None:
+            out[(cid, "fidelite")] = "fidele" if v else "infidele"
+        expected = len(cited(row)) + 2
+        return out, None if len(out) == expected else "etiquettes_manquantes"
     pert = data.get("pertinence") or {}
     if not isinstance(pert, dict):
         pert = {}
