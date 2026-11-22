@@ -517,7 +517,12 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   précision tn ≥ 0.90 sur les prédictions hors pli ; configuration retenue = meilleur rappel moyen
   parmi celles de précision moyenne ≥ 0.90 (égalité : lr puis époques les plus petits).
 - **Code** : `notebooks/lot_a2/marbert_cv.ipynb` (sorties de scores seulement) ; préparation locale
-  du fichier (`label`, `lex`, `text`) depuis `train_800_annotateur1.tsv`.
+  du fichier (`label`, `lex`, `text`) depuis `train_800_annotateur1.tsv`, versionnée depuis le
+  2026-11-22 dans `normalization/model_tn_kaggle_prep.py` (commit `994eca3`) :
+  `python -X utf8 -m normalization.model_tn_kaggle_prep --sortie <fichier>` ; relancé le
+  2026-11-22, il redonne 800 lignes et le SHA-256
+  `39a3643bd82b63aa5bb740e068d702ade178891853912a53f8b4116fd6fab2bc`, identique au fichier envoyé
+  sur Kaggle pour cette expérience (comparaison des empreintes faite le 2026-11-22).
 - **Résultats** (hors pli, moyenne ± écart-type sur 5 graines ; 23.7 min sur GPU T4) :
 
   | Système | Rappel tn | Précision tn | Macro-F1 |
