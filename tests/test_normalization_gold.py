@@ -14,6 +14,7 @@ from normalization import baseline_fasttext as ft
 from normalization import gold_agreement as ga
 from normalization import gold_final as fin
 from normalization import gold_leakage as lk
+from normalization import gold_presse as pr
 from normalization import gold_robustness as inv
 from normalization.evaluate import REPO
 from normalization.gold_common import (
@@ -608,6 +609,69 @@ def test_final_refuse_out_dir_dans_depot(tmp_path):
 def test_final_criteres_du_protocole_inchanges():
     assert (fin.MIN_RECALL_TN, fin.MIN_PRECISION_TN, fin.MAX_FALSE_ALARMS) == (0.70, 0.90, 0.01)
     assert fin.SEEDS == ("1", "2", "3")
+
+
+# ---------------------------------------------------------------------------
+# Presse neuve (EXP-A2-020, §9) : faux serveur, archive factice, aucun accès réseau
+# ---------------------------------------------------------------------------
+
+def _archive(tmp_path, year: int, n: int):
+    import io
+    import tarfile
+    path = tmp_path / f"ara_news_{year}_10K.tar.gz"
+    content = "".join(f"{i}\tphrase factice numéro {i}\n" for i in range(1, n + 1)).encode()
+    with tarfile.open(path, "w:gz") as archive:
+        info = tarfile.TarInfo(f"ara_news_{year}_10K/ara_news_{year}_10K-sentences.txt")
+        info.size = len(content)
+        archive.addfile(info, io.BytesIO(content))
+    return path
+
+
+def test_presse_annee_la_plus_recente_sans_2022():
+    available = {pr.url_for(2022), pr.url_for(2021), pr.url_for(2020)}
+    assert pr.most_recent_year(lambda url: url in available, newest=2026) == 2021
+
+
+def test_presse_aucune_annee_disponible():
+    assert pr.most_recent_year(lambda url: url == pr.url_for(2022), newest=2026) is None
+
+
+def test_presse_url_10k():
+    assert pr.url_for(2024).endswith("/ara_news_2024_10K.tar.gz")
+
+
+def test_presse_tirage_deterministe_de_300(tmp_path):
+    archive = _archive(tmp_path, 2024, 1000)
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    first = pr.draw_sample(archive, tmp_path / "a", 2024)
+    second = pr.draw_sample(archive, tmp_path / "b", 2024)
+    assert first["n"] == 300 and first["phrases_archive"] == 1000
+    assert first["sha256"] == second["sha256"] and first["graine"] == 42
+    lines = (tmp_path / "a" / "presse_ara_news_2024_10K_300.txt").read_text(encoding="utf-8")
+    assert len(lines.splitlines()) == 300
+
+
+def test_presse_refuse_un_second_tirage(tmp_path):
+    archive = _archive(tmp_path, 2024, 400)
+    pr.draw_sample(archive, tmp_path, 2024)
+    with pytest.raises(RefusGold, match="déjà tiré"):
+        pr.draw_sample(archive, tmp_path, 2024)
+
+
+def test_presse_refuse_une_archive_trop_petite(tmp_path):
+    with pytest.raises(RefusGold, match="trop petite"):
+        pr.draw_sample(_archive(tmp_path, 2024, 50), tmp_path, 2024)
+
+
+def test_presse_resultat_sans_texte(tmp_path):
+    result = pr.draw_sample(_archive(tmp_path, 2024, 400), tmp_path, 2024)
+    assert "phrase factice" not in json.dumps(result, ensure_ascii=False)
+
+
+def test_presse_refuse_out_dir_dans_depot():
+    with pytest.raises(RefusGold, match="dans le dépôt"):
+        pr.run(["tirer", "--out-dir", str(REPO / "gold_sortie")])
 
 
 def test_fasttext_non_charge_par_defaut():
