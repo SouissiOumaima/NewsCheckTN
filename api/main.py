@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
@@ -32,7 +33,14 @@ ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "evaluation" / "results"
 HEAVY_RESULT_KEYS = {"items", "per_claim", "bootstrap", "errors"}
 
-app = FastAPI(title="NewsCheck TN API", version="0.2.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Charge le moteur NLI configuré avant d'accepter les requêtes."""
+    backend_info()
+    yield
+
+
+app = FastAPI(title="NewsCheck TN API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -66,7 +74,10 @@ class VerdictDetailIn(ClaimIn):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "version": app.version, "claim_detector": model_status()}
+    return {
+        "status": "ok", "version": app.version,
+        "claim_detector": model_status(), "nli": backend_info(),
+    }
 
 
 @app.post("/normalize")  # Lot A2
@@ -157,8 +168,9 @@ def model1_route() -> dict:
                 ),
             },
             "deployment": (
-                "NLI_BACKEND=fine-tuned requiert le code de PR #21 et le checkpoint "
-                "partagé séparément. Les scores publiés ne prouvent pas que ce moteur "
+                "NLI_BACKEND=fine-tuned utilise le checkpoint partagé séparément. "
+                "Le moteur chargé est indiqué dans /health, champ nli. "
+                "Les scores publiés ne prouvent pas que ce moteur "
                 "est chargé dans cette session."
             ),
         },
