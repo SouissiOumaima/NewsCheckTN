@@ -47,6 +47,8 @@ Sur le **nouveau test gelé** (300 textes), la cascade doit atteindre :
 Les quatre conditions sont nécessaires. Sinon : résultat consigné tel quel, modèle non intégré.
 Chaque score est donné avec un intervalle de confiance à 95 % (bootstrap, 1 000 tirages).
 
+Précision : les critères portent sur la moyenne des 3 graines, voir avenant 2 (§5, f3bfe6a).
+
 ## Tirage (fait le 2026-11-07, après le commit 1ef3b39 de ce protocole)
 
 - Commande : `python -X utf8 -m normalization.model_tn_data draw` ; graine 20261107.
