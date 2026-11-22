@@ -73,8 +73,135 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-016 | 2026-11-22 | A2 | Gold : robustesse INV de l'identification de langue (dev, 10 perturbations à sens conservé) | protocole pré-inscrit (`f0bb4d0`) ; règles (`detect_language`), alphabet seul, fastText lid.176 ; graine 20261122 ; Wilson 95 % ; règle : indéterminé si n < 30, robuste si borne haute ≤ 0.05, fragile si borne basse > 0.02 | taux de bascule de la langue par perturbation et par écriture | règles : 1 bascule sur 1 314 (P3 latin 1/86) ; robuste 12 couples sur 15, indéterminé 3 (P6 arabe n = 39, P1 latin n = 60, P3 latin) ; alphabet seul fragile à P8 arabe (35/100) ; fastText fragile sur 5 perturbations latines ; idempotence et cohérence 0 échec | mesure seulement, aucune règle modifiée ; attendu « P2 fragile » non confirmé ; dev déjà vu (optimiste) |
 | EXP-A2-017 | 2026-11-22 | A2 | Gold : baseline externe fastText lid.176 contre les règles (dev) | lid.176.bin (SHA-256 `7e69ec54…`), top-1 ; ar, arz → ar ; fr → fr ; autre → erreur ; bootstrap apparié 1 000 tirages, graine 20261122 | macro-F1 de la langue | arabe : règles 0.628 vs fastText 0.185 (+0.443 [+0.364 ; +0.522]) ; latin : 0.831 vs 0.250 (+0.581 [+0.473 ; +0.703]) ; rappel tn de fastText 0 ; `t` étiquetés arz : 2/77 et 0/70 | fastText ne voit pas le tunisien ; règles conservées ; baseline rapportée aussi dans EXP-A2-016 |
 | EXP-A2-018 | 2026-11-22 | A2 | Gold : audit des fuites entre jeux par empreintes | 5 jeux vérifiés par SHA-256 (test 300, entraînement 800, dev arabe 100, dev latin 100, eval_30 34) ; empreinte brute et normalisée ; 10 paires | doublons internes ; textes partagés par paire | 0 doublon interne ; 0 recouvrement dans les 10 paires (brut et normalisé) ; 0 texte du test à retirer | précondition 2 de la mesure unique remplie ; test gelé conservé tel quel ; quasi-doublons non cherchés |
+| EXP-A2-019 | 2026-11-22 | A2 | Gold : accord entre annotateurs sur le test gelé | règle §8 du protocole Gold fixée avant (`f0bb4d0`) et avenant 2 ; annotation sans assistance ; contrôle `gold_agreement reference` | kappa de Cohen (test 300, textes communs 160) | accord humain non mesuré : seconde annotation non reçue ; test annoté par l'annotateur 1 seul (255 `t`, 45 `a`, SHA-256 `b30e7cd3…`) ; constance intra-annotateur 10/10 (pas un kappa) | référence `annotateur1_seul` ; EXP-A2-020 indicatif ; suite : seconde annotation, kappa, adjudication |
+| EXP-A2-020 | 2026-11-22 | A2 | Gold : mesure unique de la cascade lexique → MARBERTv2 sur le test gelé | configuration figée d'EXP-A2-015 (lr 2e-5, 4 époques, seuil 0.30), 800 textes, graines 1 à 3 ; inférence locale ; empreintes figées avant la mesure (`f4dd17e`) ; IC bootstrap 1 000 tirages par graine | rappel et précision `tn` (test, 255 `t` + 45 `a`) ; fausses alertes sur une presse neuve ; macro-F1 eval_30 | rappel 0.898 ± 0.021 vs 0.392 (lexique seul) ; précision 0.952 ± 0.011 vs 0.980 ; presse 8.4 % (règles 0 %) ; eval_30 0.913 vs 0.943 ; critères 1 et 2 atteints, 3 et 4 non atteints | indicatif (un seul annotateur) ; cascade NON intégrée à `normalize.py` ; suite : négatifs de presse à l'entraînement, seuil sur un dev de presse distinct |
 
 ## Entrées
+
+### EXP-A2-020 — Gold : mesure unique de la cascade lexique → MARBERTv2 sur le test gelé
+- **Date** : 2026-11-22
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : question de recherche du protocole pré-inscrit du modèle tunisien
+  (`docs/lot-a2_modele_tn_protocole.md`) : la cascade relève-t-elle le rappel du tunisien en
+  lettres arabes sans perdre en précision ? Quatre critères fixés avant (§4), tous nécessaires :
+  rappel `tn` ≥ 0.70 ; précision `tn` ≥ 0.90 ; ≤ 1 % de fausses alertes sur une presse neuve ;
+  aucune baisse du macro-F1 sur eval_30. **Mesure unique** (protocole Gold §9, `f0bb4d0`).
+- **Données** (toutes les empreintes figées avant la mesure, commit `f4dd17e`, 2026-11-22 14:26 ;
+  détail : `docs/lot-a2_gold_empreintes_avant_mesure.md`) :
+  - test gelé : 300 textes TSAC en lettres arabes (liste ordonnée `a579a57d…`), référence de
+    l'annotateur 1 seul (EXP-A2-019) : 255 `t`, 45 `a`, SHA-256 `b30e7cd3…` ; aucun `f` ni `x` ;
+  - presse neuve : Leipzig `ara_news_2020_10K` (année la plus récente ≠ 2022, règle du §9 ;
+    archive `62e1c0a4…`, 10 000 phrases), 300 phrases tirées avec la graine 42 (`d78ff4f3…`) ;
+  - eval_30 : 34 phrases (`1d0bcfaa…`), non-régression ;
+  - entraînement : 800 textes (`final_train.tsv`, `39a3643b…`, même empreinte que le fichier
+    d'EXP-A2-015) ; manifeste de la mesure `cdfac340…`.
+- **Méthode / configuration** :
+  - cascade figée (EXP-A2-015) : règles = `tn` → `tn` ; sinon, texte consulté (règles = `ar`,
+    écriture arabe ou mixte) → `tn` si la probabilité de MARBERTv2 atteint 0.30, sinon `ar` ;
+    sinon, sortie des règles ; textes consultés : test 198/300, eval_30 11/34, presse 300/300 ;
+  - entraînement final unique sur les 800 textes, graines 1, 2, 3 (avenant 2, `f3bfe6a`) :
+    `UBC-NLP/MARBERTv2`, lr 2e-5, 4 époques, lots de 16, longueur 128, échauffement 10 %, AdamW
+    (décroissance 0.01) ; Kaggle, session interactive du 2026-11-22 vers 13 h, 3.3 min, torch
+    2.11.0+cu130, transformers 5.20.2 ; seul `final_train.tsv` a été envoyé ;
+  - prédiction en local sur CPU (torch 2.11.0+cpu, transformers 5.20.2), après vérification de
+    l'empreinte de chaque fichier de modèle ; les textes du test, d'eval_30 et de la presse n'ont
+    jamais quitté le poste ;
+  - critères jugés sur la moyenne des 3 graines ; IC bootstrap percentile (1 000 tirages, graine
+    20261122) par graine ; Wilson pour la presse ; baseline « lexique seul » =
+    `normalize(texte).lang` (même calcul que la partie règles de la cascade, `d393517`) ; critère
+    4 : moyenne de la cascade ≥ macro-F1 des règles mesuré dans la même exécution (0.94 rapporté).
+- **Code** : `normalization/gold_kaggle_inputs.py`, `notebooks/lot_a2/marbert_final.ipynb`,
+  `normalization/gold_predict_local.py` (`744a287`), `normalization/gold_final.py` (`595217d`,
+  `744a287`, `d393517`) ; mesure exécutée une fois au commit `f4dd17e`, dossier `normalization/`
+  sans modification non commitée (champ `code` du JSON de résultat ; le contrôle ne porte que sur
+  ce dossier) :
+  `python -X utf8 -m normalization.gold_final --manifeste <manifeste> --out-dir <hors dépôt>` ;
+  résultat `lot-a2_gold_final_passage1_20261122.json`, SHA-256
+  `0b7c07f9a42e53ff46a465f85b8bffdd220ebbbf67d38e2bd9bf370dac6430d3` (passage 1, verrou posé).
+- **Résultats** (test, 300 textes `t` / `a`) :
+
+  | Système | Rappel `tn` [IC 95 %] | Précision `tn` [IC 95 %] |
+  |---|---|---|
+  | lexique seul (baseline) | 0.392 [0.337 ; 0.451] (100/255) | 0.980 [0.947 ; 1.000] (100/102) |
+  | cascade, graine 1 | 0.890 [0.852 ; 0.927] (227/255) | 0.962 [0.935 ; 0.983] (227/236) |
+  | cascade, graine 2 | 0.882 [0.842 ; 0.920] (225/255) | 0.953 [0.925 ; 0.978] (225/236) |
+  | cascade, graine 3 | 0.922 [0.887 ; 0.951] (235/255) | 0.940 [0.910 ; 0.968] (235/250) |
+  | cascade, moyenne ± écart-type | **0.898 ± 0.021** | **0.952 ± 0.011** |
+
+  | Critère (protocole §4) | Valeur | Verdict |
+  |---|---|---|
+  | 1. rappel `tn` ≥ 0.70 | 0.898 | atteint |
+  | 2. précision `tn` ≥ 0.90 | 0.952 | atteint |
+  | 3. fausses alertes sur la presse ≤ 1 % | 0.084 ± 0.005 (25, 27, 24 sur 300 ; Wilson [0.057 ; 0.120], [0.063 ; 0.128], [0.054 ; 0.116]) ; règles seules 0/300 [0 ; 0.013] | non atteint |
+  | 4. macro-F1 eval_30 ≥ règles (0.9426) | 0.913 ± 0.031 (graines : 0.9428, 0.9138, 0.8809) | non atteint |
+
+  Conclusion du script : « indicatif : référence d'un seul annotateur, accord humain non mesuré ;
+  pas de conclusion au sens du protocole ».
+- **Analyse** :
+  - sur le test, la cascade fait ce pour quoi elle a été conçue : le rappel du tunisien en lettres
+    arabes passe de 0.39 à 0.90, la précision restant au-dessus de 0.94 ; pour le rappel, les IC
+    par graine (bornes basses ≥ 0.84) sont loin de celui de la baseline (borne haute 0.45) ;
+  - mais elle classe en tunisien 8.4 % de phrases de presse en arabe standard, contre 0 pour les
+    règles, et elle baisse le macro-F1 d'eval_30 en moyenne (seule la graine 1 est au-dessus des
+    règles, de très peu : 0.9428 contre 0.9426 ; 34 phrases, l'écart entre graines est large) ;
+    deux des quatre conditions nécessaires manquent ;
+  - comparaison avec EXP-A2-015 (validation croisée sur l'entraînement) : rappel 0.966 ± 0.005 en
+    validation croisée contre 0.898 sur le test, précision 0.901 contre 0.952 ; la validation
+    croisée était optimiste en rappel (grille et seuil choisis sur les mêmes prédictions hors pli) ;
+    baseline 0.480 en validation croisée contre 0.392 sur le test ;
+  - **hypothèse NON vérifiée** : le modèle n'a vu que des commentaires (TSAC), jamais de presse ;
+    il a pu apprendre le registre « commentaire » plutôt que le dialecte, ce qui expliquerait les
+    fausses alertes sur l'arabe standard journalistique ; rien dans cette mesure ne le teste ;
+  - limites : référence d'un seul annotateur (EXP-A2-019), qui a aussi annoté l'entraînement et
+    écrit le lexique ; test tiré de TSAC, comme les marques du lexique ; presse d'une seule année et
+    d'une seule source ; écarts déclarés avant la mesure (§7 de
+    `docs/lot-a2_gold_empreintes_avant_mesure.md`) : a) une seule exécution, en session interactive
+    Kaggle ; b) T4 x2 proposé, un seul GPU utilisé (EXP-A2-015 : un T4) ; c) inférence locale sur
+    CPU ; d) antériorité des graines et de la règle « annotateur 1 seul » (`f0bb4d0`, 10:36,
+    avant l'annotation du test) ; e) effectifs `tn` prédits visibles avant la mesure (sur la
+    presse, ils fixaient déjà le critère 3).
+- **Décision / suite** : résultat **indicatif** ; **cascade NON intégrée à `normalize.py`**
+  (protocole du modèle tunisien §4 : les quatre conditions sont nécessaires ; de plus, `normalize()`
+  reste en bibliothèque standard) ; le pipeline garde les règles. Suite, dans une nouvelle
+  expérience avec son propre protocole : ajouter des négatifs de presse à l'entraînement et régler
+  le seuil sur un dev de presse distinct (jamais sur cette presse ni sur le test) ; seconde
+  annotation, kappa et adjudication ; toute nouvelle mesure sur ce test sera déclarée comme
+  2e passage.
+
+### EXP-A2-019 — Gold : accord entre annotateurs sur le test gelé (non mesuré)
+- **Date** : 2026-11-22
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : mesurer l'accord entre deux annotateurs indépendants sur le test gelé
+  (300) et sur les 160 textes communs de l'entraînement (§8 du protocole Gold). Règle fixée avant
+  (`f0bb4d0`, 2026-11-22 10:36, puis avenant 2 `f3bfe6a`) : si la seconde annotation n'est pas
+  complète au moment de la mesure, la référence est l'annotateur 1 seul, la mention est « accord
+  humain non mesuré » et le résultat d'EXP-A2-020 est indicatif.
+- **Données** :
+  - test gelé : 300 textes (liste ordonnée `a579a57d…`), annotés par l'annotateur 1 seul, sans
+    assistance : aucune proposition de LLM (colonne `llm_label` vide 300/300) ; 255 `t`, 45 `a`,
+    0 `f`, 0 `x` ; référence gelée en lecture seule à 11 h 23, SHA-256
+    `b30e7cd3324ded9b8114ed233b1dfd465c19736e23cb510a88fc97668cc62149` ;
+  - 160 textes communs : seconde annotation demandée à l'équipe le 2026-11-22, non reçue.
+- **Méthode / configuration** : `normalization/gold_agreement.py` (`595217d`) prêt (kappa de Cohen
+  avec IC bootstrap, matrice, lignes en désaccord) mais sans objet faute de seconde annotation ;
+  seule la commande `reference` a été lancée (300 lignes, même liste ordonnée, aucune « ? ») ;
+  contrôle de constance : les 10 premières lignes du test ont été annotées deux fois par
+  l'annotateur 1 (Bloc-notes, puis outil d'annotation).
+- **Code** : `python -X utf8 -m normalization.gold_agreement reference --fichier <référence>`.
+- **Résultats** :
+  - accord humain **non mesuré** : aucun kappa n'est rapporté, ni pour le test ni pour les 160
+    textes communs ;
+  - constance intra-annotateur : 10/10 étiquettes identiques (Wilson [0.72 ; 1.00]) ; ce n'est pas
+    un accord entre annotateurs ;
+  - référence contrôlée : 300 lignes, 255 `t`, 45 `a`, SHA-256 `b30e7cd3…`.
+- **Analyse** : la référence repose sur une seule personne, qui a aussi annoté l'entraînement et
+  écrit le lexique ; sur des textes du même type, l'accord entre annotateurs en lettres arabes était
+  de 0.65 (kappa, EXP-A2-007) : une seconde annotation pourrait changer une part non négligeable des
+  étiquettes. La constance sur 10 textes ne mesure que la stabilité d'une même personne.
+- **Décision / suite** : règle du §8 et avenant 2 appliqués : référence `annotateur1_seul`,
+  EXP-A2-020 indicatif. Suite : seconde annotation des 160 textes communs et des 300 textes du
+  test, sans voir les étiquettes de l'annotateur 1 ; kappa, adjudication ; une nouvelle mesure
+  sur la référence adjugée serait un 2e passage déclaré.
 
 ### EXP-A2-018 — Gold : audit des fuites entre jeux, par empreintes
 - **Date** : 2026-11-22
