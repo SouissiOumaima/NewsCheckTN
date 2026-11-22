@@ -1,6 +1,6 @@
 # Lot D — Protocole Gold : audit du verdict
 
-**Responsable : Hadil Lajili (Membre 5, Lot D) · Version 1 (brouillon) · 2026-11-22**
+**Responsable : Hadil Lajili (Membre 5, Lot D) · Version 1 · 2026-11-22**
 
 Ce fichier est écrit et commité **avant toute mesure du Gold**. Une mesure faite avant son
 commit ne compte pas. Une règle changée après une mesure sur le test doit être déclarée comme
@@ -38,9 +38,19 @@ dans EXP-D-015) et à la règle R-abst (section 5).
 
 | Jeu | Contenu | Usage autorisé |
 |-----|---------|----------------|
-| **Dev** | 20 affirmations fictives (`tests/fixtures/rag_llm/claims_dev.jsonl`) + **10 phrases hors sujet** rédigées (5 fr, 3 ar, 2 tn) | mettre au point le prompt du juge et la règle d'abstention ; autant de passages que nécessaire |
+| **Dev** | 20 affirmations fictives (`tests/fixtures/rag_llm/claims_dev.jsonl`) + **10 phrases hors sujet** (5 fr, 3 ar, 2 tn ; détail ci-dessous) | mettre au point le prompt du juge et la règle d'abstention ; autant de passages que nécessaire |
 | **Test v1 (déjà vu)** | Tunifact v1 : 21 affirmations, 84 passages, gelé le 2026-10-23 | **audit descriptif seulement** des sorties existantes d'EXP-D-015 ; aucun nouveau passage, aucune décision |
 | **Test v2 (jamais vu)** | nouvelles affirmations tirées d'articles **absents** de Tunifact v1, cible 30 (10 fr, 10 ar, 10 tn) + 5 phrases hors sujet | **un seul passage**, après toutes les décisions du dev |
+
+Phrases hors sujet du dev (`data/interim/lot_d/claims_dev_hors_sujet.jsonl`, non versionné) :
+- verdict de référence : `preuves_insuffisantes` pour les 10 (aucun passage du dev ne traite ces sujets) ;
+- 8 affirmations réelles tirées de **X-FACT** (Gupta et Srikumar, 2021 ; github.com/utahnlp/x-fact,
+  licence MIT du dépôt) : 5 en français (fr.africacheck.org, `zeroshot.tsv`) et 3 en arabe
+  (misbar.com, `train.all.tsv`), choisies hors des sujets du dev ; fichier et ligne notés pour chacune ;
+- 2 phrases en tunisien (lettres arabes, arabizi) rédigées par Hadil ;
+- 3 pièges reprennent un mot du dev pour un autre sujet (« taux », « البكالوريا », « soum ») ;
+- fichier fixé avant toute exécution : SHA-256
+  `16006c440c9089663a6f309bc26201885e54ae68e67a3b543b464850ccc4ecc2` (2026-11-22).
 
 Règles pour le test v2 :
 - les affirmations, leur langue et leur verdict de référence sont écrits par une personne **avant**
@@ -145,4 +155,4 @@ Chaque identifiant reçoit son entrée dans `experiments.md`, même si le résul
 1. ~~NLI~~ : fixé (affiné, EXP-C-011, proposé par Wiem le 2026-11-22 ; à confirmer par Achref pour la démo).
 2. ~~Modèle du juge~~ : fixé (`qwen2.5:3b-instruct`, 100 % GPU, essai du 2026-11-22).
 3. ~~Seconde annotatrice~~ : Wiem, 10 verdicts du dev.
-4. Test v2 : articles disponibles auprès du Lot A1, et date de gel.
+4. Test v2 : articles demandés au Lot A1 (Ghofran). Ce point ne bloque pas le dev (EXP-D-016 à 018) ; il est complété dans ce fichier, par un commit séparé, **avant** le gel du test v2.
