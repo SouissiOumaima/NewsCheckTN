@@ -26,6 +26,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | ID | Date | Lot | Tâche | Configuration | Métrique principale | Résultat | Décision |
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-D-018 | 2026-11-22 | D | Gold : règle d'abstention R-abst (dev) | Falcon-H1-3B + JSON (comme EXP-D-015), NLI affiné du Lot C (EXP-C-011) au lieu de Bronze, 3 graines ; dev 20 affirmations + 10 phrases hors sujet ; R-abst appliquée après le LLM ; plan fixé avant mesure (commits fe97fdc, da06966, cf25004) | abstention justifiée ; bons verdicts avec preuve (dev, 30) | sans règle déjà **1.00** (12/12, 3 graines) ; R-abst appliquée **0 fois** ; exactitude 0.778 ± 0.051 (graine 42 : 0.733), couverture 0.533 ; avec preuve 10/18 (graine 42) | règle non adoptée (condition 1 impossible : plafond) ; test v2 sans R-abst |
+| EXP-D-017 | 2026-11-22 | D | Gold : LLM-juge local validé sur l'annotation humaine (dev) | Qwen2.5-3B-Instruct (Ollama), température 0, JSON ; 30 verdicts de Falcon (EXP-D-018, graine 42) en 2 moitiés de 15 ; prompts v1-v3 et candidat Qwen2.5-7B sur « mise au point », puis « mesure » une fois ; plan avant mesure (commits 3be7f11, 3d5df43, 0e83d36, 2a7e655) | kappa de Cohen juge / humain par étiquette ; validation si ≥ 0.60 | mesure (3B, v2) : fidélité **−0.03** [−0.47 ; 0.40], invention 0.00, pertinence 0.00 (mise au point : fidélité 0.31) | juge **non validé** pour les 3 étiquettes ; l'audit du test v2 reste humain |
 | EXP-D-015 | 2026-11-19 | D | Silver : Falcon-H1-3B en local, format JSON imposé | comme EXP-D-014, seul changement : `LLM_RESPONSE_FORMAT=json` (Ollama, json_object) ; cache séparé ; plan fixé avant mesure (commit 325f28a) | exactitude / macro-F1 du verdict (test, 21) | **0.762 ± 0.048 / 0.600** (3 graines), valides 0.968, tunisien 5/5 ; contre gabarit +0.524, p = 0.0001 ; 2e passage d'un système Falcon-H1-3B sur le test | règle remplie : LLM de la démo et de l'intégration locales ; résultat officiel du Silver inchangé (Aya 8B) |
 | EXP-D-014 | 2026-11-19 | D | Silver : Falcon-H1-3B en local (Ollama, GTX 1650 4 Go) | GGUF Q4_K_M, 100 % GPU (2,1 Go), protocole d'EXP-D-010 (`--main-only`, 3 graines) ; plan fixé avant mesure | exactitude / macro-F1 / sorties valides (test, 21) | 0.651 ± 0.028 / 0.499, **valides 0.571** (9 réponses sans JSON sur 21) | règle non remplie (valides < 0.90) → EXP-D-015 |
 | EXP-D-013 | 2026-11-18 | D | Silver : Falcon-H1-7B contre Aya Expanse 8B | Colab T4, 4 bits, calcul float32 (float16 : inf / nan), protocole d'EXP-D-010 ; règle fixée avant mesure (commit 9433fca) | exactitude / macro-F1 (test, 21) | 0.698 ± 0.027 / **0.628 ± 0.083** ; abstention justifiée 1.00 (Aya 0.00) ; tunisien 0.6 | règle (exactitude > 0.730) non remplie : Aya 8B reste ; piste Gold (abstention) |
@@ -120,6 +121,67 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   fait sans R-abst. Elle n'est pas modifiée après coup. Suite : annotation des 30 verdicts
   (graine 42, Hadil ; 10 pour Wiem) et LLM-juge (EXP-D-017) ; l'abstention sera de nouveau mesurée
   sur le test v2 (EXP-D-019), où les passages proposés sont réels.
+
+### EXP-D-017 — Gold : LLM-juge local validé sur l'annotation humaine
+- **Date** : 2026-11-22 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : savoir si un LLM local peut remplacer l'annotation humaine pour juger les verdicts
+  (pertinence des citations, fait inventé, fidélité de l'explication). Protocole :
+  `docs/lot-d_protocole_gold.md`, sections 4 et 6 ; guide `docs/lot-d_guide_annotation_verdict.md`.
+- **Plan fixé avant chaque mesure** : code, lanceur et prompt v1 (commit 3be7f11), prompt v2
+  (3d5df43), prompt v3 et règle d'arrêt (0e83d36), amendement « candidat Qwen2.5-7B » (2a7e655).
+- **Données** : les 30 verdicts de Falcon (graine 42) d'EXP-D-018 sur le dev (20 affirmations
+  fictives + 10 phrases hors sujet), avec les passages montrés au système. Partage fixe (graine 42)
+  en deux moitiés de 15 : « mise au point » (prompt modifiable) et « mesure » (une seule fois).
+- **Annotation humaine (référence)** : Hadil, à deux avec son binôme (annotation commune des
+  30 verdicts, sans outil d'IA, rendue avant tout lancement du juge ; une incohérence entre les lignes
+  dev-c16 et dev-hs01 corrigée avant tout calcul). Sur les 30 : 25 passages cités, tous
+  « pertinent » ; 8 explications avec un fait inventé ; 12 verdicts infidèles, surtout une étiquette
+  contraire à l'explication (l'explication contredit l'affirmation, le verdict dit « vrai » :
+  dev-c01, c02, c06, c07, c11). Seconde et troisième annotations (Wiem, Mouhib, 10 verdicts) :
+  **en attente**, accord humain-humain à compléter.
+- **Juge** : Qwen2.5-3B-Instruct (Ollama, local, 100 % GPU), différent de Falcon ; température 0,
+  graine 42, JSON imposé.
+- **Résultats sur « mise au point »** (15 verdicts ; kappa de Cohen, IC 95 % par bootstrap) :
+
+  | Juge | Sorties inexploitables | Invention | Fidélité |
+  |------|------------------------|-----------|----------|
+  | 3B, prompt v1 | 8 / 15 | 0.00 (n = 13) | 0.14 [−0.43 ; 0.75] (n = 8) |
+  | 3B, prompt v2 (clés à plat oui/non, textes en arabe) | 0 | 0.00 | **0.31** [0.05 ; 0.67] |
+  | 3B, prompt v3 (règle de fidélité appliquée par le code) | 0 | 0.14 | 0.22 [0.00 ; 0.55] |
+  | 7B, prompt v2 (amendement) | 0 | 0.00 | 0.25 [0.00 ; 0.76] |
+
+  Pertinence : kappa non défini (tout « pertinent » chez l'humain et le juge). Erreurs observées :
+  v1 mélange les valeurs entre questions et rend des JSON vides sur les explications en arabe ; v2
+  lit bien le sens de l'explication mais juge « infidèle » des verdicts cohérents ; v3 voit des faits
+  absents presque partout (10 / 15) ; le 7B ne trouve qu'un verdict infidèle sur 15. Aucune version
+  ne détecte les inventions repérées par l'humain.
+- **Sélection (règle fixée avant)** : meilleur kappa de fidélité sur « mise au point » →
+  **3B, prompt v2**.
+- **Résultat sur « mesure »** (15 verdicts, 3B, prompt v2) :
+
+  | Étiquette | n | Accord brut | Kappa | IC 95 % | Humain / juge |
+  |-----------|---|-------------|-------|---------|---------------|
+  | Pertinence | 15 | 0.867 | 0.00 | [0.00 ; 0.00] | 15 pertinent / 13 pertinent, 2 non |
+  | Invention | 15 | 0.600 | 0.00 | [0.00 ; 0.00] | 6 oui, 9 non / 15 non |
+  | Fidélité | 15 | 0.467 | **−0.03** | [−0.47 ; 0.40] | 8 fidèle, 7 infidèle / 4 fidèle, 11 infidèle |
+
+  La commande « mesure » a été lancée deux fois : le second lancement a réutilisé les 15 réponses du
+  premier depuis le cache (même prompt, mêmes entrées) ; le résultat est identique.
+- **Lecture** :
+  1. Le juge n'est validé pour **aucune** étiquette : sur « mesure », il ne fait pas mieux que le
+     hasard pour la fidélité et ne détecte aucune invention.
+  2. La chute de 0.31 (« mise au point ») à −0.03 (« mesure ») montre que le meilleur score de mise au
+     point tenait au réglage et au hasard sur 15 verdicts : la séparation des deux moitiés a évité de
+     rapporter un chiffre trompeur.
+  3. Passer de 3B à 7B n'a pas aidé : juger la fidélité d'un verdict reste hors de portée de ces
+     petits modèles locaux, dans nos conditions.
+  4. Limites : 15 verdicts par moitié (intervalles très larges) ; dev fictif ; référence humaine
+     unique pour l'instant (annotation commune à deux) ; la définition de « fait inventé » est
+     ambiguë sur certains cas (dev-c04, c09, c17 : erreur de lecture ou hors sujet plutôt
+     qu'invention) — l'accord humain-humain dira si elle l'est aussi pour des annotateurs humains.
+- **Décision** : juge **non validé** ; comme prévu au protocole (section 6), les trois étiquettes
+  restent annotées à la main sur le test v2 (EXP-D-019). L'accord juge / humain y sera de nouveau
+  rapporté, à titre descriptif.
 
 ### EXP-D-015 — Silver : Falcon-H1-3B en local avec format JSON imposé
 - **Date** : 2026-11-19 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
