@@ -90,3 +90,22 @@ Chaque score est donné avec un intervalle de confiance à 95 % (bootstrap, 1 00
   est une décision humaine, et l'absence de proposition exclut tout biais d'ancrage.
 - Entraînement (annotateur 1) : 800 / 800 ; colonne `mode` de l'export « assisté » pour les 640,
   proposition présente pour 20 seulement (trace dans `*_llm.tsv`).
+
+### Avenant 2 — 2026-11-22 : graines de l'entraînement final et annotation unique du test
+
+Écart au protocole, décidé le 2026-11-22, avant toute annotation du test gelé et avant tout
+entraînement final. Il est repris dans `docs/lot-a2_protocole_gold.md` (§8 et §9).
+
+- **Graines de l'entraînement final** : la section 3 ne fixait pas les graines de l'entraînement
+  final. La cascade (configuration figée d'EXP-A2-015 : lr 2e-5, 4 époques, seuil 0.30) est
+  entraînée une fois sur les 800 textes avec 3 graines (1, 2, 3). Les critères de la section 4
+  sont jugés sur la moyenne des 3 graines ; on rapporte aussi la moyenne ± écart-type et un IC
+  bootstrap (1 000 tirages) par graine.
+- **Annotation unique du test** : la section 2 exige un test « annoté par deux personnes,
+  adjugé ». Si la seconde annotation du test n'est pas complète au moment de la mesure, la
+  référence est l'annotation de l'annotateur 1 seul, faite sans assistance. Dans ce cas :
+  aucun kappa n'est rapporté pour le test (mention « accord humain non mesuré ») ; le résultat
+  est qualifié d'indicatif ; on ne conclut pas « critères atteints » ou « non atteints » au sens
+  de la section 4. Si seuls les 160 textes communs sont doublement annotés, leur kappa est
+  rapporté.
+- Aucun autre élément du protocole ne change (jeux, empreintes, critères, cascade).
