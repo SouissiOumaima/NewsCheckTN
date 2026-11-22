@@ -571,6 +571,13 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     alerte sur `test` dans les deux cas). La baseline « majorité » vaut 0.44 ici sur le dev en
     lettres arabes contre 0.43 dans EXP-A2-011 (arrondi), consigné tel quel. eval_30 reste petit
     (34 phrases) : ses IC sont larges.
+  - Vérification du 2026-11-22 (commit `cad5a23`, `python -X utf8 -m normalization.silver_stats
+    repli`, mêmes données, découpages et graines, seuls les seuils recalculés) : pour les graines 13
+    et 2026, aucun seuil de la grille ne donne zéro fausse alerte sur le français de dev
+    (`max_false_alarm` = 0.0), pour la régression logistique comme pour le perceptron ; le seuil
+    rapporté (5.0 et 0.999) est alors le plus haut de la grille, gardé par repli. Pour la graine 42,
+    il est choisi par le critère. Les chiffres ci-dessus restent ceux mesurés avec ces seuils ; une
+    grille plus large serait une nouvelle expérience.
 - **Décision / suite** : régression logistique conservée ; écarts significatifs retenus pour le
   rapport (section 2.b) et la revue Silver. Suite : étudier les textes arabizi courts ou proches du
   français ; modèle appris pour le tunisien en lettres arabes selon le protocole pré-inscrit
