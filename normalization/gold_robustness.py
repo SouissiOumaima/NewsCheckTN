@@ -22,6 +22,7 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
+from normalization import baseline_fasttext
 from normalization.evaluate import load_examples
 from normalization.gold_common import (
     BOOTSTRAP_DRAWS,
@@ -165,8 +166,11 @@ PREDICTORS: dict[str, Callable[[list[str]], list[str]]] = {
     "alphabet": alphabet_baseline,
 }
 
-# Systèmes facultatifs, chargés seulement s'ils sont demandés (fastText : étape 3).
-OPTIONAL_LOADERS: dict[str, Callable[[argparse.Namespace], Callable[[list[str]], list[str]]]] = {}
+# Systèmes facultatifs, chargés seulement s'ils sont demandés (fastText : EXP-A2-017, §6).
+# baseline_fasttext n'importe le paquet fasttext qu'au chargement du modèle.
+OPTIONAL_LOADERS: dict[str, Callable[[argparse.Namespace], Callable[[list[str]], list[str]]]] = {
+    "fasttext": lambda args: baseline_fasttext.load_predictor(args.fasttext_modele),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +280,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dev-arabe", type=Path, default=DEV_SETS["arabe"][0])
     parser.add_argument("--dev-latin", type=Path, default=DEV_SETS["latin"][0])
     parser.add_argument("--systemes", default="regles,alphabet",
-                        help="systèmes mesurés, séparés par des virgules")
+                        help="systèmes mesurés, séparés par des virgules (option : fasttext)")
+    parser.add_argument("--fasttext-modele", type=Path, default=baseline_fasttext.DEFAULT_MODEL)
     return parser.parse_args(argv)
 
 

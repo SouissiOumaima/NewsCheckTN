@@ -10,6 +10,7 @@ import random
 
 import pytest
 
+from normalization import baseline_fasttext as ft
 from normalization import gold_robustness as inv
 from normalization.evaluate import REPO
 from normalization.gold_common import (
@@ -272,3 +273,70 @@ def test_mesure_jeu_factice():
 def test_systeme_inconnu_refuse():
     with pytest.raises(RefusGold, match="inconnu"):
         inv.build_predictors("regles,inexistant", inv.parse_args(["--out-dir", "x"]))
+
+
+# ---------------------------------------------------------------------------
+# Baseline fastText lid.176 (faux modèle : aucun téléchargement)
+# ---------------------------------------------------------------------------
+
+class _FakeF:
+    """Imite la fonction C++ `model.f.predict` de fasttext, sur des textes factices."""
+
+    def __init__(self, answers: dict[str, str]):
+        self.answers = answers
+        self.seen: list[str] = []
+
+    def predict(self, text, k, threshold, on_error):
+        self.seen.append(text)
+        return [(0.9, "__label__" + self.answers.get(text, "es"))]
+
+
+class FakeModel:
+    def __init__(self, answers: dict[str, str]):
+        self.f = _FakeF(answers)
+
+
+def test_fasttext_correspondance_des_etiquettes():
+    assert [ft.map_label(x) for x in ("ar", "arz", "fr", "es", "en")] == \
+        ["ar", "ar", "fr", "autre", "autre"]
+
+
+def test_fasttext_retire_les_retours_a_la_ligne():
+    model = FakeModel({"ligne un ligne deux": "fr"})
+    assert ft.top_label(model, "ligne un\nligne deux") == "fr"
+    assert "\n" not in model.f.seen[0]
+
+
+def test_fasttext_predicteur_mappe():
+    model = FakeModel({"Il fait beau": "fr", ARABE: "arz"})
+    assert ft.make_predictor(model)(["Il fait beau", ARABE, "3lech"]) == ["fr", "ar", "autre"]
+
+
+def test_fasttext_part_des_t_etiquetes_arz():
+    examples = [{"id": "l1", "lang": "tn", "text": "a"}, {"id": "l2", "lang": "tn", "text": "b"},
+                {"id": "l3", "lang": "ar", "text": "c"}]
+    model = FakeModel({"a": "arz", "b": "ar", "c": "arz"})
+    result = ft.compare(examples, "arabe", model, lambda texts: ["tn"], draws=10)
+    assert result["t_etiquetes_arz"]["k"] == 1 and result["t_etiquetes_arz"]["n"] == 2
+    assert result["fasttext"]["par_classe"]["tn"]["recall"] == 0.0
+    assert "regles_moins_fasttext" in result
+
+
+def test_fasttext_refuse_un_modele_d_empreinte_differente(tmp_path):
+    fake = tmp_path / "lid.176.bin"
+    fake.write_bytes(b"pas un modele")
+    with pytest.raises(RefusGold, match="empreinte différente"):
+        ft.load_model(fake)
+
+
+def test_fasttext_branche_dans_inv(monkeypatch):
+    model = FakeModel({})
+    monkeypatch.setattr(ft, "load_predictor", lambda path: ft.make_predictor(model))
+    chosen = inv.build_predictors("regles,fasttext", inv.parse_args(["--out-dir", "x"]))
+    assert set(chosen) == {"regles", "fasttext"}
+    assert chosen["fasttext"](["texte factice"]) == ["autre"]
+
+
+def test_fasttext_non_charge_par_defaut():
+    assert set(inv.build_predictors("regles,alphabet", inv.parse_args(["--out-dir", "x"]))) == \
+        {"regles", "alphabet"}
