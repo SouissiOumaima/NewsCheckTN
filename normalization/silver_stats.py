@@ -3,6 +3,7 @@
 Usage (depuis la racine du dépôt) :
     python -X utf8 -m normalization.silver_stats bootstrap
     python -X utf8 -m normalization.silver_stats seeds      # scikit-learn requis
+    python -X utf8 -m normalization.silver_stats repli      # contrôle du repli du seuil
     python -X utf8 -m normalization.silver_stats curve      # scikit-learn requis
     python -X utf8 -m normalization.silver_stats curve --seeds 13 42 2026 --figure FICHIER.png
 
@@ -109,13 +110,24 @@ def mean_std(values: list[float]) -> tuple[float, float]:
     return mean, (statistics.stdev(values) if len(values) > 1 else 0.0)
 
 
-def choose_threshold(french_dev_scores: list[float], thresholds, max_false_alarm: float = 0.0):
-    """Règle de `train_langid` : plus petit seuil sans fausse alerte sur le français de dev."""
+def choose_threshold_flagged(
+    french_dev_scores: list[float], thresholds, max_false_alarm: float = 0.0
+) -> tuple[float, bool]:
+    """Comme `choose_threshold`, et dit en plus si le seuil vient du repli.
+
+    Renvoie (seuil, repli) : repli = True quand aucun seuil de la grille ne tient le critère sur
+    le français de dev ; le seuil renvoyé est alors le plus haut de la grille.
+    """
     for threshold in thresholds:
         rate = sum(s >= threshold for s in french_dev_scores) / len(french_dev_scores)
         if rate <= max_false_alarm:
-            return threshold
-    return thresholds[-1]  # repli : aucun seuil ne tient le critère, on garde le plus haut
+            return threshold, False
+    return thresholds[-1], True  # repli : aucun seuil ne tient le critère, on garde le plus haut
+
+
+def choose_threshold(french_dev_scores: list[float], thresholds, max_false_alarm: float = 0.0):
+    """Règle de `train_langid` : plus petit seuil sans fausse alerte sur le français de dev."""
+    return choose_threshold_flagged(french_dev_scores, thresholds, max_false_alarm)[0]
 
 
 def binary_scores(
@@ -217,9 +229,14 @@ def train_mlp(
 
 
 def evaluate(scorer, thresholds, pool: dict, data: dict) -> dict:
-    """Seuil choisi sur le français de dev, puis mesure sur l'arabizi mis de côté et le test."""
-    threshold = choose_threshold(scorer(pool["french_dev"]), thresholds)
-    return binary_scores(scorer(data["ar_dev"]), scorer(pool["french_test"]), threshold)
+    """Seuil choisi sur le français de dev, puis mesure sur l'arabizi mis de côté et le test.
+
+    Le résultat dit aussi si le seuil vient du repli (clé « repli »).
+    """
+    threshold, fallback = choose_threshold_flagged(scorer(pool["french_dev"]), thresholds)
+    result = binary_scores(scorer(data["ar_dev"]), scorer(pool["french_test"]), threshold)
+    result["repli"] = fallback
+    return result
 
 
 def print_row(name: str, results: list[dict]) -> None:
@@ -251,6 +268,29 @@ def command_seeds() -> None:
     print(f"\nmoyenne ± écart-type sur {len(SEEDS)} graines {SEEDS} :")
     print_row("régression logistique (livrée)", logreg)
     print_row("perceptron multicouche (neur.)", mlp)
+
+
+def command_repli() -> None:
+    """Contrôle d'EXP-A2-014 : le seuil choisi vient-il du repli ? (aucune autre mesure)
+
+    Mêmes données, mêmes découpages (graines 13, 42, 2026) et mêmes entraînements que `seeds`,
+    mais seul le choix du seuil sur le français de dev est calculé : aucun macro-F1, rappel ni
+    compte d'alertes n'est recalculé ni affiché.
+    """
+    from normalization import train_langid as tl
+
+    pool = load_pool()
+    for seed in SEEDS:
+        data = split(pool, seed)
+        models = (
+            ("régression logistique", train_logreg(data["ar_train"], data["fr_train"]),
+             tl.THRESHOLDS),
+            ("perceptron multicouche", train_mlp(data["ar_train"], data["fr_train"], seed),
+             MLP_THRESHOLDS),
+        )
+        for name, scorer, thresholds in models:
+            threshold, fallback = choose_threshold_flagged(scorer(pool["french_dev"]), thresholds)
+            print(f"graine {seed:4} | {name:22} | seuil {threshold:<5} | repli {fallback}")
 
 
 def command_curve(seeds: list[int], figure: Path | None) -> None:
@@ -294,6 +334,7 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("bootstrap", help="IC à 95 % de l'écart système - baselines")
     commands.add_parser("seeds", help="3 graines : modèle livré contre baseline neuronale")
+    commands.add_parser("repli", help="contrôle : le seuil choisi vient-il du repli ?")
     curve = commands.add_parser("curve", help="courbe d'apprentissage (10 à 100 %)")
     curve.add_argument("--seeds", type=int, nargs="+", default=[SEEDS[0]])
     curve.add_argument("--figure", type=Path, default=None, help="fichier PNG (facultatif)")
@@ -302,6 +343,8 @@ def main() -> None:
         command_bootstrap()
     elif args.command == "seeds":
         command_seeds()
+    elif args.command == "repli":
+        command_repli()
     else:
         command_curve(args.seeds, args.figure)
 

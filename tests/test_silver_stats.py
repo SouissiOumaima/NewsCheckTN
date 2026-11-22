@@ -5,6 +5,8 @@ import pytest
 from normalization.silver_stats import (
     binary_scores,
     choose_threshold,
+    choose_threshold_flagged,
+    evaluate,
     mean_std,
     paired_bootstrap,
     split,
@@ -45,6 +47,35 @@ def test_seuil_plus_petit_sans_fausse_alerte():
     french_dev = [-3.0, 0.4, 1.2]  # un texte français monte jusqu'à 1,2
     assert choose_threshold(french_dev, [0.0, 0.5, 1.0, 1.5, 2.0]) == 1.5
     assert choose_threshold([9.0], [0.0, 1.0]) == 1.0  # repli : le plus haut seuil
+
+
+def test_seuil_sans_repli_signale():
+    french_dev = [-3.0, 0.4, 1.2]  # le critère est tenu à 1,5
+    assert choose_threshold_flagged(french_dev, [0.0, 0.5, 1.0, 1.5, 2.0]) == (1.5, False)
+
+
+def test_seuil_de_repli_signale():
+    # aucun seuil ne tient le critère : on garde le plus haut, et le repli est signalé
+    assert choose_threshold_flagged([9.0], [0.0, 1.0]) == (1.0, True)
+
+
+def test_choose_threshold_inchange_avec_l_indicateur():
+    for scores, grid in (([-3.0, 0.4, 1.2], [0.0, 0.5, 1.0, 1.5, 2.0]), ([9.0], [0.0, 1.0])):
+        assert choose_threshold(scores, grid) == choose_threshold_flagged(scores, grid)[0]
+
+
+def test_evaluate_rapporte_le_repli():
+    pool = {"french_dev": ["f1", "f2"], "french_test": ["f3"]}
+    data = {"ar_dev": ["a1", "a2"]}
+    high = {"f1": 9.0, "f2": 0.0, "f3": 0.0, "a1": 9.0, "a2": 9.0}
+    low = {"f1": 0.0, "f2": 0.0, "f3": 0.0, "a1": 9.0, "a2": 9.0}
+    with_fallback = evaluate(lambda texts: [high[t] for t in texts], [0.5, 1.0], pool, data)
+    normal = evaluate(lambda texts: [low[t] for t in texts], [0.5, 1.0], pool, data)
+    assert with_fallback["repli"] is True and with_fallback["seuil"] == 1.0
+    assert normal["repli"] is False and normal["seuil"] == 0.5
+    # les autres chiffres sont ceux de binary_scores au même seuil, sans changement
+    assert {k: v for k, v in normal.items() if k != "repli"} == binary_scores(
+        [9.0, 9.0], [0.0], threshold=0.5)
 
 
 def test_scores_binaires():
