@@ -70,8 +70,175 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
 | EXP-B-013 | 2026-11-20 | B | Question de recherche 1 : extracteur gelé contre le TF-IDF du Lot C (112 textes du test du Lot C dans P061–P600) | extracteur gelé (mesure sur `a48e447`), modes règles et parseurs, unité texte ; TF-IDF d'EXP-C-010 reproduit (0.6435) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 binaire de détection | Lot B 0.803 [0.725 ; 0.874] vs TF-IDF 0.825 [0.742 ; 0.893] vs baseline 0.345 ; Lot B − TF-IDF −0.023 [−0.124 ; +0.076], non établi, ni par langue (tn-mixte < 15 textes) | aucune différence établie ; un seul annotateur ; XLM-R en attente |
 | EXP-B-014 | 2026-11-20 | B | Robustesse (INV) du système gelé : 7 perturbations à sens conservé sur P061–P600 | une perturbation par texte et par type, graine 20261015, empreinte `c8b2a266…` ; modes règles et parseurs ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | taux de changement de `is_claim` / `modality` ; Δ macro-F1 de détection | ponctuation −0.137 [−0.178 ; −0.097] (12 % de changements), presque tout sur les questions sans mot interrogatif du lexique (39 sur 40 contre 0 sur 10) ; fautes −0.019 ; casse et diacritiques 0 ; langue A2 changée par l'arabizi 11.6 % | reconnaissance des questions dépendante du « ? » ; lexique interrogatif de 6 entrées ; non corrigé (système gelé) |
+| EXP-A2-016 | 2026-11-22 | A2 | Gold : robustesse INV de l'identification de langue (dev, 10 perturbations à sens conservé) | protocole pré-inscrit (`f0bb4d0`) ; règles (`detect_language`), alphabet seul, fastText lid.176 ; graine 20261122 ; Wilson 95 % ; règle : indéterminé si n < 30, robuste si borne haute ≤ 0.05, fragile si borne basse > 0.02 | taux de bascule de la langue par perturbation et par écriture | règles : 1 bascule sur 1 314 (P3 latin 1/86) ; robuste 12 couples sur 15, indéterminé 3 (P6 arabe n = 39, P1 latin n = 60, P3 latin) ; alphabet seul fragile à P8 arabe (35/100) ; fastText fragile sur 5 perturbations latines ; idempotence et cohérence 0 échec | mesure seulement, aucune règle modifiée ; attendu « P2 fragile » non confirmé ; dev déjà vu (optimiste) |
+| EXP-A2-017 | 2026-11-22 | A2 | Gold : baseline externe fastText lid.176 contre les règles (dev) | lid.176.bin (SHA-256 `7e69ec54…`), top-1 ; ar, arz → ar ; fr → fr ; autre → erreur ; bootstrap apparié 1 000 tirages, graine 20261122 | macro-F1 de la langue | arabe : règles 0.628 vs fastText 0.185 (+0.443 [+0.364 ; +0.522]) ; latin : 0.831 vs 0.250 (+0.581 [+0.473 ; +0.703]) ; rappel tn de fastText 0 ; `t` étiquetés arz : 2/77 et 0/70 | fastText ne voit pas le tunisien ; règles conservées ; baseline rapportée aussi dans EXP-A2-016 |
+| EXP-A2-018 | 2026-11-22 | A2 | Gold : audit des fuites entre jeux par empreintes | 5 jeux vérifiés par SHA-256 (test 300, entraînement 800, dev arabe 100, dev latin 100, eval_30 34) ; empreinte brute et normalisée ; 10 paires | doublons internes ; textes partagés par paire | 0 doublon interne ; 0 recouvrement dans les 10 paires (brut et normalisé) ; 0 texte du test à retirer | précondition 2 de la mesure unique remplie ; test gelé conservé tel quel ; quasi-doublons non cherchés |
 
 ## Entrées
+
+### EXP-A2-018 — Gold : audit des fuites entre jeux, par empreintes
+- **Date** : 2026-11-22
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : vérifier qu'aucun texte du test gelé ne figure déjà dans l'entraînement
+  du modèle tunisien ou dans le dev (§7 du protocole Gold `docs/lot-a2_protocole_gold.md`, commité
+  avant toute mesure : `f0bb4d0`, 2026-11-22 10:36). Règle fixée avant : tout recouvrement du test
+  avec l'entraînement ou le dev impose un retrait avant la mesure unique, par avenant daté.
+- **Données** : cinq jeux, empreintes vérifiées par le script avant lecture : test gelé (300,
+  liste ordonnée `a579a57d…`), entraînement (800, liste ordonnée `5b4f40b9…`), dev lettres arabes
+  (fichier `a59f3d27…`, 100 lignes), dev lettres latines (fichier `1703f003…`, 100 lignes : toutes
+  les lignes, y compris les textes non décidés), eval_30 (fichier `1d0bcfaa…`, 34). Seuls les
+  textes sont lus, jamais les étiquettes.
+- **Méthode / configuration** : deux empreintes SHA-256 par texte (texte brut sans espaces de bord ;
+  `" ".join(normalize(texte).text.split())`) ; doublons internes de chaque jeu ; textes partagés pour
+  chacune des 10 paires de jeux ; effectifs seulement.
+- **Code** : `normalization/gold_leakage.py` (commit `5d4978e`) ; exécution au commit `595217d`,
+  arbre propre ; `python -X utf8 -m normalization.gold_leakage --out-dir <hors dépôt>` ; résultats
+  `lot-a2_gold_fuites_20261122.json` (effectifs seulement) et fichier local des numéros de ligne,
+  hors dépôt.
+- **Résultats** :
+  - doublons internes : 0 dans chacun des cinq jeux, en empreinte brute comme normalisée ;
+  - textes partagés : 0 dans chacune des 10 paires (brut et normalisé), dont test / entraînement,
+    test / dev arabe, test / dev latin et test / eval_30 ;
+  - décision de la règle : 0 texte du test à retirer ; 0 erreur de traitement.
+- **Analyse** : la disjonction attendue par construction (le tirage du 2026-11-07 excluait tous les
+  textes déjà annotés, `normalization.model_tn_data`) est confirmée, y compris après normalisation.
+  Limites : seuls les doublons exacts sont repérés, pas les quasi-doublons (texte reformulé, ajout
+  d'un mot) ; l'audit ne dit rien du recouvrement avec les corpus qui ont servi à écrire le lexique
+  (TSAC, limite déjà écrite dans le protocole du modèle tunisien, §2).
+- **Décision / suite** : précondition 2 de la mesure unique (§9) remplie ; test gelé conservé tel
+  quel (300 textes) ; aucun avenant de retrait.
+
+### EXP-A2-017 — Gold : baseline externe fastText lid.176 contre les règles du Lot A2 (dev)
+- **Date** : 2026-11-22
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : donner une baseline externe forte (§6 du protocole Gold, `f0bb4d0`) :
+  que fait un identifiant de langue générique face aux règles du Lot A2 ? Attendu écrit avant : lid.176
+  n'a pas d'étiquette tunisienne, son rappel `tn` est nul par construction.
+- **Données** : dev d'EXP-A2-009 (jeux de mise au point, déjà vus), empreintes vérifiées : lettres
+  arabes 100 (77 `t`, 23 `a`), `a59f3d27…` ; lettres latines 86 décidés (70 `t`, 16 `f`), `1703f003…`.
+- **Méthode / configuration** :
+  - modèle `lid.176.bin` (fastText, 176 langues, CC BY-SA 3.0), téléchargé le 2026-11-22 depuis
+    `https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin` dans
+    `models/checkpoints/` (non versionné), 131 266 198 octets, SHA-256
+    `7e69ec5451bc261cc7844e49e4792a85d7f09c06789ec800fc4a44aec362764e`, vérifié avant chargement ;
+  - paquet `fasttext-wheel` 0.9.2 (déjà déclaré dans `requirements.txt`), importé seulement par le
+    module de baseline, jamais par `normalize()` ;
+  - incompatibilité contournée : avec numpy 2.2.6, `model.predict` de fasttext 0.9.2 lève
+    `ValueError` (`copy=False`) ; on appelle la fonction C++ `model.f.predict(texte, 1, 0.0,
+    "replace")`, les sauts de ligne étant remplacés par des espaces ;
+  - étiquette la plus probable (top-1, sans seuil) ; correspondance fixée avant : `ar`, `arz` → `ar` ;
+    `fr` → `fr` ; toute autre → `autre` (erreur) ; chiffre informatif séparé : part des `t` étiquetés
+    `arz` ;
+  - écart apparié règles − fastText, bootstrap percentile 1 000 tirages, graine 20261122.
+- **Code** : `normalization/baseline_fasttext.py` (commit `9719e2a`) ; exécution au commit `595217d`,
+  arbre propre ; `python -X utf8 -m normalization.baseline_fasttext --out-dir <hors dépôt>` ;
+  résultats `lot-a2_gold_fasttext_dev_20261122.json` (hors dépôt, chiffres seulement).
+- **Résultats** :
+
+  | Jeu | n | fastText exactitude / macro-F1 | Règles exactitude / macro-F1 | Règles − fastText, macro-F1 [IC 95 %] | Règles − fastText, exactitude [IC 95 %] |
+  |---|---|---|---|---|---|
+  | lettres arabes | 100 | 0.220 / 0.185 | 0.640 / 0.628 | +0.443 [+0.364 ; +0.522] | +0.420 [+0.330 ; +0.520] |
+  | lettres latines | 86 | 0.081 / 0.250 | 0.895 / 0.831 | +0.581 [+0.473 ; +0.703] | +0.814 [+0.721 ; +0.895] |
+
+  - par classe, fastText : `tn` rappel 0 sur les deux jeux ; `ar` rappel 0.957 (22/23), précision
+    0.229 ; `fr` rappel 0.438 (7/16), précision 0.583 ;
+  - étiquettes brutes de lid.176 : lettres arabes `ar` 94, `fa` 3, `arz` 2, `ps` 1 ; lettres latines
+    18 étiquettes différentes, dont `en` 38, `fr` 12, `id` 5, `pl` 4 ;
+  - `t` étiquetés `arz` (informatif, hors score) : 2/77 en lettres arabes (Wilson [0.007 ; 0.090]),
+    0/70 en lettres latines ;
+  - 0 erreur de traitement.
+- **Analyse** : lid.176 ne voit pas le tunisien, comme attendu. En lettres arabes, il le confond
+  surtout avec l'arabe standard (`ar`), très rarement avec l'égyptien (`arz`, 2/77) : il se comporte
+  presque comme la baseline « tout arabe standard ». En lettres latines, l'arabizi est dispersé sur
+  de nombreuses langues, l'anglais en tête, et même le français n'est reconnu que pour 7 textes sur
+  16 (textes courts et informels). L'écart en faveur des règles est net et son IC exclut 0 sur les
+  deux jeux. Limites : le dev a servi à écrire les règles, la comparaison leur est donc favorable
+  (lid.176 n'a rien appris sur ces textes) ; la correspondance `arz` → `ar` est un choix fixé avant ;
+  top-1 sans seuil de confiance.
+- **Décision / suite** : baseline externe du Gold ; fastText ne remplace pas les règles ; il est
+  aussi rapporté comme système de comparaison dans EXP-A2-016.
+
+### EXP-A2-016 — Gold : robustesse INV de l'identification de langue (dev, 10 perturbations)
+- **Date** : 2026-11-22
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : la langue prédite reste-t-elle la même quand on modifie la surface d'un
+  texte sans en changer le sens (critère Gold « INV ») ? **Mesure seulement** : aucune règle n'est
+  modifiée. Protocole pré-inscrit `docs/lot-a2_protocole_gold.md` §5, commit `f0bb4d0`
+  (2026-11-22 10:36), avant toute mesure. Attendu écrit avant : P2 (tout en majuscules) risque
+  d'être fragile (test `xfail` « mot seul tout en majuscules »).
+- **Données** : dev d'EXP-A2-009 (jeux de mise au point, déjà vus), empreintes vérifiées par le
+  script : lettres arabes 100 (77 `t`, 23 `a`), `a59f3d27…` ; lettres latines 86 décidés (70 `t`,
+  16 `f`), `1703f003…`. Ni le test gelé ni eval_30.
+- **Méthode / configuration** :
+  - perturbations du §5, une à la fois ; un texte n'est compté que si la perturbation le modifie ;
+    tirage `random.Random("20261122-<code>-<ligne>")` ;
+  - détails fixés dans le code avant la mesure (commit `0d3a6ed`, 2026-11-22 11:05) : P1 minuscules
+    et P2 majuscules (lettres latines) ; P3 une lettre d'un mot répétée 3 fois ; P4 un tatweel après
+    une lettre arabe qui s'attache à la suivante ; P5 une haraka (fatha, damma, kasra, soukoun) après
+    chaque lettre arabe avec la probabilité 0.3, au moins une ; P6 « لا » remplacé par la ligature
+    U+FEFB ; P7 un émoji parmi 😂 ❤ 👍 🔥 en fin de texte ; P8 l'URL `https://example.com/article`
+    en fin de texte ; P9 « !!! » en fin de texte ; P10 chaque espace remplacée au hasard par deux
+    espaces ou une espace insécable ;
+  - systèmes : règles du Lot A2 (`detect_language`, comportement de `c95b9b4`), baseline « alphabet
+    seul » (EXP-A2-011), fastText lid.176 (EXP-A2-017) ;
+  - taux de bascule avec intervalle de Wilson à 95 % ; règle fixée avant : indéterminé si n < 30,
+    robuste si la borne haute ≤ 0.05, fragile si la borne basse > 0.02, sinon indéterminé ; avec
+    aucune bascule, « robuste » n'est atteignable qu'à partir d'environ 73 textes ;
+  - exactitude et macro-F1 avant / après, écart apparié, bootstrap percentile 1 000 tirages,
+    graine 20261122 ; invariants sans étiquette : idempotence de `normalize()` et cohérence
+    `detect_language(x) == normalize(x).lang`.
+- **Code** : `normalization/gold_robustness.py` et `gold_common.py` (commits `0d3a6ed`, `9719e2a`) ;
+  exécution au commit `595217d`, arbre propre ;
+  `python -X utf8 -m normalization.gold_robustness --out-dir <hors dépôt> --systemes regles,alphabet,fasttext` ;
+  résultats `lot-a2_gold_inv_dev_20261122.json` (hors dépôt, chiffres seulement).
+- **Résultats** (bascules / n ; [Wilson 95 %] ; décision) :
+
+  | Jeu | Perturbation | n | Règles | Alphabet seul | fastText |
+  |---|---|---|---|---|---|
+  | arabe | P3 élongation | 100 | 0 [0 ; 0.037] robuste | 0 robuste | 3 [0.010 ; 0.085] indéterminé |
+  | arabe | P4 tatweel | 100 | 0 robuste | 0 robuste | 1 [0.002 ; 0.055] indéterminé |
+  | arabe | P5 diacritiques | 100 | 0 robuste | 0 robuste | 2 [0.006 ; 0.070] indéterminé |
+  | arabe | P6 ligature | 39 | 0 [0 ; 0.090] indéterminé | 0 indéterminé | 2 [0.014 ; 0.169] indéterminé |
+  | arabe | P7 émoji | 100 | 0 robuste | 0 robuste | 1 [0.002 ; 0.055] indéterminé |
+  | arabe | P8 URL | 100 | 0 robuste | **35 [0.264 ; 0.448] fragile** | 3 [0.010 ; 0.085] indéterminé |
+  | arabe | P9 ponctuation | 100 | 0 robuste | 0 robuste | 2 [0.006 ; 0.070] indéterminé |
+  | arabe | P10 espaces | 100 | 0 robuste | 0 robuste | 3 [0.010 ; 0.085] indéterminé |
+  | latin | P1 minuscules | 60 | 0 [0 ; 0.060] indéterminé | 0 indéterminé | 3 [0.017 ; 0.137] indéterminé |
+  | latin | P2 majuscules | 85 | 0 [0 ; 0.043] robuste | 0 robuste | **12 [0.083 ; 0.231] fragile** |
+  | latin | P3 élongation | 86 | 1 [0.002 ; 0.063] indéterminé | 0 robuste | **6 [0.032 ; 0.144] fragile** |
+  | latin | P7 émoji | 86 | 0 [0 ; 0.043] robuste | 0 robuste | 2 [0.006 ; 0.081] indéterminé |
+  | latin | P8 URL | 86 | 0 robuste | 0 robuste | **8 [0.048 ; 0.173] fragile** |
+  | latin | P9 ponctuation | 86 | 0 robuste | 0 robuste | **5 [0.025 ; 0.129] fragile** |
+  | latin | P10 espaces | 86 | 0 robuste | 0 robuste | **10 [0.064 ; 0.201] fragile** |
+
+  - règles : 1 bascule sur 1 314 textes perturbés (P3 latin, 1/86) ; robuste sur 12 couples sur 15 ;
+    indéterminé sur 3 : P6 arabe et P1 latin (effectifs 39 et 60, sous les 73 textes nécessaires
+    sans bascule) et P3 latin (1 bascule, borne haute 0.063) ;
+  - macro-F1 des règles inchangé partout, sauf P3 latin : 0.831 → 0.817 (écart −0.015
+    [−0.051 ; 0.000]) ; dev arabe 0.628, dev latin 0.831 avant perturbation (EXP-A2-011 : 0.63 / 0.83) ;
+  - alphabet seul : fragile à P8 sur le dev arabe (35/100 ; macro-F1 0.187 → 0.159, écart −0.028
+    [−0.079 ; +0.019]) ;
+  - fastText : fragile sur 5 perturbations latines (P2, P3, P8, P9, P10), indéterminé ailleurs ;
+    seul écart de macro-F1 dont l'IC exclut 0 : P2 latin, 0.250 → 0.105 (−0.145 [−0.271 ; −0.018]) ;
+  - invariants : idempotence 0/100 et 0/86 échecs ; cohérence 0/100 et 0/86 (Wilson haut 0.037 et
+    0.043) ; 0 erreur de traitement.
+- **Analyse** :
+  - les règles du Lot A2 sont stables sous ces perturbations : la normalisation (diacritiques,
+    tatweel, formes de présentation, élongation, espaces) et la protection des URL et émojis font
+    leur travail ; la seule bascule (une élongation en lettres latines) n'est pas analysée ici, la
+    ligne n'étant pas affichée ;
+  - **attendu « P2 fragile » : NON confirmé sur ce dev** (0/85) ; la limite connue porte sur un mot
+    seul en majuscules, pas sur des phrases ;
+  - la baseline « alphabet seul » bascule dès que les 22 lettres latines de l'URL dépassent le
+    nombre de lettres arabes du texte (35 textes sur 100) : c'est le défaut que la protection des
+    URL évite aux règles ;
+  - fastText est instable sur l'arabizi (casse, ponctuation, espaces, URL) : ses prédictions,
+    dispersées sur de nombreuses langues (EXP-A2-017), changent au moindre détail de surface ;
+  - limites : le dev a servi à la mise au point des règles (chiffres optimistes, ce n'est pas une
+    généralisation) ; perturbations synthétiques, une à la fois ; mesure des règles seulement, pas
+    de la cascade MARBERTv2 ; P1 et P6 ne peuvent pas être déclarés robustes avec ces effectifs.
+- **Décision / suite** : résultat INV du Gold retenu tel quel ; aucune correction (mesure seulement).
+  Suite possible, hors Gold : mesurer la cascade sous les mêmes perturbations.
 
 ### EXP-B-014 — Robustesse (INV) du système gelé : perturbations à sens conservé
 - **Date** : 2026-11-20
