@@ -221,8 +221,9 @@ def detect_script(text: str) -> str:
 
 def detect_language(text: str) -> Lang:
     """Identifie la langue : script, puis marques dialectales en lettres arabes."""
-    # TODO(Lot A2): classifieur appris pour le tunisien sans mot du lexique et
-    # pour l'arabizi sans chiffres (voir experiments.md).
+    # Pas de classifieur appris pour le tunisien en lettres arabes ici : la cascade MARBERTv2 a
+    # été mesurée une seule fois (EXP-A2-020, docs/lot-a2_protocole_gold.md) et n'est pas
+    # intégrée (critères non atteints ; normalize() reste en bibliothèque standard).
     if sum(_count_letters(expand_presentation_forms(_PROTECTED.sub(" ", text)))) == 0:
         return Lang.UNKNOWN  # vide, ou seulement chiffres / emojis / liens
     script = detect_script(text)

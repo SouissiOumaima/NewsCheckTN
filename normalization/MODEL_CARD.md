@@ -2,7 +2,7 @@
 
 Composant : `normalization/normalize.py` (`normalize(text) -> Document`, champs `lang` et `script`),
 avec `normalization/langid.py`. Deux parties : une règle à lexique pour les lettres arabes, un modèle
-appris pour les lettres latines sans chiffre d'arabizi. Journal : EXP-A2-001 à EXP-A2-009.
+appris pour les lettres latines sans chiffre d'arabizi. Journal : EXP-A2-001 à EXP-A2-020.
 
 ## 1. Règle à lexique (tunisien en lettres arabes)
 
@@ -43,5 +43,15 @@ Analyse de 45 erreurs : `docs/lot-a2_analyse_erreurs.md` (EXP-A2-009).
 
 - Prévu : choisir l'analyseur ou le modèle selon la langue (lots B, C), ventiler les résultats par langue (lot E).
 - Hors périmètre : autres dialectes arabes, anglais (classé selon sa ressemblance au français), textes d'un seul mot.
-- Limites connues : rappel du tunisien en lettres arabes de 0,53 (lexique limité, variantes, affixes, négation contractée) ; un mot seul d'arabizi tout en majuscules n'est pas reconnu ; un verbe standard en « ش » hors liste déclenche une fausse négation ; « bravo + nom » reste fragile ; textes mêlant français et tunisien mal représentés.
+- Limites connues : rappel du tunisien en lettres arabes de 0,53 sur le dev (échantillon TSAC de référence, EXP-A2-009) et de 0,392 sur le test gelé (règles seules, EXP-A2-020) (lexique limité, variantes, affixes, négation contractée) ; un mot seul d'arabizi tout en majuscules n'est pas reconnu ; un verbe standard en « ش » hors liste déclenche une fausse négation ; « bravo + nom » reste fragile ; textes mêlant français et tunisien mal représentés.
 - Éthique : les données d'entraînement sont des commentaires publics, parfois injurieux ; le fichier de poids ne contient que des fragments de 1 à 4 lettres, aucun texte entier.
+
+## 5. Palier Gold : limites (EXP-A2-016 à 020)
+
+Protocole : `docs/lot-a2_protocole_gold.md`. Le composant décrit ici reste celui des sections 1 et 2 (règles et modèle arabizi), sans changement de comportement.
+
+- **Arabizi identifié, pas converti** : `arabizi_to_arabic` renvoie le texte inchangé. Aucun jeu de référence de translittération n'existe, une table ne pourrait donc pas être mesurée. Conséquence pour le Lot D : la recherche BM25 n'a pas de forme arabe de l'arabizi à comparer.
+- **Cascade MARBERTv2 non intégrée** : mesurée une seule fois sur le test gelé (EXP-A2-020), elle porte le rappel du tunisien en lettres arabes à 0.90 (règles : 0.39) avec une précision de 0.95, mais deux des quatre critères fixés avant ne sont pas atteints (fausses alertes sur la presse, baisse sur eval_30). Elle ne figure donc pas dans `normalize()`, qui reste en bibliothèque standard. Le rappel du tunisien en lettres arabes du composant reste celui des règles.
+- **Fausses alertes sur la presse** : elles concernent la cascade (8.4 % sur 300 phrases de presse neuve), pas les règles (0/300 sur la même presse).
+- **Dev vu pendant la mise au point** : la robustesse (EXP-A2-016 : 1 bascule sur 1 314 textes perturbés) et la comparaison à fastText lid.176 (EXP-A2-017 : macro-F1 0.628 / 0.831 contre 0.185 / 0.250) sont mesurées sur ce dev ; elles sont optimistes et ne valent pas généralisation.
+- **Annotation** : la référence du test gelé vient d'un seul annotateur (accord humain non mesuré, EXP-A2-019) ; les résultats de la cascade sont indicatifs.
