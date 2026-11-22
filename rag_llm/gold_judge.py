@@ -358,7 +358,9 @@ def main() -> None:
         )
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out = RESULTS_DIR / f"lot-d_juge_{args.part}_{args.prompt}_{date.today():%Y%m%d}.json"
+    model = re.sub(r"[^A-Za-z0-9.]+", "-", generator.name).strip("-")
+    suffix = "" if model == "qwen2.5-3b-instruct" else f"_{model}"  # 3B : noms inchangés
+    out = RESULTS_DIR / f"lot-d_juge_{args.part}_{args.prompt}{suffix}_{date.today():%Y%m%d}.json"
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(f"Résultats : {out.relative_to(ROOT)}")
     print(f"Cache : {generator.hits} réutilisées, {generator.misses} générées")

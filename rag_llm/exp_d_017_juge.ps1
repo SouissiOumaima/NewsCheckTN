@@ -11,12 +11,14 @@
 # Usage (Ollama lance, depuis Z:\NewsCheckTN) :
 #   powershell -ExecutionPolicy Bypass -File .\rag_llm\exp_d_017_juge.ps1 -Part mise_au_point
 #   powershell -ExecutionPolicy Bypass -File .\rag_llm\exp_d_017_juge.ps1 -Part mesure -Prompt juge_v1
+# Amendement (protocole, section 6) : candidat qwen2.5:7b-instruct, prompt v2, sur mise_au_point :
+#   powershell -ExecutionPolicy Bypass -File .\rag_llm\exp_d_017_juge.ps1 -Part mise_au_point -Prompt juge_v2 -Model qwen2.5:7b-instruct
 param(
     [Parameter(Mandatory = $true)][ValidateSet("mise_au_point", "mesure")][string]$Part,
-    [string]$Prompt = "juge_v1"
+    [string]$Prompt = "juge_v1",
+    [ValidateSet("qwen2.5:3b-instruct", "qwen2.5:7b-instruct")][string]$Model = "qwen2.5:3b-instruct"
 )
 $ErrorActionPreference = "Stop"
-$Model = "qwen2.5:3b-instruct"
 
 try { $tags = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -TimeoutSec 10 }
 catch { throw "Ollama ne repond pas sur localhost:11434 : lancer l'application Ollama." }
@@ -32,7 +34,7 @@ $env:LLM_BASE_URL = "http://localhost:11434/v1"
 $env:LLM_API_KEY = "ollama"
 $env:LLM_MODEL = $Model
 $env:LLM_MIN_INTERVAL = "0"
-$env:LLM_TIMEOUT = "600"
+$env:LLM_TIMEOUT = "900"          # 7B : une partie du modele tourne sur le CPU
 $env:LLM_RESPONSE_FORMAT = "json"
 $env:LLM_ALLOW_EXTERNAL = "0"
 $env:LLM_CACHE = "evaluation/results/lot-d_llm_cache_exp-d-017.jsonl"

@@ -124,6 +124,15 @@ on rapporte aussi le nombre d'affirmations avec preuve transformées à tort en 
 - Prompt v3 : le juge donne le sens de l'explication (confirmée / contredite / insuffisante) et la
   liste des faits absents des passages ; la règle du guide est appliquée par le code : `invente` =
   au moins un fait absent ; `fidele` = verdict cohérent avec ce sens **et** aucun fait absent.
+- **Amendement (2026-11-22, avant toute mesure sur la moitié `mesure`)** : résultats sur
+  `mise_au_point` avec `qwen2.5:3b-instruct` — kappa de `fidelite` 0.14 (v1, 8 sorties
+  inexploitables), 0.31 (v2), 0.22 (v3) ; `invente` 0.00 / 0.00 / 0.14. Les trois versions font des
+  erreurs opposées (trop indulgent, trop sévère, faits absents partout) : la limite paraît venir du
+  modèle, pas du prompt. **Candidat ajouté : `qwen2.5:7b-instruct`** (≤ 8 Md, local, Ollama ;
+  ne tient pas en entier dans 4 Go, une partie tourne sur le CPU), avec le prompt **v2** inchangé,
+  sur `mise_au_point`. Aucun nouveau prompt. Sélection : le couple (modèle, prompt) qui a le meilleur
+  kappa de `fidelite` sur `mise_au_point` ; à égalité, le 3B. Puis `mesure` **une seule fois** avec
+  ce couple. Le juge reste différent de Falcon.
 - Sur le test v2, on rapporte de nouveau l'accord juge / humain : c'est la vraie mesure de validité.
 - Constat **avant** le lancement du juge (2026-11-22) : dans l'annotation humaine du dev, tous les
   passages cités sont `pertinent` (25 sur 25). Le kappa de `pertinence` n'est donc pas défini sur le
