@@ -11,6 +11,7 @@ import random
 import pytest
 
 from normalization import baseline_fasttext as ft
+from normalization import gold_leakage as lk
 from normalization import gold_robustness as inv
 from normalization.evaluate import REPO
 from normalization.gold_common import (
@@ -335,6 +336,73 @@ def test_fasttext_branche_dans_inv(monkeypatch):
     chosen = inv.build_predictors("regles,fasttext", inv.parse_args(["--out-dir", "x"]))
     assert set(chosen) == {"regles", "fasttext"}
     assert chosen["fasttext"](["texte factice"]) == ["autre"]
+
+
+def _fuites_factices() -> dict[str, list[str]]:
+    return {
+        "test": ["Il fait beau", "texte du test seul", "Bonjour  tout le monde", "3lech ya5i"],
+        "entrainement": ["Il fait beau", "autre texte"],
+        "dev_arabe": ["Il fait beau", SANS_LA],
+        "dev_latin": ["Bonjour tout le monde"],
+        "eval_30": ["3lech ya5i"],
+    }
+
+
+def test_fuites_empreinte_normalisee_rattrape_les_espaces():
+    first = lk.fingerprints(["Bonjour  tout"], "a", [])
+    second = lk.fingerprints(["Bonjour tout"], "b", [])
+    assert first[0][1] != second[0][1] and first[0][2] == second[0][2]
+
+
+def test_fuites_doublons_internes():
+    prints = lk.fingerprints(["a", "a", "b", " b "], "factice", [])
+    assert lk.internal_duplicates(prints) == {"n": 4, "doublons_bruts": 2,
+                                              "doublons_normalises": 2}
+
+
+def test_fuites_retrait_compte_une_seule_fois():
+    results, lines = lk.audit(_fuites_factices())
+    # « Il fait beau » est dans l'entraînement ET le dev arabe ; « Bonjour  tout » ne recoupe
+    # le dev latin qu'après normalisation : 2 textes à retirer, pas 3.
+    assert results["decision"]["textes_du_test_a_retirer"] == 2
+    assert lines["test_a_retirer"] == [1, 3]
+
+
+def test_fuites_eval_30_ne_declenche_pas_de_retrait():
+    sets = {"test": ["3lech ya5i"], "entrainement": ["x"], "dev_arabe": ["y"],
+            "dev_latin": ["z"], "eval_30": ["3lech ya5i"]}
+    results, _ = lk.audit(sets)
+    assert results["intersections"]["test|eval_30"]["brut"]["empreintes_communes"] == 1
+    assert results["decision"]["retrait_necessaire"] is False
+
+
+def test_fuites_sorties_sans_texte():
+    sets = _fuites_factices()
+    results, lines = lk.audit(sets)
+    dumped = json.dumps([results, lines], ensure_ascii=False)
+    assert all(text not in dumped for texts in sets.values() for text in texts)
+
+
+def test_fuites_liste_ordonnee_verifiee(tmp_path):
+    path = tmp_path / "test.tsv"
+    path.write_text("?\tpremier texte\n?\tsecond texte\n", encoding="utf-8")
+    good = sha256_texts(["premier texte", "second texte"])
+    texts, digest = lk.load_set("test", path, "annotation", "liste", good)
+    assert texts == ["premier texte", "second texte"] and digest == good
+    with pytest.raises(RefusGold, match="empreinte différente"):
+        lk.load_set("test", path, "annotation", "liste", "0" * 64)
+
+
+def test_fuites_empreintes_dans_les_journaux():
+    journal = (REPO / "experiments.md").read_text(encoding="utf-8")
+    assert lk.SETS["eval_30"][3] in journal
+    for name in ("test", "entrainement"):
+        assert len(lk.SETS[name][3]) == 64
+
+
+def test_fuites_refuse_out_dir_dans_depot():
+    with pytest.raises(RefusGold, match="dans le dépôt"):
+        lk.run(["--out-dir", str(REPO / "gold_sortie")])
 
 
 def test_fasttext_non_charge_par_defaut():
