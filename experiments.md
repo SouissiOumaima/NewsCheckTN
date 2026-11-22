@@ -68,7 +68,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 | EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (540 textes, P061–P600, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
-| EXP-B-013 | 2026-11-20 | B | Question de recherche 1 : extracteur gelé contre le TF-IDF du Lot C (112 textes du test du Lot C dans P061–P600) | extracteur gelé (mesure sur `a48e447`), modes règles et parseurs, unité texte ; TF-IDF d'EXP-C-010 reproduit (0.6435) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 binaire de détection | Lot B 0.803 [0.725 ; 0.874] vs TF-IDF 0.825 [0.742 ; 0.893] vs baseline 0.345 ; Lot B − TF-IDF −0.023 [−0.124 ; +0.076], non établi, ni par langue (tn-mixte < 15 textes) | aucune différence établie ; un seul annotateur ; XLM-R en attente |
+| EXP-B-013 | 2026-11-20 (XLM-R : 2026-11-21) | B | Question de recherche 1 : extracteur gelé contre le TF-IDF et XLM-R + LoRA du Lot C (112 textes du test du Lot C dans P061–P600) | extracteur gelé (mesure sur `a48e447`), modes règles et parseurs, unité texte ; TF-IDF d'EXP-C-010 reproduit (0.6435) ; XLM-R : 3 graines (42, 123, 2026), prédictions exportées par le Lot C ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 binaire de détection | Lot B 0.803 vs TF-IDF 0.825 vs XLM-R 0.851 ± 0.015 vs baseline 0.345 ; **tn (60)** : Lot B 0.707, TF-IDF 0.817, XLM-R 0.816 ± 0.030, Lot B − XLM-R −0.109 ± 0.030, non établi pour aucune graine ; tn en lettres arabes (18) : −0.365 ± 0.032, établi pour les 3 graines | aucune différence globale établie ; Lot B nettement derrière en tunisien en lettres arabes ; un seul annotateur |
 | EXP-B-014 | 2026-11-20 | B | Robustesse (INV) du système gelé : 7 perturbations à sens conservé sur P061–P600 | une perturbation par texte et par type, graine 20261015, empreinte `c8b2a266…` ; modes règles et parseurs ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | taux de changement de `is_claim` / `modality` ; Δ macro-F1 de détection | ponctuation −0.137 [−0.178 ; −0.097] (12 % de changements), presque tout sur les questions sans mot interrogatif du lexique (39 sur 40 contre 0 sur 10) ; fautes −0.019 ; casse et diacritiques 0 ; langue A2 changée par l'arabizi 11.6 % | reconnaissance des questions dépendante du « ? » ; lexique interrogatif de 6 entrées ; non corrigé (système gelé) |
 
 ## Entrées
@@ -165,7 +165,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Date** : 2026-11-20
 - **Auteur / Lot** : Membre 3 / Lot B
 - **Objectif / hypothèse** : comparer, sur des textes vierges pour les deux lots, la détection
-  d'affirmations de l'extracteur à règles (Lot B) et du Model 1 TF-IDF (Lot C, EXP-C-010).
+  d'affirmations de l'extracteur à règles (Lot B), du Model 1 TF-IDF (Lot C, EXP-C-010) et de
+  XLM-R + LoRA (Lot C, EXP-C-003 ; ajouté le 2026-11-21).
   Numéro EXP-B-012 réservé à la première mesure sur eval_100.
 - **Données** :
   - Gold : test P061–P600 d'EXP-B-010, SHA-256
@@ -178,6 +179,27 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     du Lot C est régénéré par `data/prepare_claim_detection_dataset.py` (600 lignes). Contrôle :
     les 540 textes communs avec le gold ont la même empreinte (espaces normalisés), le même label
     et la même modalité ; 112 sur 112 pour les textes mesurés.
+  - XLM-R + LoRA (ajout du 2026-11-21) : export privé du Lot C (hors dépôt), nouvelle inférence
+    des adaptateurs sauvegardés des graines 42, 123 et 2026, sans réentraînement ni réglage ;
+    texte brut, troncature à 256 jetons, argmax sur AFFIRMATION / OPINION / AUTRE. Un fichier
+    `id,label_predit` par graine, restreint aux 112 identifiants (aucun texte). Contrôles avant
+    la mesure :
+    - `claim_detection_600.jsonl` fourni identique octet pour octet au fichier régénéré ci-dessus
+      (SHA-256 `fbf35df619ed1b7af7aef7d85e3b0a7772414a3bba5df57aa1967d4e0aef37cd`, 600 identifiants
+      dans le même ordre ; label, modalité, langue, écriture et texte identiques) ;
+    - split fourni : même contenu JSON que celui du dépôt (graine et 120 `test_ids` dans le même
+      ordre). Les empreintes brutes diffèrent par les seules fins de ligne : dépôt (LF)
+      `9a25686286ccb3271ca98fe9b03046e2a0cb55cf6e5b7f43ab467669b5a8cee0`, fichier et manifeste du
+      Lot C (CRLF) `cabe7f9e4c116616ccc69c5da838fead08254474455932c434d5e45995f6f566` ; identiques
+      après conversion CRLF → LF ;
+    - les 3 fichiers de prédictions contiennent exactement les 112 identifiants mesurés (aucun
+      doublon, aucun manquant) ;
+    - empreintes SHA-256 des fichiers de prédictions :
+      - graine 42 : `fe4b669e4f7a43ae0f50c2c56645061f9843731d24dad43242aa1a858894bdbf` ;
+      - graine 123 : `e904b2f7eb57d7f245f278fa3ac539e324e617f4def417724d3debe03a79e842` ;
+      - graine 2026 : `292ed05da0d213ca5b7912b2330eefc94fa1ebc2b07342ec521e27df1d9ec9cf`.
+    - Selon le manifeste du Lot C, la macro-F1 à 3 classes rejouée sur les 120 textes est égale à
+      celle des métriques sauvegardées pour chaque graine (écart 0.0).
 - **Méthode / configuration** :
   - Reproduction d'EXP-C-010 avec sa commande (venv séparé, scikit-learn 1.9.1) : macro-F1
     **0.6435** sur les 120 textes, comme l'entrée d'origine.
@@ -203,7 +225,18 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
       --gold <test_P061_P600.tsv> --ids data/splits/claim_detection_multiclass_600_seed42.json \
       --tfidf <tfidf_test.json> --out-dir <dossier hors dépôt> \
       --expect-gold-sha256 5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b
+  # 4. Comparaison avec XLM-R (fichiers id,label_predit du Lot C, une graine par fichier)
+  python -X utf8 notebooks/lot_b_linguistic/mesures/qr1_compare.py \
+      --gold <test_P061_P600.tsv> --ids data/splits/claim_detection_multiclass_600_seed42.json \
+      --tfidf <tfidf_test.json> \
+      --xlmr <xlmr_lora_seed42_P061_P600_test112.csv> <xlmr_lora_seed123_P061_P600_test112.csv> \
+             <xlmr_lora_seed2026_P061_P600_test112.csv> \
+      --out-dir <dossier hors dépôt> \
+      --expect-gold-sha256 5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b
   ```
+
+  La ligne « tn (60) » regroupe les trois écritures du tunisien ; elle est calculée hors dépôt avec
+  les fonctions du script (`measure_block`, mêmes graines et nombres de tirages).
 
 - **Résultats** (macro-F1 binaire [IC 95 %] ; règles et parseurs identiques, aucun désaccord sur
   les 112 textes) :
@@ -219,6 +252,37 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 
   - Lot B − baseline : +0.458 [+0.378 ; +0.531] ; TF-IDF − baseline : +0.480 [+0.399 ; +0.549].
   - ⚠ : moins de 15 textes, non interprétable.
+
+- **Résultats XLM-R + LoRA** (ajout du 2026-11-21 ; macro-F1 binaire [IC 95 %] par graine, puis
+  moyenne ± écart-type sur les 3 graines ; Lot B en mode règles, identique au mode parseurs) :
+
+  | Groupe | n (aff.) | Lot B | TF-IDF | XLM-R 42 | XLM-R 123 | XLM-R 2026 | XLM-R moyenne | Baseline |
+  |---|---|---|---|---|---|---|---|---|
+  | global | 112 (59) | 0.803 | 0.825 | 0.864 [0.792 ; 0.924] | 0.855 [0.782 ; 0.919] | 0.835 [0.762 ; 0.902] | 0.851 ± 0.015 | 0.345 |
+  | fr | 23 (14) | 0.852 | 0.795 | 0.904 [0.744 ; 1.000] | 0.904 [0.744 ; 1.000] | 0.904 [0.744 ; 1.000] | 0.904 ± 0.000 | 0.378 |
+  | ar | 29 (17) | 0.964 | 0.847 | 0.892 [0.757 ; 1.000] | 0.854 [0.695 ; 0.964] | 0.892 [0.752 ; 1.000] | 0.879 ± 0.022 | 0.370 |
+  | **tn (toutes écritures)** | **60 (28)** | **0.707 [0.576 ; 0.808]** | **0.817 [0.715 ; 0.916]** | **0.833 [0.729 ; 0.927]** | **0.833 [0.731 ; 0.917]** | **0.782 [0.666 ; 0.882]** | **0.816 ± 0.030** | **0.318** |
+  | tn, lettres arabes | 18 (9) | 0.542 | 0.778 | 0.889 [0.714 ; 1.000] | 0.944 [0.804 ; 1.000] | 0.888 [0.714 ; 1.000] | 0.907 ± 0.032 | 0.333 |
+  | tn, arabizi | 28 (11) | 0.678 | 0.750 | 0.785 [0.607 ; 0.928] | 0.747 [0.562 ; 0.893] | 0.713 [0.520 ; 0.857] | 0.748 ± 0.036 | 0.282 |
+  | tn, mixte ⚠ | 14 (8) | 0.925 | 1.000 | 0.844 [0.562 ; 1.000] | 0.844 [0.562 ; 1.000] | 0.754 [0.440 ; 1.000] | 0.814 ± 0.052 | 0.364 |
+
+  Différence appariée **Lot B − XLM-R** [IC 95 %] (`*` : IC excluant 0) :
+
+  | Groupe | Graine 42 | Graine 123 | Graine 2026 | Moyenne ± écart-type |
+  |---|---|---|---|---|
+  | global | −0.061 [−0.150 ; +0.018] | −0.052 [−0.144 ; +0.036] | −0.032 [−0.120 ; +0.055] | −0.049 ± 0.015 |
+  | fr | −0.053 [−0.199 ; +0.000] | −0.053 [−0.199 ; +0.000] | −0.053 [−0.199 ; +0.000] | −0.053 ± 0.000 |
+  | ar | +0.072 [−0.070 ; +0.229] | +0.110 [−0.041 ; +0.276] | +0.072 [−0.071 ; +0.220] | +0.085 ± 0.022 |
+  | **tn (toutes écritures)** | **−0.126 [−0.262 ; +0.000]** | **−0.127 [−0.266 ; +0.011]** | **−0.075 [−0.215 ; +0.060]** | **−0.109 ± 0.030** |
+  | tn, lettres arabes | −0.347 [−0.597 ; −0.085] `*` | −0.402 [−0.660 ; −0.139] `*` | −0.346 [−0.581 ; −0.126] `*` | −0.365 ± 0.032 |
+  | tn, arabizi | −0.106 [−0.297 ; +0.072] | −0.069 [−0.279 ; +0.121] | −0.035 [−0.250 ; +0.178] | −0.070 ± 0.036 |
+  | tn, mixte ⚠ | +0.081 [+0.000 ; +0.292] | +0.081 [+0.000 ; +0.292] | +0.171 [+0.000 ; +0.467] | +0.111 ± 0.052 |
+
+  - Rappel sur les 60 textes tn : Lot B − TF-IDF −0.110 [−0.266 ; +0.041] ; Lot B − baseline
+    +0.389 [+0.263 ; +0.495] ; TF-IDF − baseline +0.498 [+0.389 ; +0.602].
+  - XLM-R − baseline : établi pour chaque graine au global, en fr, en ar, en tn et dans chaque
+    sous-groupe tn, sauf tn-mixte graine 2026 (+0.391 [+0.000 ; +0.591], ⚠ < 15 textes).
+  - En fr, les 3 graines donnent les mêmes prédictions binaires sur les 23 textes.
 - **Analyse** :
   - Les deux systèmes dépassent nettement la baseline. **La différence Lot B − TF-IDF n'est pas
     établie**, ni au global ni dans aucun groupe (en ar, la borne basse de l'IC est à 0).
@@ -228,9 +292,31 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     tâche binaire (le TF-IDF prédit 3 classes ; sa macro-F1 à 3 classes, 0.643, n'est pas
     comparable) ; le Model 1 a été entraîné sur 428 autres textes de P061–P600 (même source et
     même style) ; 18 à 29 textes par groupe.
-- **Décision / suite** : XLM-R + LoRA (EXP-C-003) **en attente** : la même commande accepte
-  `--xlmr <graine1> <graine2> <graine3>` (fichiers `id,label_predit`), une mesure par graine puis
-  moyenne ± écart-type. À vérifier avec le Lot C : les 3 graines utilisent le split seed 42.
+- **Analyse XLM-R** (question de recherche : le tunisien) :
+  - **Tunisien, 60 textes** : XLM-R 0.816 ± 0.030 contre Lot B 0.707. L'écart Lot B − XLM-R
+    (−0.109 ± 0.030) va dans le même sens pour les 3 graines, mais **n'est établi pour aucune** :
+    l'IC touche 0 (graine 42) ou le contient (graines 123 et 2026).
+  - **Tunisien en lettres arabes** (18 textes) : seul groupe où l'écart est établi, pour les 3
+    graines (−0.365 ± 0.032). C'est le groupe déjà le plus faible du Lot B (EXP-B-010) ; le Lot A2
+    en classe une partie comme arabe standard et aucun parseur ne le couvre.
+  - Arabizi : écart non établi (−0.070 ± 0.036). Mixte : moins de 15 textes, non interprétable.
+  - Global, fr, ar : aucune différence établie. En ar, le Lot B est devant pour les 3 graines
+    (+0.085 ± 0.022), sans que ce soit établi.
+  - L'écart-type entre graines (0.015 au global, 0.030 en tn) est petit devant la largeur des IC
+    (environ ± 0.07 à ± 0.14) : l'incertitude vient surtout du petit nombre de textes.
+  - **Limite de traçabilité signalée par le Lot C** : le script d'entraînement garde les
+    identifiants de test fixes et fait varier train / validation selon la graine. Les métriques
+    sauvegardées à l'entraînement indiquent 120 textes de test pour chaque graine, mais ne
+    contiennent ni les identifiants ni l'empreinte du split utilisé. Le split historique n'est
+    donc identifié que par ses identifiants (fichier du dépôt), **sans empreinte d'origine** ;
+    l'égalité des tailles (120) ne prouve pas l'identité des fichiers. L'égalité entre macro-F1
+    rejouée et macro-F1 sauvegardée (manifeste du Lot C) est un indice, pas une preuve.
+  - Mêmes limites que ci-dessus : un seul annotateur ; unité texte ; XLM-R entraîné sur 428 autres
+    textes de P061–P600 (même source et même style), ce qui l'avantage par rapport au Lot B.
+- **Décision / suite** : comparaison XLM-R faite (export du Lot C du 2026-11-21). Réponse
+  provisoire à la question de recherche 1 : sur le tunisien, l'extracteur à règles ne fait pas
+  mieux que les classifieurs du Lot C ; il est nettement derrière en lettres arabes. Aucune règle
+  n'est modifiée (système gelé). Mesure de référence à venir : eval_100.
 
 ### EXP-B-011 — Mesure exploratoire sur silver_40 (détection, modalité, SPO, coréférence)
 - **Statut** : **exploratoire, n = 40, une annotation indépendante non garantie, SPO n = 10 dont
