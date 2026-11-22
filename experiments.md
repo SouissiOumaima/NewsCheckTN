@@ -88,7 +88,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Incident (avant toute mesure)** : le premier lancement du dev a repris les 60 réponses d'EXP-D-014
   dans le cache (la clé du cache ne contient pas le format). Correction : cache séparé
   (`LLM_CACHE=evaluation/results/lot-d_llm_cache_exp-d-015.jsonl`, commité avant la relance) ; résultats
-  d'EXP-D-014 sauvegardés sous `*_exp-d-014.json` (même nom de fichier de sortie).
+  d'EXP-D-014 sauvegardés sous `*_exp-d-014.json` (même nom de fichier de sortie). Après la relecture
+  de la PR #33, le format JSON imposé entre dans la clé du cache (clé inchangée sans ce format).
 - **Résultats — dev (20, 60 réponses générées)** : 0.667 ± 0.076 / macro-F1 0.51 ± 0.045, couverture 0.80,
   sorties valides **0.983 ± 0.029** (EXP-D-014 : 0.80) ; 1 rejet (`json_invalide`).
 - **Résultats — test gelé (21, une seule fois)** :
@@ -165,7 +166,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     avec le fichier d'EXP-D-010 (`rag_llm.compare_llm_runs`) à ajouter.
 - **Décision** : règle non remplie (0.698 < 0.730) → **Aya 8B reste**. À retenir pour le Gold : macro-F1
   bien supérieur et abstention correcte sur les affirmations sans preuve, là où Aya ne s'abstient jamais.
-  Le fichier de sortie indique `exp_id: EXP-D-009` (valeur écrite en dur dans `silver_verdict.py`).
+  Le fichier de sortie indique `exp_id: EXP-D-009` (valeur écrite en dur dans `silver_verdict.py` ;
+  option `--exp-id` ajoutée après la relecture de la PR #33, défaut inchangé).
 
 ### EXP-D-012 — Silver : Tiny Aya (3,35 Md) contre Aya Expanse 8B
 - **Date** : 2026-11-16 (Colab) et 2026-11-19 (API) — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
