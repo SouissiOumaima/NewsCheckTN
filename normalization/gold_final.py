@@ -54,7 +54,7 @@ from normalization.gold_common import (
     write_json,
 )
 from normalization.gold_leakage import SETS
-from normalization.normalize import detect_language, normalize
+from normalization.normalize import normalize
 
 TEST_LIST_SHA = SETS["test"][3]
 EVAL30_SHA = SETS["eval_30"][3]
@@ -153,8 +153,13 @@ def reference_view(rows: list[tuple[str, str]]) -> tuple[list[int], list[str]]:
 
 
 def rules_binary(text: str) -> str:
-    """Baseline « lexique seul » : le pipeline actuel, ramené à tn / non-tn."""
-    return "tn" if detect_language(text) == Lang.TN else "ar"
+    """Baseline « lexique seul » : le pipeline actuel, ramené à tn / non-tn.
+
+    Même calcul que la partie « règles » de la cascade (normalize(texte).lang, comme le `lex`
+    d'EXP-A2-015 et `regles` de gold_kaggle_inputs) : la comparaison porte sur le seul apport
+    du modèle.
+    """
+    return "tn" if normalize(text).lang == Lang.TN else "ar"
 
 
 def mean_sd(values: list[float]) -> dict:

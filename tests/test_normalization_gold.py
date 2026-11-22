@@ -589,6 +589,14 @@ def test_final_deuxieme_passage_refuse_sans_premier(tmp_path):
         fin.acquire_passage(tmp_path / "verrou.json", True, "a" * 64)
 
 
+def test_final_baseline_alignee_sur_normalize(monkeypatch):
+    from common.schemas import Document, Lang
+    monkeypatch.setattr(fin, "normalize", lambda text: Document(text, text, Lang.TN, "arabic"))
+    assert fin.rules_binary("texte factice") == "tn"
+    monkeypatch.setattr(fin, "normalize", lambda text: Document(text, text, Lang.FR, "latin"))
+    assert fin.rules_binary("texte factice") == "ar"
+
+
 def test_final_verrou_fixe_hors_depot():
     assert fin.LOCK_PATH == REPO.parent / "NewsCheckTN_out" / "verrou_gold_final.json"
     assert not fin.LOCK_PATH.resolve().is_relative_to(REPO.resolve())
