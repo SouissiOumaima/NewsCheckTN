@@ -126,3 +126,31 @@ def test_prompt_v2_cles_explicites_et_format_plat():
     assert lab[("dev-c01", "invente")] == "non" and lab[("dev-c01", "fidelite")] == "infidele"
     _, err = gj.parse_judge('{"fait_invente": "oui", "verdict_fidele": "invente"}', ROW)
     assert err == "etiquettes_manquantes"
+
+
+def test_prompt_v3_regle_de_fidelite_appliquee_par_le_code():
+    system = gj.build_messages(ROW, 'liste "faits_absents"\n{{CLES}}')[0]["content"]
+    assert '"faits_absents": ["..."]' in system and '"verdict_fidele"' not in system
+
+    def judge(sens, absent, verdict="vrai"):
+        raw = json.dumps(
+            {
+                "sens_explication": sens,
+                "pertinence_P1": "oui",
+                "pertinence_P5": "oui",
+                "faits_absents": absent,
+            }
+        )
+        return gj.parse_judge(raw, {**ROW, "verdict": verdict})
+
+    lab, err = judge("contredite", [])  # explication contredit, verdict « vrai »
+    assert err is None and lab[("dev-c01", "fidelite")] == "infidele"
+    assert lab[("dev-c01", "invente")] == "non"
+    lab, _ = judge("contredite", [], verdict="faux")
+    assert lab[("dev-c01", "fidelite")] == "fidele"
+    lab, _ = judge("contredite", ["troisième trimestre"], verdict="faux")
+    assert lab[("dev-c01", "invente")] == "oui" and lab[("dev-c01", "fidelite")] == "infidele"
+    lab, _ = judge("insuffisante", ["..."], verdict="preuves_insuffisantes")
+    assert lab[("dev-c01", "invente")] == "non" and lab[("dev-c01", "fidelite")] == "fidele"
+    _, err = judge("peut-être", [])
+    assert err == "etiquettes_manquantes"

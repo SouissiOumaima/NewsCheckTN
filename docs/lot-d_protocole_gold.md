@@ -116,6 +116,14 @@ on rapporte aussi le nombre d'affirmations avec preuve transformées à tort en 
 - **Validation (fixée maintenant)** : le juge est déclaré validé pour une étiquette si son kappa
   de Cohen avec l'annotation humaine est **≥ 0.60** sur la moitié de mesure du dev. Une étiquette
   non validée n'est pas notée par le juge sur le test v2 : elle reste annotée à la main.
+- **Règle d'arrêt (fixée le 2026-11-22, avant le lancement du prompt v3)** : au plus trois versions
+  du prompt sur la moitié `mise_au_point` (v1, v2, v3). On lance ensuite `mesure` **une seule
+  fois** avec la version qui a le meilleur kappa de `fidelite` sur `mise_au_point` (à égalité : le
+  moins de sorties inexploitables), même si aucune n'atteint 0.60. Les résultats de toutes les
+  versions sont rapportés.
+- Prompt v3 : le juge donne le sens de l'explication (confirmée / contredite / insuffisante) et la
+  liste des faits absents des passages ; la règle du guide est appliquée par le code : `invente` =
+  au moins un fait absent ; `fidele` = verdict cohérent avec ce sens **et** aucun fait absent.
 - Sur le test v2, on rapporte de nouveau l'accord juge / humain : c'est la vraie mesure de validité.
 - Constat **avant** le lancement du juge (2026-11-22) : dans l'annotation humaine du dev, tous les
   passages cités sont `pertinent` (25 sur 25). Le kappa de `pertinence` n'est donc pas défini sur le

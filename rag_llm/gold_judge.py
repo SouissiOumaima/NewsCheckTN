@@ -106,19 +106,35 @@ def build_messages(row: dict, system_prompt: str) -> list[dict]:
             lines.append(f"{p}{mark} : {row[p]}")
     lines.append(f"Passages cités : {', '.join(cits) if cits else 'aucun'}")
     if KEYS_PLACEHOLDER in system_prompt:  # prompt v2 et suivants : clés attendues explicites
-        system_prompt = system_prompt.replace(KEYS_PLACEHOLDER, expected_keys_template(row))
+        system_prompt = system_prompt.replace(
+            KEYS_PLACEHOLDER, expected_keys_template(row, system_prompt)
+        )
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": "\n".join(lines)},
     ]
 
 
-def expected_keys_template(row: dict) -> str:
-    """Gabarit JSON des clés attendues pour ce verdict (format plat, prompt v2)."""
+def expected_keys_template(row: dict, system_prompt: str = "") -> str:
+    """Gabarit JSON des clés attendues pour ce verdict (format plat, prompts v2 et v3)."""
     keys = {"raison": "...", "sens_explication": "confirmee | contredite | insuffisante"}
     keys.update({f"pertinence_{p}": "oui | non" for p in cited(row)})
-    keys.update({"fait_invente": "oui | non", "verdict_fidele": "oui | non"})
+    if '"faits_absents"' in system_prompt:  # v3 : le code applique la règle de fidélité
+        keys["faits_absents"] = ["..."]
+    else:
+        keys.update({"fait_invente": "oui | non", "verdict_fidele": "oui | non"})
     return json.dumps(keys, ensure_ascii=False)
+
+
+# Prompt v3 : le juge lit le sens de l'explication et liste les faits absents ; la règle du guide
+# (section 4) est appliquée par le code : fidèle = verdict cohérent avec ce sens
+# ET aucun fait absent.
+SENS_FOR_VERDICT = {
+    "vrai": {"confirmee"},
+    "faux": {"contredite"},
+    "preuves_insuffisantes": {"insuffisante"},
+    "trompeur": {"confirmee", "contredite"},  # en partie vrai, en partie faux
+}
 
 
 def parse_judge(raw: str, row: dict) -> tuple[dict[tuple[str, str], str], str | None]:
@@ -133,6 +149,21 @@ def parse_judge(raw: str, row: dict) -> tuple[dict[tuple[str, str], str], str | 
     if not isinstance(data, dict):
         return {}, "json_invalide"
     cid, out = row["claim_id"], {}
+    if "faits_absents" in data:  # prompt v3 : règle appliquée par le code
+        for p in cited(row):
+            v = YES_NO.get(str(data.get(f"pertinence_{p}", "")).strip().lower())
+            if v is not None:
+                out[(cid, f"pertinence:{p}")] = "pertinent" if v else "non_pertinent"
+        absent = data.get("faits_absents")
+        sens = str(data.get("sens_explication", "")).strip().lower().replace("é", "e")
+        if isinstance(absent, list):
+            absent = [a for a in absent if str(a).strip() and str(a).strip() != "..."]
+            out[(cid, "invente")] = "oui" if absent else "non"
+            if sens in {"confirmee", "contredite", "insuffisante"}:
+                ok = sens in SENS_FOR_VERDICT.get(row["verdict"], set()) and not absent
+                out[(cid, "fidelite")] = "fidele" if ok else "infidele"
+        expected = len(cited(row)) + 2
+        return out, None if len(out) == expected else "etiquettes_manquantes"
     if "verdict_fidele" in data or "fait_invente" in data:  # format plat (prompt v2)
         for p in cited(row):
             v = YES_NO.get(str(data.get(f"pertinence_{p}", "")).strip().lower())
