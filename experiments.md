@@ -219,7 +219,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   `" ".join(normalize(texte).text.split())`) ; doublons internes de chaque jeu ; textes partagés pour
   chacune des 10 paires de jeux ; effectifs seulement.
 - **Code** : `normalization/gold_leakage.py` (commit `5d4978e`) ; exécution au commit `595217d`,
-  arbre propre ; `python -X utf8 -m normalization.gold_leakage --out-dir <hors dépôt>` ; résultats
+  dossier `normalization/` sans modification non commitée (le contrôle ne porte que sur ce
+  dossier) ; `python -X utf8 -m normalization.gold_leakage --out-dir <hors dépôt>` ; résultats
   `lot-a2_gold_fuites_20261122.json` (effectifs seulement) et fichier local des numéros de ligne,
   hors dépôt.
 - **Résultats** :
@@ -258,7 +259,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     `arz` ;
   - écart apparié règles − fastText, bootstrap percentile 1 000 tirages, graine 20261122.
 - **Code** : `normalization/baseline_fasttext.py` (commit `9719e2a`) ; exécution au commit `595217d`,
-  arbre propre ; `python -X utf8 -m normalization.baseline_fasttext --out-dir <hors dépôt>` ;
+  dossier `normalization/` sans modification non commitée (le contrôle ne porte que sur ce
+  dossier) ; `python -X utf8 -m normalization.baseline_fasttext --out-dir <hors dépôt>` ;
   résultats `lot-a2_gold_fasttext_dev_20261122.json` (hors dépôt, chiffres seulement).
 - **Résultats** :
 
@@ -315,7 +317,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     graine 20261122 ; invariants sans étiquette : idempotence de `normalize()` et cohérence
     `detect_language(x) == normalize(x).lang`.
 - **Code** : `normalization/gold_robustness.py` et `gold_common.py` (commits `0d3a6ed`, `9719e2a`) ;
-  exécution au commit `595217d`, arbre propre ;
+  exécution au commit `595217d`, dossier `normalization/` sans modification non commitée (le
+  contrôle ne porte que sur ce dossier) ;
   `python -X utf8 -m normalization.gold_robustness --out-dir <hors dépôt> --systemes regles,alphabet,fasttext` ;
   résultats `lot-a2_gold_inv_dev_20261122.json` (hors dépôt, chiffres seulement).
 - **Résultats** (bascules / n ; [Wilson 95 %] ; décision) :
