@@ -72,7 +72,9 @@ Unité : un **verdict** de Falcon (graine 42) et chacun des passages qu'il cite.
 | `fidelite` (par verdict) | `fidele` / `infidele` | Chaque phrase de l'explication est-elle soutenue par un passage cité ? (un seul point non soutenu → `infidele`) |
 
 - Annotation faite **sans voir** l'avis du juge, et avant de lancer le juge sur le même jeu.
-- Annotatrice principale : Hadil. **Seconde annotatrice : Wiem Saafi** (accord du 2026-11-22),
+- Annotation principale : Hadil, **à deux avec son binôme** (annotation commune, 30 verdicts,
+  rendue le 2026-11-22, avant tout lancement du juge ; une incohérence entre deux lignes, c16 et
+  hs01, corrigée par elles avant tout calcul). **Seconde annotatrice : Wiem Saafi** (accord du 2026-11-22),
   sur 10 verdicts du dev, sans outil d'IA, avec le guide `docs/lot-d_guide_annotation_verdict.md`.
   On mesure l'accord entre humains (kappa de Cohen). Les deux annotatrices travaillent sans voir
   les étiquettes de l'autre.
@@ -115,6 +117,11 @@ on rapporte aussi le nombre d'affirmations avec preuve transformées à tort en 
   de Cohen avec l'annotation humaine est **≥ 0.60** sur la moitié de mesure du dev. Une étiquette
   non validée n'est pas notée par le juge sur le test v2 : elle reste annotée à la main.
 - Sur le test v2, on rapporte de nouveau l'accord juge / humain : c'est la vraie mesure de validité.
+- Constat **avant** le lancement du juge (2026-11-22) : dans l'annotation humaine du dev, tous les
+  passages cités sont `pertinent` (25 sur 25). Le kappa de `pertinence` n'est donc pas défini sur le
+  dev : cette étiquette est déclarée **non validable sur le dev** et reste annotée à la main sur le
+  test v2, sauf si l'accord y est mesurable. Code : `rag_llm/gold_judge.py`, prompt
+  `rag_llm/prompts/juge_v1.txt`, lanceur `rag_llm/exp_d_017_juge.ps1`.
 
 ## 7. Mesures et statistiques
 

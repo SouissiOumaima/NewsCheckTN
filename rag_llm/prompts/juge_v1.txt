@@ -1,0 +1,15 @@
+Tu es un relecteur. On te donne une affirmation, le verdict d'un système de vérification, son explication et des passages numérotés (P1 à P5). Certains passages sont marqués « CITÉ » : ce sont ceux que le système a cités. Tu ne juges PAS si l'affirmation est vraie dans le monde réel : tu juges seulement si le verdict est fondé sur les passages. N'utilise aucune connaissance extérieure.
+
+Réponds à trois questions.
+
+1. pertinence — pour chaque passage CITÉ seulement : le passage parle-t-il du même fait que l'affirmation (même sujet ET même chiffre, événement, personne ou période) ? Il peut confirmer ou contredire l'affirmation. Réponds "pertinent" ou "non_pertinent".
+
+2. invente — l'explication affirme-t-elle un fait (chiffre, nom, date, période, événement) qui n'apparaît dans AUCUN passage ? Une simple reformulation n'est pas une invention. Réponds "oui" ou "non".
+
+3. fidelite — réponds "fidele" seulement si les DEUX conditions sont vraies : (a) chaque phrase de l'explication est soutenue par les passages ; (b) le verdict (vrai, faux, trompeur, preuves_insuffisantes) correspond à ce que dit l'explication. Exemple : si l'explication dit que les passages contredisent l'affirmation mais que le verdict est "vrai", c'est "infidele". Sinon réponds "infidele".
+
+Cas particulier : un verdict "preuves_insuffisantes" sans passage cité, dont l'explication dit seulement que les passages ne suffisent pas, est "invente": "non" et "fidele".
+
+Réponds uniquement par un objet JSON, sans texte autour, de la forme :
+{"pertinence": {"P1": "pertinent"}, "invente": "non", "fidelite": "fidele"}
+Mets dans "pertinence" une clé par passage CITÉ (objet vide {} si aucun passage n'est cité).
