@@ -11,6 +11,8 @@ import random
 import pytest
 
 from normalization import baseline_fasttext as ft
+from normalization import gold_agreement as ga
+from normalization import gold_final as fin
 from normalization import gold_leakage as lk
 from normalization import gold_robustness as inv
 from normalization.evaluate import REPO
@@ -403,6 +405,209 @@ def test_fuites_empreintes_dans_les_journaux():
 def test_fuites_refuse_out_dir_dans_depot():
     with pytest.raises(RefusGold, match="dans le dépôt"):
         lk.run(["--out-dir", str(REPO / "gold_sortie")])
+
+
+# ---------------------------------------------------------------------------
+# Accord entre annotateurs (EXP-A2-019)
+# ---------------------------------------------------------------------------
+
+def _rows(labels: str) -> list[tuple[str, str]]:
+    return [(label, f"texte factice {i}") for i, label in enumerate(labels, 1)]
+
+
+def test_accord_refuse_un_mauvais_nombre_de_lignes():
+    with pytest.raises(RefusGold, match="lignes au lieu de"):
+        ga.check_rows("factice", _rows("tta"), 4)
+
+
+def test_accord_refuse_une_etiquette_invalide():
+    with pytest.raises(RefusGold, match="étiquettes invalides"):
+        ga.check_rows("factice", _rows("tzt"), 3)
+
+
+def test_accord_refuse_des_textes_differents():
+    other = [("t", "texte factice 1"), ("a", "autre texte")]
+    with pytest.raises(RefusGold, match="textes différents"):
+        ga.check_same_texts(_rows("ta"), other)
+
+
+def test_accord_non_mesure_si_annotation_incomplete():
+    result, lines = ga.agreement(_rows("tat"), _rows("t?t"), draws=10)
+    assert result["statut"].startswith("accord humain non mesuré")
+    assert "kappa" not in result and lines == []
+
+
+def test_accord_kappa_et_desaccords():
+    result, lines = ga.agreement(_rows("ttaaft"), _rows("ttaatt"), draws=50)
+    assert result["statut"] == "mesuré" and result["desaccords"] == 1 and lines == [5]
+    assert result["matrice"]["f->t"] == 1
+    assert result["kappa_ic_bas"] <= result["kappa"] <= result["kappa_ic_haut"]
+    assert "texte factice" not in json.dumps([result, lines], ensure_ascii=False)
+
+
+def test_accord_parfait():
+    result, _ = ga.agreement(_rows("tat"), _rows("tat"), draws=10)
+    assert result["kappa"] == 1.0
+
+
+def _write_annotations(path, rows):
+    path.write_text("".join(f"{label}\t{text}\n" for label, text in rows), encoding="utf-8")
+
+
+def test_reference_controlee(tmp_path, monkeypatch):
+    rows = _rows("t" * 299 + "a")
+    monkeypatch.setattr(ga, "TEST_LIST_SHA", sha256_texts([t for _, t in rows]))
+    path = tmp_path / "reference.tsv"
+    _write_annotations(path, rows)
+    assert ga.check_reference(path)["etiquettes"] == {"t": 299, "a": 1}
+
+
+def test_reference_refusee_si_incomplete(tmp_path, monkeypatch):
+    rows = _rows("t" * 299 + "?")
+    monkeypatch.setattr(ga, "TEST_LIST_SHA", sha256_texts([t for _, t in rows]))
+    path = tmp_path / "reference.tsv"
+    _write_annotations(path, rows)
+    with pytest.raises(RefusGold, match="incomplète"):
+        ga.check_reference(path)
+
+
+def test_accord_refuse_out_dir_dans_depot():
+    with pytest.raises(RefusGold, match="dans le dépôt"):
+        ga.run(["accord", "--jeu", "test", "--out-dir", str(REPO / "gold_sortie")])
+
+
+# ---------------------------------------------------------------------------
+# Mesure finale (EXP-A2-020), sans aucune donnée réelle
+# ---------------------------------------------------------------------------
+
+def _predictions(path, labels):
+    path.write_text("".join(f"{i}\t{label}\n" for i, label in enumerate(labels, 1)),
+                    encoding="utf-8")
+    return {"chemin": str(path), "sha256": fin.sha256_file(path)}
+
+
+def test_final_predictions_lues(tmp_path):
+    entry = _predictions(tmp_path / "p.tsv", ["tn", "ar", "tn"])
+    assert fin.load_predictions("p", entry, 3, {"tn", "ar"}) == ["tn", "ar", "tn"]
+
+
+def test_final_refuse_une_prediction_manquante(tmp_path):
+    entry = _predictions(tmp_path / "p.tsv", ["tn", "ar"])
+    with pytest.raises(RefusGold, match="numéros"):
+        fin.load_predictions("p", entry, 3, {"tn", "ar"})
+
+
+def test_final_refuse_une_etiquette_non_autorisee(tmp_path):
+    entry = _predictions(tmp_path / "p.tsv", ["tn", "fr", "ar"])
+    with pytest.raises(RefusGold, match="non autorisées"):
+        fin.load_predictions("p", entry, 3, {"tn", "ar"})
+
+
+def test_final_refuse_une_empreinte_de_predictions(tmp_path):
+    entry = _predictions(tmp_path / "p.tsv", ["tn"])
+    entry["sha256"] = "0" * 64
+    with pytest.raises(RefusGold, match="empreinte différente"):
+        fin.load_predictions("p", entry, 1, {"tn", "ar"})
+
+
+def test_final_refuse_une_reference_d_empreinte_differente(tmp_path):
+    path = tmp_path / "ref.tsv"
+    _write_annotations(path, _rows("ta"))
+    with pytest.raises(RefusGold, match="empreinte différente"):
+        fin.load_reference(path, "0" * 64, n=2)
+
+
+def test_final_refuse_une_reference_avec_point_d_interrogation(tmp_path):
+    rows = _rows("t?")
+    path = tmp_path / "ref.tsv"
+    _write_annotations(path, rows)
+    with pytest.raises(RefusGold, match="invalides ou"):
+        fin.load_reference(path, fin.sha256_file(path), sha256_texts([t for _, t in rows]), n=2)
+
+
+def test_final_f_et_x_exclus():
+    kept, golds = fin.reference_view(_rows("tafx"))
+    assert kept == [0, 1] and golds == ["tn", "ar"]
+
+
+def test_final_rappel_et_precision():
+    s = fin.binary_scores(["tn", "tn", "ar", "ar"], ["tn", "ar", "tn", "ar"])
+    assert s["rappel_tn"] == 0.5 and s["precision_tn"] == 0.5
+
+
+def _criteria(press: bool) -> dict:
+    rows = _rows("ttttaa")
+    preds = {s: ["tn", "tn", "tn", "tn", "ar", "ar"] for s in fin.SEEDS}
+    eval_examples = [{"lang": "fr", "text": "Il fait beau aujourd'hui"},
+                     {"lang": "ar", "text": SANS_LA}]
+    eval_preds = {s: ["fr", "ar"] for s in fin.SEEDS}
+    press_texts = [SANS_LA] * 100 if press else None
+    press_preds = {s: ["ar"] * 100 for s in fin.SEEDS} if press else None
+    return fin.criteria(rows, preds, eval_examples, eval_preds, press_texts, press_preds,
+                        draws=20)
+
+
+def test_final_criteres_atteints_si_reference_adjugee():
+    result = _criteria(press=True)
+    assert result["rappel_tn"]["moyenne"] == 1.0 and result["rappel_tn"]["ecart_type"] == 0.0
+    assert fin.verdict(result, "adjugee")["conclusion"] == "critères atteints"
+
+
+def test_final_indicatif_si_annotateur_unique():
+    result = _criteria(press=True)
+    assert fin.verdict(result, "annotateur1_seul")["conclusion"].startswith("indicatif")
+
+
+def test_final_presse_non_mesuree():
+    result = _criteria(press=False)
+    decision = fin.verdict(result, "adjugee")
+    assert decision["criteres"]["3_fausses_alertes"] is None
+    assert decision["conclusion"].startswith("non conclu")
+
+
+def test_final_criteres_non_atteints():
+    result = _criteria(press=True)
+    result["precision_tn"]["moyenne"] = 0.80
+    assert fin.verdict(result, "adjugee")["conclusion"] == "critères non atteints"
+
+
+def test_final_passage_unique(tmp_path):
+    assert fin.acquire_passage(tmp_path, False, "a" * 64) == 1
+    with pytest.raises(RefusGold, match="déjà faite"):
+        fin.acquire_passage(tmp_path, False, "a" * 64)
+    assert fin.acquire_passage(tmp_path, True, "a" * 64) == 2
+    with pytest.raises(RefusGold, match="deux passages"):
+        fin.acquire_passage(tmp_path, True, "a" * 64)
+
+
+def test_final_deuxieme_passage_refuse_sans_premier(tmp_path):
+    with pytest.raises(RefusGold, match="aucun passage"):
+        fin.acquire_passage(tmp_path, True, "a" * 64)
+
+
+def test_final_manifeste_incomplet(tmp_path):
+    path = tmp_path / "manifeste.json"
+    path.write_text(json.dumps({"reference_test": {}}), encoding="utf-8")
+    with pytest.raises(RefusGold, match="incomplet"):
+        fin.load_manifest(path)
+
+
+def test_final_manifeste_statut_invalide(tmp_path):
+    path = tmp_path / "manifeste.json"
+    path.write_text(json.dumps({"reference_test": {}, "statut_reference": "autre",
+                                "graines": {}, "presse": None}), encoding="utf-8")
+    with pytest.raises(RefusGold, match="statut_reference"):
+        fin.load_manifest(path)
+
+
+def test_final_refuse_out_dir_dans_depot(tmp_path):
+    with pytest.raises(RefusGold, match="dans le dépôt"):
+        fin.run(["--manifeste", str(tmp_path / "m.json"), "--out-dir", str(REPO / "gold_sortie")])
+
+
+def test_final_criteres_du_protocole_inchanges():
+    assert (fin.MIN_RECALL_TN, fin.MIN_PRECISION_TN, fin.MAX_FALSE_ALARMS) == (0.70, 0.90, 0.01)
+    assert fin.SEEDS == ("1", "2", "3")
 
 
 def test_fasttext_non_charge_par_defaut():
