@@ -148,4 +148,37 @@ validation croisée à 5 plis et 5 graines sur l'entraînement uniquement.
   au plus 1 % de fausses alertes sur une presse neuve, aucune baisse sur eval_30.
 - Jeux tirés et gelés : 300 textes de test (SHA-256 `a579a57d…`) et 800 d'entraînement (SHA-256
   `5b4f40b9…`).
-- Étape en cours : la double annotation.
+- Double annotation : non obtenue à la date du Gold, test annoté par une seule personne (EXP-A2-019) ;
+  résultats de la mesure unique en section 9.
+
+## 9. Palier Gold
+
+Protocole pré-inscrit avant toute mesure (`docs/lot-a2_protocole_gold.md`, commit `f0bb4d0`) ;
+empreintes de tout ce que lit la mesure unique figées avant elle (`f4dd17e`). Toutes les mesures
+sont faites sur le dev, sauf la mesure unique sur le test gelé.
+
+| Question | Résultat | Entrée |
+|---|---|---|
+| Robustesse (INV) : 10 perturbations de surface | règles : 1 bascule sur 1 314 textes perturbés ; robustes sur 12 couples (perturbation × écriture) sur 15, indéterminées sur 3 faute d'effectif ; idempotence et cohérence sans échec ; « alphabet seul » fragile aux URL ; fastText fragile sur 5 perturbations latines | EXP-A2-016 |
+| Baseline externe forte : fastText lid.176 | macro-F1 0.185 (lettres arabes) et 0.250 (lettres latines), contre 0.628 et 0.831 pour les règles ; écarts +0.44 et +0.58, IC au-dessus de 0 ; rappel du tunisien nul | EXP-A2-017 |
+| Fuites entre jeux | aucun doublon, aucun texte commun entre test, entraînement, dev et eval_30 ; quasi-doublons non cherchés | EXP-A2-018 |
+| Accord entre annotateurs | non mesuré : test annoté par une seule personne, seconde annotation non reçue | EXP-A2-019 |
+| Mesure unique de la cascade lexique → MARBERTv2 (test, 300 textes) | rappel du tunisien 0.898 ± 0.021 (lexique seul 0.392), précision 0.952 ± 0.011 (0.980) ; fausses alertes sur une presse neuve 8.4 % (règles 0 %) ; macro-F1 eval_30 0.913 contre 0.943 ; critères 1 et 2 atteints, 3 et 4 non atteints | EXP-A2-020 |
+
+**Décision.** La cascade relève fortement le rappel du tunisien en lettres arabes, mais elle classe
+en tunisien de la presse en arabe standard et baisse le score sur eval_30. Deux des quatre
+conditions fixées avant manquent : elle n'est **pas intégrée** à `normalize.py`, qui garde les
+règles (bibliothèque standard seulement). Le résultat est **indicatif** : la référence du test
+vient d'un seul annotateur.
+
+**Limites.**
+- Une seule personne a annoté le test, l'entraînement et écrit le lexique ; l'accord humain n'est
+  pas mesuré.
+- Le dev qui sert à INV et à fastText a servi à la mise au point des règles : ces chiffres sont
+  optimistes.
+- La presse neuve vient d'une seule année (2020) et d'une seule source.
+- Hypothèse non vérifiée : le modèle, entraîné sur des commentaires seulement, aurait appris le
+  registre plutôt que le dialecte. Suite : négatifs de presse à l'entraînement et seuil réglé sur un
+  dev de presse distinct, dans une nouvelle expérience.
+- L'arabizi est identifié mais pas converti en lettres arabes (aucun jeu de référence de
+  translittération).
