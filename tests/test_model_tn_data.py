@@ -4,9 +4,10 @@ import hashlib
 
 import pytest
 
+from normalization import model_tn_data
 from normalization import model_tn_kaggle_prep as prep
 from normalization.evaluate import REPO
-from normalization.model_tn_data import fingerprint, split_pool
+from normalization.model_tn_data import aligned_pairs, fingerprint, split_pool
 
 POOL = [f"texte {i}" for i in range(100)]
 
@@ -36,6 +37,59 @@ def test_reserve_trop_petite():
 def test_empreinte_depend_de_l_ordre():
     assert fingerprint(["a", "b"]) == fingerprint(["a", "b"])
     assert fingerprint(["a", "b"]) != fingerprint(["b", "a"])
+
+
+# ---------------------------------------------------------------------------
+# Accord entre annotateurs (command_kappa), textes FACTICES
+# ---------------------------------------------------------------------------
+
+def _rows(labels: str, prefix: str = "texte factice") -> list[tuple[str, str]]:
+    return [(label, f"{prefix} {i}") for i, label in enumerate(labels, 1)]
+
+
+def test_paires_alignees():
+    pairs, misaligned = aligned_pairs(_rows("tat"), _rows("tta"))
+    assert pairs == [("t", "t"), ("a", "t"), ("t", "a")] and misaligned == 0
+
+
+def test_paires_desalignees_comptees():
+    second = _rows("tat")
+    second[1] = ("a", "autre texte")
+    pairs, misaligned = aligned_pairs(_rows("tat"), second)
+    assert len(pairs) == 2 and misaligned == 1
+
+
+def test_lignes_sans_vis_a_vis_non_comptees_comme_desalignees():
+    pairs, misaligned = aligned_pairs(_rows("tatat"), _rows("ta"))
+    assert len(pairs) == 2 and misaligned == 0
+
+
+def _files(tmp_path, monkeypatch, rows_1, rows_2):
+    for key, rows in (("test_1", rows_1), ("test_2", rows_2), ("train_1", rows_1),
+                      ("train_2", rows_2)):
+        path = tmp_path / f"{key}.tsv"
+        path.write_text("".join(f"{label}\t{text}\n" for label, text in rows), encoding="utf-8")
+        monkeypatch.setitem(model_tn_data.FILES, key, path)
+
+
+def test_command_kappa_aligne(tmp_path, monkeypatch, capsys):
+    _files(tmp_path, monkeypatch, _rows("ttaa"), _rows("ttat"))
+    model_tn_data.command_kappa()
+    out = capsys.readouterr().out
+    assert out.count("lignes désalignées écartées : 0") == 2
+    assert "4 paires" in out and "texte factice" not in out
+
+
+def test_command_kappa_lignes_desalignees(tmp_path, monkeypatch, capsys):
+    second = _rows("ttaa")
+    second[0] = ("t", "autre factice 1")
+    second[2] = ("a", "autre factice 3")
+    _files(tmp_path, monkeypatch, _rows("ttaa"), second + [("t", "ligne en plus")])
+    model_tn_data.command_kappa()
+    out = capsys.readouterr().out
+    assert out.count("lignes désalignées écartées : 2") == 2
+    assert "lignes sans vis-à-vis : 1" in out and "2 paires" in out
+    assert "factice" not in out and "ligne en plus" not in out
 
 
 # ---------------------------------------------------------------------------

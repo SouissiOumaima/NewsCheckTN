@@ -101,11 +101,29 @@ def command_draw() -> None:
         print(f"  {name:8} {path}")
 
 
+def aligned_pairs(
+    first: list[tuple[str, str]], second: list[tuple[str, str]]
+) -> tuple[list[tuple[str, str]], int]:
+    """Paires d'étiquettes des lignes au même texte, et nombre de lignes désalignées écartées.
+
+    Une ligne est désalignée si, à la même position, les deux fichiers n'ont pas le même texte.
+    Les lignes au-delà du fichier le plus court ne sont pas comptées ici (sans vis-à-vis : c'est
+    le cas voulu de l'entraînement, 800 lignes contre 160 doublées).
+    """
+    pairs = [(la, lb) for (la, ta), (lb, tb) in zip(first, second, strict=False) if ta == tb]
+    return pairs, min(len(first), len(second)) - len(pairs)
+
+
 def command_kappa() -> None:
     """Accord entre les deux annotateurs, sur le test et sur les 160 textes doublés."""
     for first, second in (("test_1", "test_2"), ("train_1", "train_2")):
         a, b = read_annotations(FILES[first]), read_annotations(FILES[second])
-        pairs = [(la, lb) for (la, ta), (lb, tb) in zip(a, b, strict=False) if ta == tb]
+        pairs, misaligned = aligned_pairs(a, b)
+        # Nombres seulement : jamais le texte ni le numéro d'une ligne écartée.
+        print(f"{first} / {second} : lignes désalignées écartées : {misaligned}")
+        if len(a) != len(b):
+            print(f"  lignes sans vis-à-vis : {abs(len(a) - len(b))}"
+                  f" (fichiers de {len(a)} et {len(b)} lignes)")
         done = [(la, lb) for la, lb in pairs if la != "?" and lb != "?"]
         if not done:
             print(f"{first} / {second} : aucune paire annotée par les deux")
