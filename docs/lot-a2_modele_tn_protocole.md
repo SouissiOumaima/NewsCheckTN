@@ -83,7 +83,7 @@ Précision : les critères portent sur la moyenne des 3 graines, voir avenant 2 
 - Traçabilité : la pré-annotation assistée de cet avenant a envoyé des textes TSAC (commentaires
   publics, aucune donnée privée) au service externe Gemini (Google AI Studio). Le nombre exact de
   textes envoyés n'est pas établi ; des propositions ont été conservées pour 20 textes sur 640
-  (note d'exécution ci-dessus). Cet envoi n'avait pas été signalé à l'équipe au moment des faits ;
+  (note d'exécution ci-dessous). Cet envoi n'avait pas été signalé à l'équipe au moment des faits ;
   il est consigné ici le 2026-11-22, à la demande de la relecture de #31. Le test gelé et les
   textes du kappa n'ont jamais été envoyés.
 
