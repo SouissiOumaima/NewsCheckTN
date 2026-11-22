@@ -154,8 +154,9 @@ Cinq dimensions. Les chiffres viennent d'EXP-B-010 (test gelé), sauf mention co
 
 ### 6.1 Données
 - **Test P061–P600 synthétique** : 540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C. Les scores mesurés sur ces données sont
-  **probablement optimistes**. Sur textes réels (pilote P01–P60, TArC et Tunifact), la macro-F1
-  de détection est de 0.52 à 0.64 (EXP-B-009, avant les règles R1, R2 et R4). eval_100 (textes
+  **probablement optimistes**. Sur le pilote P01–P60, textes fournis par le Lot A1 (dont des
+  phrases Tunifact attestées) ; provenance de chaque texte non certifiée : la macro-F1 de
+  détection y est de 0.52 à 0.64 (EXP-B-009, avant les règles R1, R2 et R4). eval_100 (textes
   réels) reste la mesure de référence à venir.
 - **Un seul annotateur sur le test** : pas de kappa ni de gold adjugé. 47 textes sur 540 sont
   marqués « doute » ; sur ces textes, le macro-F1 de détection tombe à 0.668 (0.780 sur les 493
