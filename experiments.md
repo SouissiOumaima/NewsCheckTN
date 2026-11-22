@@ -70,6 +70,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-011 | 2026-10-26 | A2 | Revue Bronze : baselines triviales, gel des jeux, normaliseur mesuré, erreurs en 5 familles | `python -X utf8 -m normalization.review` ; baselines « majorité » et « alphabet seul » | macro-F1 langue (test eval_30 ; dev TSAC) ; nombres conservés | test : 0.94 contre 0.19 (majorité) et 0.50 (alphabet seul) ; dev arabe 0.63 contre 0.43 ; dev latin 0.83 contre 0.45 ; nombres 29/29 | chiffres de la revue ; suite : test TSAC neuf, jamais vu |
 | EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
+| EXP-A2-015 | 2026-11-15 | A2 | Modèle appris : MARBERTv2 en cascade derrière le lexique, validation croisée sur l'entraînement | `notebooks/lot_a2/marbert_cv.ipynb` (Kaggle, GPU T4) ; 800 commentaires TSAC annotés (629 t, 171 a ; annotateur 1) ; 5 plis × 5 graines ; lr 2e-5 / 5e-5 × 1 à 4 époques ; seuil = meilleur rappel tn avec précision ≥ 0.90 | rappel, précision tn, macro-F1 hors pli (moyenne ± écart-type sur 5 graines) | lexique seul : rappel 0.480, précision 0.968, macro-F1 0.565 ; cascade retenue (lr 2e-5, 4 époques, seuil 0.30) : rappel 0.966 ± 0.005, précision 0.901 ± 0.003, macro-F1 0.817 ± 0.006 | préliminaire et optimiste ; configuration figée pour la mesure unique sur le test gelé (après double annotation et adjudication) |
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
 | EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (P061–P600 : 540 textes synthétiques générés par un modèle de langue, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
@@ -496,6 +497,57 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - « Politique & institutions » regroupe exactement les 8 paires de nawaat.org (2 articles) : ce groupe est le même que celui du site, déjà jugé non interprétable.
 - **Analyse (sujet)** : aucun écart de sujet n'est établi. Les deux seules catégories interprétables sont chacune portées par un gros article (tunifact-938 : 14 paires sur 17 ; tunifact-933 : 11 sur 16), les deux articles où le principal ne fait aucune erreur : leur avantage apparent sur le reste reflète surtout ces deux articles, et l'effet de sujet ne peut pas être séparé de l'effet d'article (limite notée avant calcul). Les catégories viennent des titres seulement, sans second annotateur. Avec 56 paires, 10 articles et 6 catégories, le test ne permet pas de mesurer un biais par sujet.
 - **Décision / suite (sujet)** : rien n'est changé dans le modèle ; à reprendre dans la section Limitations (test trop petit et trop concentré pour les biais de source et de sujet) ; un test futur plus grand, échantillonné par article et par catégorie, serait nécessaire.
+
+### EXP-A2-015 — Modèle appris : MARBERTv2 en cascade, validation croisée sur l'entraînement
+- **Date** : 2026-11-15
+- **Auteur / Lot** : Membre 2 / Lot A2
+- **Objectif / hypothèse** : protocole pré-inscrit (`docs/lot-a2_modele_tn_protocole.md`). Un modèle
+  arabe pré-entraîné, placé derrière le lexique (marque trouvée → tn ; sinon, décision du modèle),
+  relève-t-il le rappel du tunisien en lettres arabes sans descendre sous 0.90 de précision ? Étape
+  de réglage seulement : le test gelé n'est pas utilisé.
+- **Données** : entraînement tiré le 2026-11-07 (graine 20261107, SHA-256 `5b4f40b9…`), 800
+  commentaires TSAC annotés par l'annotateur 1 : 629 `t`, 171 `a`, aucun `f` ni `x` ; 160 textes en
+  mode aveugle (textes du kappa), 640 prévus en mode assisté dont 620 sans proposition du LLM
+  (note d'exécution du protocole). Marque du lexique trouvée dans 312 textes. Jeu de données privé
+  sur Kaggle ; aucun texte versionné.
+- **Méthode / configuration** : `UBC-NLP/MARBERTv2`, classification binaire tn / ar ; longueur 128,
+  lot 16, AdamW (décroissance 0.01), échauffement linéaire 10 % ; validation croisée stratifiée à
+  5 plis répétée avec 5 graines (1 à 5) ; grille fixée avant : taux d'apprentissage 2e-5 / 5e-5 ×
+  1 à 4 époques ; pour chaque configuration, seuil commun aux graines = meilleur rappel tn avec une
+  précision tn ≥ 0.90 sur les prédictions hors pli ; configuration retenue = meilleur rappel moyen
+  parmi celles de précision moyenne ≥ 0.90 (égalité : lr puis époques les plus petits).
+- **Code** : `notebooks/lot_a2/marbert_cv.ipynb` (sorties de scores seulement) ; préparation locale
+  du fichier (`label`, `lex`, `text`) depuis `train_800_annotateur1.tsv`, versionnée depuis le
+  2026-11-22 dans `normalization/model_tn_kaggle_prep.py` (commit `994eca3`) :
+  `python -X utf8 -m normalization.model_tn_kaggle_prep --sortie <fichier>` ; relancé le
+  2026-11-22, il redonne 800 lignes et le SHA-256
+  `39a3643bd82b63aa5bb740e068d702ade178891853912a53f8b4116fd6fab2bc`, identique au fichier envoyé
+  sur Kaggle pour cette expérience (comparaison des empreintes faite le 2026-11-22).
+- **Résultats** (hors pli, moyenne ± écart-type sur 5 graines ; 23.7 min sur GPU T4) :
+
+  | Système | Rappel tn | Précision tn | Macro-F1 |
+  |---|---|---|---|
+  | lexique seul (baseline) | 0.480 | 0.968 | 0.565 |
+  | cascade, lr 2e-5, 4 époques, seuil 0.30 (retenue) | 0.966 ± 0.005 | 0.901 ± 0.003 | 0.817 ± 0.006 |
+
+  grille (rappel / précision / macro-F1) : lr 2e-5 : 1 ép. 0.838 / 0.913 / 0.743 ; 2 ép. 0.948 /
+  0.904 / 0.807 ; 3 ép. 0.963 / 0.905 / 0.823 ; 4 ép. 0.966 / 0.901 / 0.817 — lr 5e-5 : 1 ép. 0.918
+  / 0.908 / 0.790 ; 2 ép. 0.960 / 0.904 / 0.817 ; 3 ép. 0.958 / 0.903 / 0.815 ; 4 ép. 0.962 / 0.907
+  / 0.825.
+- **Analyse** :
+  - le rappel tn passe de 0.48 (lexique seul, cohérent avec 0.53 sur le dev) à 0.97, au prix d'une
+    précision qui descend de 0.97 à 0.90, plancher fixé à l'avance et atteint par construction du
+    seuil ;
+  - à partir de 2 époques, les configurations sont proches (rappel 0.95 à 0.97) : le choix entre
+    elles compte peu ; la variance entre graines est faible (écart-type ≤ 0.01 dès 3 époques) ;
+  - **limites** : résultats optimistes (grille et seuil choisis sur les mêmes prédictions hors pli) ;
+    un seul annotateur (kappa pas encore mesuré) ; classes déséquilibrées (79 % de tn) ; la presse
+    neuve et eval_30 ne sont pas encore mesurées. Une première exécution avait lu 625 lignes au lieu
+    de 800 (guillemets interprétés par pandas) : ses chiffres sont écartés, la lecture vérifie
+    désormais le nombre de lignes.
+- **Décision / suite** : configuration figée (lr 2e-5, 4 époques, seuil 0.30) ; seconde annotation
+  (300 + 160), kappa et adjudication ; puis entraînement final sur les 800 textes et mesure unique
+  sur le test gelé, la presse neuve et eval_30, selon les 4 critères du protocole.
 
 ### EXP-B-011 — Mesure exploratoire sur silver_40 (détection, modalité, SPO, coréférence)
 - **Statut** : **exploratoire, n = 40, une annotation indépendante non garantie, SPO n = 10 dont
