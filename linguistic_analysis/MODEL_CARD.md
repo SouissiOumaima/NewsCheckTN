@@ -219,6 +219,14 @@ Cinq dimensions. Les chiffres viennent d'EXP-B-010 (test gelé), sauf mention co
 - **Comparaison avec le Model 1 du Lot C (EXP-B-013)**, sur les 112 textes de son test gelé
   présents dans P061–P600 : macro-F1 binaire 0.803 [0.725 ; 0.874] contre 0.825 [0.742 ; 0.893]
   pour le TF-IDF ; différence −0.023 [−0.124 ; +0.076], **non établie**, ni par langue.
+  Contre XLM-R + LoRA du Lot C (3 graines, moyenne ± écart-type) :
+  - global : XLM-R 0.851 ± 0.015 contre Lot B 0.803, écart **non établi** ;
+  - tunisien (60 textes) : XLM-R 0.816 ± 0.030 contre Lot B 0.707, écart **non établi** ;
+  - seul écart établi : **tunisien en lettres arabes**, Lot B 0.542 contre XLM-R 0.907 (n = 18,
+    établi pour 3 graines sur 3). À lire avec prudence : 18 textes seulement, et 6 sous-groupes
+    de langue comparés.
+  - XLM-R est entraîné sur 428 autres textes de P061–P600 (même source synthétique), ce qui
+    l'avantage.
 - **Biais par source et par sujet : non mesurés.** Un seul indice : sur silver_40, les textes de
   forum TArC donnent 24 affirmations prédites sur 30, alors que le gold n'en compte aucune
   (macro-F1 de détection 0.167). Sur Tunifact, la détection vaut 1.000, mais ce jeu ne contient
