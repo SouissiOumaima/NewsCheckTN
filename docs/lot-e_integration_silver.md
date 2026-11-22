@@ -15,10 +15,13 @@ scientifique n'est relancée par ce travail d'intégration.
   activent la recherche hybride ; dépendance sentence-transformers.
 - `NLI_BACKEND=fine-tuned` active le checkpoint de PR #21, à installer localement
   dans models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42/.
-- `LLM_PROVIDER=hf`, `LLM_MODEL=CohereLabs/aya-expanse-8b` : modèle officiel
-  EXP-D-010, à exécuter sur une machine GPU compatible avec les dépendances du
-  notebook Lot D et avec l'accès au modèle accordé. Ne pas lancer le 8B sur CPU
-  sans vérifier les ressources. La configuration seule ne prouve pas son chargement.
+- Configuration officielle actuelle du Lot D, annoncée le 22 novembre 2026 :
+  Falcon-H1-3B GGUF Q4 avec JSON imposé, servi localement par Ollama (EXP-D-015).
+  Voir le lancement et les prérequis dans `frontend/README.md`.
+- Aya Expanse 8B (EXP-D-010) reste une référence historique. Son expérience et ses
+  chiffres sont conservés ; le changement de modèle officiel ne réécrit aucun résultat.
+- Le score de Falcon sur le test v1 provient d'un second passage sur le même jeu :
+  il est déclaré optimiste, pas présenté comme un nouveau test jamais vu.
 
 Les variables doivent être exportées dans le processus qui lance l'API ;
 ce projet ne charge pas automatiquement un fichier .env.
@@ -51,16 +54,38 @@ l'erreur fournisseur, les clés ni la réponse brute. API distante non autorisé
 gabarit et external_provider_not_authorized. Ces raisons sont visibles dans la
 trace ; elles ne doivent pas être comptées comme des résultats du modèle LLM.
 L'incertitude fixe du LLM du Lot D n'est pas une probabilité calibrée.
+L'interface masque sa valeur numérique lorsque le moteur effectivement utilisé
+est `llm` et affiche « incertitude non calibrée ». Pour le gabarit, l'indice reste
+visible et est également signalé comme non calibré. Le schéma `Verdict` est inchangé.
 Une citation autorisée n'atteste pas à elle seule du support sémantique.
 
 ## Validation
 
 Tests avec générateur fictif : succès, citation hors liste, verdict sans citation,
 JSON absent, panne, absence de preuve, refus d'une API externe, cohérence des routes.
-La vérification du vrai NLI est séparée ; les tests n'exécutent pas Aya 8B ni e5-base.
-Le verdict LLM et le retrieval hybride réels nécessitent encore leurs ressources
-sur la machine de démo. Comparaison Gemini EXP-D-009 distincte d'Aya officiel
-EXP-D-010 ; aucun nouveau score scientifique n'est déduit de ces tests.
+La vérification du vrai NLI est séparée ; les tests n'exécutent aucun LLM ni e5-base.
+Le verdict LLM et le retrieval hybride réels nécessitent leurs ressources sur la
+machine de démo. Hadil a rapporté un essai complet Falcon sur son PC ; après les
+fusions retenues, une répétition commune doit vérifier le commit, les modèles et
+les replis. Aucun nouveau score scientifique n'est déduit des tests d'intégration.
+
+## Préparation Gold et dépendances
+
+La PR #32 précède le réalignement de la PR #33, qui apporte notamment
+`LLM_RESPONSE_FORMAT=json`. Avant son intégration dans main, la démonstration
+Falcon doit utiliser le code de `lot-d-falcon` ou une version qui inclut ces changements.
+Définir cette variable sur une version qui l'ignore ne reproduit pas EXP-D-015.
+
+Les runs Falcon EXP-D-014/015 utilisent le NLI Bronze. Le NLI affiné graine 42
+est proposé pour la démo et le Gold, sous réserve de confirmation de Wiem : il
+s'agit d'une configuration différente à consigner avant toute nouvelle mesure.
+La proposition de règle « tous les passages cités sont neutres → abstention »
+reste un protocole du Lot D à évaluer ; elle n'est pas activée par cette mise à jour.
+Le résultat τ = 0 d'EXP-C-015 ne constitue pas un nouveau seuil à brancher.
+
+EXP-C-012/013 restent hors évaluation jusqu'à la décision collective. Les nouveaux
+articles et le jeu Gold doivent être autorisés, séparés du développement et gelés
+avant la mesure. L'annotation humaine des verdicts s'effectue sans voir celle de Hadil.
 
 
 ## Relecture Lot D

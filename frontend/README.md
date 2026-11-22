@@ -41,6 +41,59 @@ claire (code 503, avec le fichier et le numéro de ligne) au lieu de retomber en
 Le fichier `data/processed/evidence_corpus*.jsonl` est ignoré par Git, pour ne jamais versionner par
 erreur un corpus dont les droits ne sont pas confirmés.
 
+## Démonstration Falcon locale
+
+Le modèle officiel actuel du Lot D est Falcon-H1-3B + JSON (EXP-D-015).
+Aya 8B (EXP-D-010) reste historique ; les résultats existants ne sont pas réécrits.
+Le score de Falcon est optimiste car issu d'un second passage sur le même test.
+
+**Prérequis :** utiliser une version intégrant la PR #33 (`lot-d-falcon` tant que
+non fusionnée), installer Ollama et le modèle sur le PC qui lance l'API, préparer
+les checkpoints Model 1/NLI et le corpus privé. Ollama doit répondre sur le port 11434.
+Le chargement initial des modèles publics peut nécessiter le réseau ; préparer
+les caches avant une démonstration hors connexion. Ne pas versionner les modèles
+ni les passages Tunifact.
+
+Depuis la racine du dépôt, dans PowerShell :
+
+```powershell
+$env:VERDICT_BACKEND = "llm"
+$env:LLM_PROVIDER = "ollama"
+$env:LLM_BASE_URL = "http://localhost:11434/v1"
+$env:LLM_API_KEY = "ollama"
+$env:LLM_MODEL = "hf.co/tiiuae/Falcon-H1-3B-Instruct-GGUF:Q4_K_M"
+$env:LLM_RESPONSE_FORMAT = "json"
+$env:LLM_MIN_INTERVAL = "0"
+$env:LLM_ALLOW_EXTERNAL = "0"
+$env:CLAIM_DETECTOR_BACKEND = "xlmr"
+$env:CLAIM_DETECTOR_CHECKPOINT = "models/checkpoints/claim_detection_xlmr_lora_seed42"
+$env:RETRIEVAL_METHOD = "hybrid"
+$env:EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
+$env:EVIDENCE_CORPUS = "data/interim/lot_d/evidence_tunifact_v1.jsonl"
+# Bronze dans les expériences Falcon existantes ; affiné proposé pour le Gold.
+$env:NLI_BACKEND = "bronze"
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Ouvrir `http://127.0.0.1:8000/app/`. Les variables doivent être définies dans le
+processus qui lance l'API : `.env` n'est pas chargé automatiquement.
+
+Pour l'essai Gold proposé après confirmation de Wiem, remplacer `NLI_BACKEND`
+par `fine-tuned` et définir `NLI_FINETUNED_MODEL` vers
+`models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42`. Redémarrer l'API et
+consigner ce changement ; il ne reproduit pas les runs Falcon avec Bronze.
+Sur la GTX 1650 de Hadil, les encodeurs peuvent rester sur CPU pour réserver le
+GPU au serveur Ollama ; la configuration matérielle fait partie de la trace.
+
+Vérifier dans `/check/detail` le NLI actif, `verdict_engine.used=llm`, le modèle
+Falcon et l'absence de repli. Un résultat gabarit n'est pas une exécution Falcon.
+L'interface affiche le moteur et le modèle réels et masque l'incertitude fixe du
+LLM au profit de « incertitude non calibrée ». Une citation présente dans les
+passages retrouvés peut rester hors sujet : montrer aussi cette limite.
+
+La règle d'abstention Gold proposée par Hadil n'est pas activée ici. Son protocole
+doit être publié avant les mesures. Les réécritures NLI EXP-C-012/013 restent suspendues.
+
 ## Pages
 
 | Page | Fichier | Responsable | Route(s) API |
@@ -71,7 +124,7 @@ sans toucher au frontend.
     renvoyées sous forme de message lisible.
   - `NC.text(s)` affiche un texte avec `dir="auto"` et la police arabe si besoin ; `NC.esc(s)` échappe
     le HTML ; `NC.fmt(x, 2)` formate un nombre à la française.
-  - `NC.verdictBox(verdict)`, `NC.verdictChip(label)`, `NC.stanceChip(stance, conf)` : affichage
+  - `NC.verdictBox(verdict, verdict_engine)`, `NC.verdictChip(label)`, `NC.stanceChip(stance, conf)` : affichage
     standard d'un verdict et d'une position.
 
 L'adresse de l'API se change dans l'en-tête (« changer ») ; le choix est gardé dans le navigateur.
