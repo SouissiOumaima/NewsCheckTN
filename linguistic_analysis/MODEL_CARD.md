@@ -6,7 +6,8 @@ Système à règles et lexiques, avec analyseurs syntaxiques facultatifs. Aucun 
 poids appris. Journal : EXP-B-001 à EXP-B-011, EXP-B-013 et EXP-B-014 (EXP-B-012 est réservé à
 eval_100). **Système gelé** au commit `1826244` : aucune
 modification du code ni des lexiques depuis (voir `experiments.md`, « Gel du système du Lot B
-pour EXP-B-010 »). Résultat de référence : **EXP-B-010** (540 textes jamais vus).
+pour EXP-B-010 »). Résultat de référence actuel : **EXP-B-010** (540 textes synthétiques jamais vus ;
+voir §3 et §6.1). Mesure de référence à venir sur textes réels : eval_100.
 
 ## 1. Rôle, entrées et sorties
 
@@ -64,13 +65,14 @@ relais.
 
 | Jeu | Contenu | Rôle |
 | --- | --- | --- |
-| Test P061–P600 du Lot A1 | 540 textes, un annotateur (label, modalité ; pas de triplet ni de coréférence) ; langue déclarée : fr 140, ar 135, tn-arabizi 135, tn-arabe 81, tn-mixte 49 ; SHA-256 `5514039a…4f9a6b` noté avant la mesure | **test gelé** d'EXP-B-010 : jamais utilisé pour écrire ni régler les règles. Fichier hors dépôt |
+| Test P061–P600 | 540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C (label, modalité ; pas de triplet ni de coréférence) ; langue déclarée : fr 140, ar 135, tn-arabizi 135, tn-arabe 81, tn-mixte 49 ; SHA-256 `5514039a…4f9a6b` noté avant la mesure | **test gelé** d'EXP-B-010 : jamais utilisé pour écrire ni régler les règles. Fichier hors dépôt |
 | silver_40 du Lot A1 (livraison provisoire) | 40 textes (TArC 30, Tunifact 10), deux annotations, 10 triplets dont 3 avec réserve, 1 coréférence | mesure exploratoire EXP-B-011 ; 5 textes déjà dans le pilote. Fichiers hors dépôt |
 
 ## 4. Résultats
 
 ### 4.1 Référence : test gelé P061–P600 (EXP-B-010)
 
+Textes synthétiques (voir §3) : scores probablement optimistes (§6.1).
 Système gelé (`1826244`), unité texte, un annotateur. Bootstrap percentile 95 %, graine 20261015,
 1000 tirages ; extracteur − baseline : apparié, graine 42, 2000 tirages. Commande dans
 `experiments.md` (EXP-B-010).
@@ -151,6 +153,10 @@ les règles R1, R2 et R4 (EXP-B-009).
 Cinq dimensions. Les chiffres viennent d'EXP-B-010 (test gelé), sauf mention contraire.
 
 ### 6.1 Données
+- **Test P061–P600 synthétique** : 540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C. Les scores mesurés sur ces données sont
+  **probablement optimistes**. Sur textes réels (pilote P01–P60, TArC et Tunifact), la macro-F1
+  de détection est de 0.52 à 0.64 (EXP-B-009, avant les règles R1, R2 et R4). eval_100 (textes
+  réels) reste la mesure de référence à venir.
 - **Un seul annotateur sur le test** : pas de kappa ni de gold adjugé. 47 textes sur 540 sont
   marqués « doute » ; sur ces textes, le macro-F1 de détection tombe à 0.668 (0.780 sur les 493
   autres).
@@ -221,6 +227,9 @@ Cinq dimensions. Les chiffres viennent d'EXP-B-010 (test gelé), sauf mention co
   (ECE non mesurée).
 
 ### 6.5 Usage
+- **Décision L5 (répartition des rôles)** : le Model 1 du Lot C écarte AUTRE et OPINION ; le Lot B
+  fournit l'extraction et la modalité, opinion comprise. La classe (Lot C) et la modalité (Lot B)
+  sont des annotations distinctes.
 - **Le Lot B ne filtre pas la classe AUTRE.** `is_claim` ne sépare que les opinions, questions,
   souhaits et hypothèses. Les récits personnels et les faits privés de forme assertive restent des
   candidates : 58 AUTRE sur 175 sont prédits affirmation, et 4 des 40 erreurs analysées sont dans

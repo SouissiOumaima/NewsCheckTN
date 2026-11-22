@@ -66,10 +66,10 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 | EXP-A2-012 | 2026-11-06 | A2 | Silver : lexique élargi et retrait des affixes | `python -X utf8 -m normalization.silver_tuning tune` ; 8 configurations (seuil `MIN_TEXTS` 12 / 8 / 6 / 4 × retrait des affixes) ; dev arabe coupé en deux moitiés fixes (SHA-256) | macro-F1, rappel et précision `tn` (moitié « reglage », N = 47) ; fausses alertes PADT dev | actuel : 0.65, 0 alerte ; seuil 8 + affixes : 0.72 mais 2 alertes ; seuil 4 + affixes : 48 alertes | non retenu, configuration actuelle conservée ; suite : filtrer les candidats contre une grande référence d'arabe standard |
 | EXP-A2-013 | 2026-11-06 | A2 | Silver : candidats filtrés par une grande référence d'arabe standard (Leipzig) | `silver_tuning tune --leipzig` : seuil 12 / 8 / 6 / 4 × occurrences tolérées dans Leipzig News 2022 300K (0 / 2 / 5) × affixes ; mesure unique `final --min-texts 4 --max-leipzig 0` | macro-F1 et rappel `tn` (dev, moitié « mesure », N = 53) ; fausses alertes PADT test ; eval_30 | mesure : 0.61 → 0.68, rappel 0.51 → 0.61, précision 1.00 → 1.00 ; eval_30 0.94 → 0.94 ; PADT test 0 → 1 alerte sur 680 | non activé (critère d'adoption : 0 alerte sur PADT test) ; gain confirmé sur données neuves ; suite : analyse de l'alerte, nouvelle presse de test |
 | EXP-B-009 | 2026-11-14 | B | Réanalyse du pilote de 60 textes (macro-F1, bootstrap apparié contre la baseline) et ablation des composants | extracteur du Lot B inchangé depuis EXP-B-008, modes règles et parseurs ; `evaluate_double` et `ablation` (commit `88cdb36`) ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 de détection et de modalité, extracteur − baseline ; écarts d'ablation | détection : +0.172 [+0.044 ; +0.288] (Achraf), +0.229 [+0.067 ; +0.361] (Ghofrane), +0.221 [+0.061 ; +0.365] (accord) ; modalité : IC excluant 0 contre les 3 gold en parseurs, contre Achraf seulement en règles ; ablation : factualité −0.324 sur eval_30, verbes de parole −5/22 triplets, lexiques de modalité défavorables sur le pilote | eval_30 et pilote = jeux de mise au point (optimistes) ; mesure sur test gelé : EXP-B-010 ; lexiques de modalité non retouchés d'ici là |
-| EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (540 textes, P061–P600, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
+| EXP-B-010 | 2026-11-15 | B | Mesure du système gelé sur un jeu jamais vu (P061–P600 : 540 textes synthétiques générés par un modèle de langue, un annotateur) | extracteur gelé (`1826244`, aucune modification avant la mesure), modes règles et parseurs ; unité texte ; IC graine 20261015, 1000 tirages ; apparié contre la baseline graine 42, 2000 tirages | détection (exactitude, précision, rappel, macro-F1) ; modalité (exactitude, macro-F1) ; par langue / écriture | détection macro-F1 0.771 [0.733 ; 0.806] vs 0.345 (Δ +0.426 [+0.391 ; +0.460]) ; précision 0.714, rappel 0.986 ; modalité exactitude 0.733 vs 0.385, macro-F1 0.734 ; parseurs − règles non établi (+0.004 [−0.004 ; +0.013]) | première mesure non optimiste du Lot B ; un seul annotateur ; suite : erreurs opinion / souhait / rapporté → assertif, tunisien en lettres arabes, comparaison avec le Lot C |
 | EXP-B-011 | 2026-11-15 | B | Mesure exploratoire sur silver_40 (n = 40, une annotation indépendante non garantie, SPO n = 10 dont 3 réserves ouvertes, aucun texte tn en lettres arabes) | extracteur gelé (`1826244`), modes règles et parseurs ; `evaluate_double` (détection, modalité) et `evaluate --eval-set` (SPO, coréférence) ; IC graine 20261015, 1000 tirages | kappa ; détection et modalité par provenance (TArC / Tunifact fr / Tunifact ar) ; triplet exact, F1 de jetons, `resolved_text` | kappa label 0.660 (38 textes ; TArC seul 0.347) ; TArC : 24 textes sur 30 prédits affirmation, aucune affirmation gold chez Ghofrane ; modalité exactitude 0.395 (38) ; triplet exact 1/7 (règles) et 2/7 (parseurs) sans réserve, 0/3 avec réserve ; coréférence 0/1 | exploratoire, non comparable à EXP-B-010 ; 5 textes Tunifact déjà dans le pilote P01–P60 ; suite : arbitrage des réserves, eval_100 |
-| EXP-B-013 | 2026-11-20 (XLM-R : 2026-11-21) | B | Question de recherche 1 : extracteur gelé contre le TF-IDF et XLM-R + LoRA du Lot C (112 textes du test du Lot C dans P061–P600) | extracteur gelé (mesure sur `a48e447`), modes règles et parseurs, unité texte ; TF-IDF d'EXP-C-010 reproduit (0.6435) ; XLM-R : 3 graines (42, 123, 2026), prédictions exportées par le Lot C ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 binaire de détection | Lot B 0.803 vs TF-IDF 0.825 vs XLM-R 0.851 ± 0.015 vs baseline 0.345 ; **tn (60)** : Lot B 0.707, TF-IDF 0.817, XLM-R 0.816 ± 0.030, Lot B − XLM-R −0.109 ± 0.030, non établi pour aucune graine ; tn en lettres arabes (18) : −0.365 ± 0.032, établi pour les 3 graines | aucune différence globale établie ; Lot B nettement derrière en tunisien en lettres arabes ; un seul annotateur |
-| EXP-B-014 | 2026-11-20 | B | Robustesse (INV) du système gelé : 7 perturbations à sens conservé sur P061–P600 | une perturbation par texte et par type, graine 20261015, empreinte `c8b2a266…` ; modes règles et parseurs ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | taux de changement de `is_claim` / `modality` ; Δ macro-F1 de détection | ponctuation −0.137 [−0.178 ; −0.097] (12 % de changements), presque tout sur les questions sans mot interrogatif du lexique (39 sur 40 contre 0 sur 10) ; fautes −0.019 ; casse et diacritiques 0 ; langue A2 changée par l'arabizi 11.6 % | reconnaissance des questions dépendante du « ? » ; lexique interrogatif de 6 entrées ; non corrigé (système gelé) |
+| EXP-B-013 | 2026-11-20 (XLM-R : 2026-11-21) | B | Question de recherche 1 : extracteur gelé contre le TF-IDF et XLM-R + LoRA du Lot C (112 textes synthétiques du test du Lot C dans P061–P600) | extracteur gelé (mesure sur `a48e447`), modes règles et parseurs, unité texte ; TF-IDF d'EXP-C-010 reproduit (0.6435) ; XLM-R : 3 graines (42, 123, 2026), prédictions exportées par le Lot C ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | macro-F1 binaire de détection | Lot B 0.803 vs TF-IDF 0.825 vs XLM-R 0.851 ± 0.015 vs baseline 0.345 ; **tn (60)** : Lot B 0.707, TF-IDF 0.817, XLM-R 0.816 ± 0.030, Lot B − XLM-R −0.109 ± 0.030, non établi pour aucune graine ; tn en lettres arabes (18) : −0.365 ± 0.032, établi pour les 3 graines | aucune différence globale établie ; Lot B nettement derrière en tunisien en lettres arabes ; un seul annotateur |
+| EXP-B-014 | 2026-11-20 | B | Robustesse (INV) du système gelé : 7 perturbations à sens conservé sur P061–P600 (540 textes synthétiques) | une perturbation par texte et par type, graine 20261015, empreinte `c8b2a266…` ; modes règles et parseurs ; IC graine 20261015, 1000 tirages ; apparié graine 42, 2000 tirages | taux de changement de `is_claim` / `modality` ; Δ macro-F1 de détection | ponctuation −0.137 [−0.178 ; −0.097] (12 % de changements), presque tout sur les questions sans mot interrogatif du lexique (39 sur 40 contre 0 sur 10) ; fautes −0.019 ; casse et diacritiques 0 ; langue A2 changée par l'arabizi 11.6 % | reconnaissance des questions dépendante du « ? » ; lexique interrogatif de 6 entrées ; non corrigé (système gelé) |
 
 ## Entrées
 
@@ -79,7 +79,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Objectif / hypothèse** : mesurer la stabilité de l'extracteur gelé face à des perturbations
   de surface qui ne changent pas le sens (critère Gold « INV »). **Mesure seulement** : aucune règle
   n'est modifiée à partir de ces résultats.
-- **Données** : test gelé P061–P600 d'EXP-B-010 (540 textes, un annotateur, hors dépôt), SHA-256
+- **Données** : test gelé P061–P600 d'EXP-B-010 (540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C ; hors dépôt), SHA-256
   `5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b`.
 - **Méthode / configuration** :
   - Une perturbation par texte et par type ; graine 20261015, un générateur par type. Un texte
@@ -152,7 +152,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     non corrigée (système gelé).**
   - Observation : dans P061–P600, les questions sont regroupées en blocs d'identifiants
     consécutifs (38 des 50 questions dans 4 blocs : P236–P245, P345–P354, P450–P459, P537–P544).
-    La provenance par bloc est à confirmer avec le Lot C.
+    Ces blocs viennent de la génération par catégorie (textes synthétiques, voir EXP-B-010).
   - **Limites** : un seul annotateur ; une seule perturbation par texte et par type, une seule
     graine ; « sens conservé » non vérifié par une personne (retirer « ? » d'une question sans mot
     interrogatif ne le conserve pas toujours) ; causes classées automatiquement à partir des
@@ -169,7 +169,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   XLM-R + LoRA (Lot C, EXP-C-003 ; ajouté le 2026-11-21).
   Numéro EXP-B-012 réservé à la première mesure sur eval_100.
 - **Données** :
-  - Gold : test P061–P600 d'EXP-B-010, SHA-256
+  - Gold : test P061–P600 d'EXP-B-010 (540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C), SHA-256
     `5514039a5ad44c3b9a1416ef7dd82525aa708b28b78d603281da4693064f9a6b`.
   - Textes : les **112** identifiants du test gelé du Lot C
     (`data/splits/claim_detection_multiclass_600_seed42.json`, 120 identifiants) présents dans
@@ -287,7 +287,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - Les deux systèmes dépassent nettement la baseline. **La différence Lot B − TF-IDF n'est pas
     établie**, ni au global ni dans aucun groupe (en ar, la borne basse de l'IC est à 0).
   - Observation : dans P061–P600, les questions sont regroupées en blocs d'identifiants
-    consécutifs (voir EXP-B-014). La provenance par bloc est à confirmer avec le Lot C.
+    consécutifs (voir EXP-B-014) : ils viennent de la génération par catégorie (textes
+    synthétiques, voir EXP-B-010). Tous les scores ci-dessus sont probablement optimistes.
   - **Limites** : un seul annotateur ; unité texte (eval_100 mesurera à l'unité phrase) ;
     tâche binaire (le TF-IDF prédit 3 classes ; sa macro-F1 à 3 classes, 0.643, n'est pas
     comparable) ; le Model 1 a été entraîné sur 428 autres textes de P061–P600 (même source et
@@ -476,7 +477,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   qui n'a servi ni à écrire ni à régler les règles. Hypothèse : l'écart à la baseline mesuré sur
   le pilote (EXP-B-009) se confirme.
 - **Données** :
-  - Lignes P061 à P600 du jeu de 600 phrases du Lot A1 : **540 textes**, extraits de
+  - Lignes P061 à P600 du jeu de 600 phrases : **540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C**. Extraits de
     `claim_detection_600.xlsx` vers un fichier tabulé hors dépôt (`id`, `texte`, `label`,
     `modalite`, `doute`, `source`, `langue`, `script`).
   - **SHA-256 du fichier mesuré** :
@@ -489,6 +490,10 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     hypothétique 39, conditionnel 20.
   - Langue et écriture déclarées par le jeu : fr 140, ar 135, tn en arabizi 135, tn en lettres
     arabes 81, tn mixte 49.
+  - **Provenance (déclarée par le Lot C le 2026-11-21)** : P061–P600 = 540 textes synthétiques générés par un modèle de langue par catégorie (blocs consécutifs), annotés à la main par un seul annotateur (Lot C) ; protocole de génération à documenter par le Lot C.
+    Les blocs de questions consécutifs relèvent de cette structure du corpus. Le champ `source`
+    du fichier (« original ») ne prouve pas une provenance naturelle. Scores probablement
+    optimistes ; sur textes réels, voir EXP-B-009 et, à venir, eval_100.
   - **Indépendance** : jeu vierge pour le Lot B.
     - Aucun fichier du Lot B, sur aucune branche, ne cite ces identifiants. La seule occurrence
       est un test synthétique de plage d'identifiants.
@@ -576,7 +581,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
     baseline est **établi**, avec un IC loin de 0.
   - Les scores sont plus élevés que sur le pilote (macro-F1 de détection 0.60–0.74), surtout en
     tunisien arabizi. Ce jeu semble formé de phrases plus courtes et plus nettes que les messages
-    du pilote. Ce point reste à vérifier : nombre de phrases par texte.
+    du pilote. Explication probable : ce sont des textes synthétiques (voir « Provenance »), et non
+    des messages réels.
   - L'erreur dominante reste **le défaut `assertif`** pour les opinions, les souhaits et une partie
     du discours rapporté. C'est cohérent avec l'ablation d'EXP-B-009.
   - Le tunisien en lettres arabes est le groupe le plus faible. Le Lot A2 en classe 41 sur 81 comme
