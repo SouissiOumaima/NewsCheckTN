@@ -14,7 +14,6 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import urlsplit
 
-
 # Empreintes des copies effectivement controlees.
 SHA_V6 = "FBB13F118F4A2F3B604C86BA1729295BED5A6BEA4A7EDBF80262CF15835B7B29"
 SHA_V3 = "5FA857BE810D568E6266641EADE1C0FFFE805E804D6E4A989BA0CA5B5CFC1099"
