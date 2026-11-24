@@ -35,7 +35,7 @@ supports / refutes / neutral.
 - Les deux comparaisons portent sur des périmètres différents.
 - P0289 : texte lisible et OPINION dans le corpus consolidé ;
   correction du fichier historique non démontrée.
-- P0462 : décision humaine finale à confirmer.
+- P0462 : label OPINION confirmé individuellement par Achref le 20/11/2026 ; validation collective en attente.
 - Reconciliation actuelle du 21/11/2026 : 22 concordances
   et 9 divergences entre les 31 arbitrages documentes et
   le corpus A1 600 actuellement utilise.
@@ -53,8 +53,9 @@ supports / refutes / neutral.
 - SHA-256 registre : 497CF0E1023540C51EC47E86C782B709696EC1C51A3E3369C988481CEDFAC80A
 - SHA-256 corpus humain 540 : 965DBE80FABD724258CE7417CE233296C6A2BB459D4CDD36A12A6B3CB1DA83C5
 - SHA-256 corpus A1 600 : 5741A6E84459772DE84930C5493786DFB5F065E0F50EE43026F64F22D81443FF
-- Les propositions 0054, 0066 et 0462 ne sont pas
-  considérées comme validées.
+- 0054 et 0462 : OPINION confirmé individuellement par Achref le 20/11/2026 ; validation collective en attente.
+- 0066 : AFFIRMATION sous réserve de l'harmonisation collective de la règle sur les énoncés personnels.
+- 0071 : EN_REVISION, sans label définitif ; contexte médical insuffisant.
 
 ## Reproductibilité et limites
 

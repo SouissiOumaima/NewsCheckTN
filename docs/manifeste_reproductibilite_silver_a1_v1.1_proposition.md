@@ -214,7 +214,7 @@ Statut : proposition non validée.
 - Bilan historique S3 : conservé, à réconcilier.
 - Corpus et annotations originaux : inchangés.
 
-### Empreintes des références
+### Empreintes des références (instantanes historiques)
 
 Registre arbitrage A1 :
 497CF0E1023540C51EC47E86C782B709696EC1C51A3E3369C988481CEDFAC80A
@@ -243,16 +243,23 @@ Elles ne constituent pas un gel officiel.
 - 0071 : EN_REVISION, sans nouveau label.
 - Gel collectif : NON EFFECTUE.
 
-### Empreintes documentaires actualisees
+### Empreintes documentaires actualisees (octets LF ; corrections locales PR #37)
 
-- Data Card V1.2 : 8CF9950722684DCA54D1C7A94515CCD744978C04AAB95067A5D4FA76DFFD7C49
-- Rapport Silver A1 : 46D7B303D14DD868447BC04D6C99E8FE483A7DC6A1014CCAA55EB2ED64241452
-- Decisions ouvertes : D5F61988819A81F08430A4A4EA02345E24A4704D7144866874A414F88686406A
-- CSV Achref normalise (prive) : A20B69DE199BA3DE35ADEE018F457848AC3F9F72ED06C7E277A9D9B1DF9D41E5
-- CSV original Achref (prive) :
-  B0E4F154508A482ECFB91B6697B1CD4C16335519616BB1E8B099341573004BE7
+- Data Card V1.2 corrigee : 6C8721B57AA818711B0D637AAAA09D62BD3BE1053EAC0081CFFA927C903B2A0A
+- Data Card V1.2 historique (commit 07d05e5) : 581FC248C1D6204905DD453B9CB876CF0DA7F96BA4B2ADE270B45D0EDB7D75BD
+- Rapport Silver A1 : 08FC5196B862256E0B3A0CE6FEA36D8BF80EAC7E79A1F548F17AFED8F1D2AE5E
+- Decisions ouvertes : C875E54DE5C6D1E440F568C92373671CD9B588A118EB55B8C1346A42B59DF2C2
+- Version historiquement declaree comme CSV normalise (prive) : A20B69DE199BA3DE35ADEE018F457848AC3F9F72ED06C7E277A9D9B1DF9D41E5.
+  Fichier non retrouve localement ; transformation et correspondance avec l'export original non verifiees.
+- Version historiquement declaree comme export original Achref (prive) : B0E4F154508A482ECFB91B6697B1CD4C16335519616BB1E8B099341573004BE7.
+  Version exacte non identifiee ; fichier non retrouve localement.
+- Copie de l'export du 20/11 conservee par Achref : C5C61F4D1C9159FD958472AD7AAC44210B74E68F84A557F0EBEA63C782644E8C.
+  Empreinte communiquee par le relecteur, non verifiee directement sur cette copie.
+- Controle local du 24/11/2026 : 71 fichiers CSV examines dans les dossiers de projet connus ; aucune correspondance pour ces trois empreintes.
+- Conclusion : aucune equivalence entre ces versions ni aucune operation de normalisation ne peut etre attestee sans les copies sources.
+- Les CSV prives restent hors depot Git et ne sont pas republies.
 
 Les fichiers prives sont conserves hors depot Git.
 Les donnees originales ne sont pas modifiees.
 
-Note : les empreintes anterieures documentent des instantanes historiques ; la derniere empreinte des decisions ouvertes correspond a la version actuelle.
+Note : l'empreinte de la Data Card corrigee correspond aux octets locaux LF destines a la PR #37. Son empreinte historique, ainsi que les empreintes du rapport Silver et des decisions ouvertes, correspondent aux octets Git/LF du commit 07d05e5. La validation scientifique collective et le gel officiel restent en attente.
