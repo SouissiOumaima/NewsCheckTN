@@ -70,7 +70,7 @@ $env:CLAIM_DETECTOR_CHECKPOINT = "models/checkpoints/claim_detection_xlmr_lora_s
 $env:RETRIEVAL_METHOD = "hybrid"
 $env:EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
 $env:EVIDENCE_CORPUS = "data/interim/lot_d/evidence_tunifact_v1.jsonl"
-# Bronze dans les expériences Falcon existantes ; affiné proposé pour le Gold.
+# Bronze dans les expériences Falcon existantes ; affiné confirmé pour le Gold.
 $env:NLI_BACKEND = "bronze"
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
@@ -78,7 +78,7 @@ python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 Ouvrir `http://127.0.0.1:8000/app/`. Les variables doivent être définies dans le
 processus qui lance l'API : `.env` n'est pas chargé automatiquement.
 
-Pour l'essai Gold proposé après confirmation de Wiem, remplacer `NLI_BACKEND`
+Pour l'essai Gold confirmé par le Lot D (EXP-D-018), remplacer `NLI_BACKEND`
 par `fine-tuned` et définir `NLI_FINETUNED_MODEL` vers
 `models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42`. Redémarrer l'API et
 consigner ce changement ; il ne reproduit pas les runs Falcon avec Bronze.
@@ -91,8 +91,9 @@ L'interface affiche le moteur et le modèle réels et masque l'incertitude fixe 
 LLM au profit de « incertitude non calibrée ». Une citation présente dans les
 passages retrouvés peut rester hors sujet : montrer aussi cette limite.
 
-La règle d'abstention Gold proposée par Hadil n'est pas activée ici. Son protocole
-doit être publié avant les mesures. Les réécritures NLI EXP-C-012/013 restent suspendues.
+La règle d'abstention Gold n'est pas activée ici : elle n'a pas été adoptée après
+la mesure sur dev (EXP-D-018). Le juge Qwen n'est pas validé (EXP-D-017).
+Les réécritures NLI EXP-C-012/013 restent suspendues.
 
 ## Pages
 

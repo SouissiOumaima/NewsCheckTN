@@ -76,11 +76,12 @@ La PR #32 précède le réalignement de la PR #33, qui apporte notamment
 Falcon doit utiliser le code de `lot-d-falcon` ou une version qui inclut ces changements.
 Définir cette variable sur une version qui l'ignore ne reproduit pas EXP-D-015.
 
-Les runs Falcon EXP-D-014/015 utilisent le NLI Bronze. Le NLI affiné graine 42
-est proposé pour la démo et le Gold, sous réserve de confirmation de Wiem : il
-s'agit d'une configuration différente à consigner avant toute nouvelle mesure.
-La proposition de règle « tous les passages cités sont neutres → abstention »
-reste un protocole du Lot D à évaluer ; elle n'est pas activée par cette mise à jour.
+Les runs Falcon EXP-D-014/015 utilisent le NLI Bronze. Hadil confirme le NLI
+affiné graine 42 pour le Gold, déclaré dans le protocole et EXP-D-018 : cette
+configuration est différente des runs historiques. La règle « tous les passages
+cités sont neutres → abstention » a été évaluée sur le dev et n'est pas adoptée
+(EXP-D-018). Elle n'est pas activée par cette mise à jour. Le juge Qwen reste
+non validé (EXP-D-017) : les annotations humaines restent nécessaires.
 Le résultat τ = 0 d'EXP-C-015 ne constitue pas un nouveau seuil à brancher.
 
 EXP-C-012/013 restent hors évaluation jusqu'à la décision collective. Les nouveaux
@@ -89,6 +90,9 @@ avant la mesure. L'annotation humaine des verdicts s'effectue sans voir celle de
 
 
 ## Relecture Lot D
+
+Le rapport Lot E est dans `docs/report/06_integration_audit_lot-e_gold.md` ; le
+parcours et la narration sont dans `docs/lot-e_demo_gold_75s.md`.
 
 Les champs input/normalized et le helper _claims_from_doc sont repris de la
 proposition lot-e-demo, sans importer sa seconde déclaration de /check/detail.
