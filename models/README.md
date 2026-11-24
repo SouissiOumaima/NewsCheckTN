@@ -21,7 +21,7 @@ Données d'entraînement : `data/processed/checkworthy_*.jsonl` et `data/process
 |-------------------|---------|
 | `baselines/` | TF-IDF, FastText (`train_tfidf.py`, `train_fasttext.py`) |
 | `encoders/` | Fine-tuning XLM-R / AraBERT + LoRA (`train_encoder.py`, configs) |
-| `nli/` | Modèle de stance (`stance.py` = inférence, `train_nli.py`) |
+| `nli/` | Modèle de stance (`stance.py` = inférence, `train.py` = affinage) |
 | `claim_detector.py` | Inférence check-worthiness utilisée par le pipeline |
 | `checkpoints/` | Poids entraînés — **non versionné** |
 
