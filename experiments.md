@@ -176,7 +176,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   « pertinent » ; 8 explications avec un fait inventé ; 12 verdicts infidèles, surtout une étiquette
   contraire à l'explication (l'explication contredit l'affirmation, le verdict dit « vrai » :
   dev-c01, c02, c06, c07, c11). Annotations indépendantes des mêmes 10 verdicts (tirés avec la
-  graine 42) : Wiem (rendue, sans IA) ; Achref (rendue, dev-c04 laissé sans étiquette, « je ne sais pas ») ; Mouhib (en attente).
+  graine 42) : Wiem (rendue, sans IA) ; Achref (rendue, dev-c04 laissé sans étiquette, « je ne sais pas »). Une quatrième annotation, prévue un temps, a été annulée.
 - **Juge** : Qwen2.5-3B-Instruct (Ollama, local, 100 % GPU), différent de Falcon ; température 0,
   graine 42, JSON imposé.
 - **Résultats sur « mise au point »** (15 verdicts ; kappa de Cohen, IC 95 % par bootstrap) :
