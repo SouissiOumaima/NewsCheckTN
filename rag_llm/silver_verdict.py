@@ -68,6 +68,16 @@ LLM_SYSTEMS = [
 # ---------------------------------------------------------------------------
 
 
+DEFAULT_EXP_ID = "EXP-D-009"  # valeur historique, inchangée par défaut
+
+
+def exp_id_arg(value: str) -> str:
+    """`--exp-id` : un identifiant du Lot D, ex. EXP-D-015."""
+    if not re.fullmatch(r"EXP-D-\d{3}", value):
+        raise argparse.ArgumentTypeError(f"{value!r} : format attendu EXP-D-NNN")
+    return value
+
+
 class CachedGenerator:
     """Enveloppe un moteur : une même requête (prompt, graine, modèle) n'est générée qu'une fois."""
 
@@ -82,7 +92,13 @@ class CachedGenerator:
                     self._cache[row["key"]] = row["output"]
 
     def _key(self, messages: list[dict], seed: int) -> str:
-        blob = json.dumps([self.name, seed, messages], ensure_ascii=False, sort_keys=True)
+        parts: list = [self.name, seed, messages]
+        # Format JSON imposé (LLM_RESPONSE_FORMAT=json, EXP-D-015) : il entre dans la clé, pour ne
+        # jamais reprendre une réponse produite sans ce format. Sans lui, la clé ne change pas
+        # (les caches existants restent valables).
+        if getattr(self.inner, "json_mode", False):
+            parts.append({"response_format": "json_object"})
+        blob = json.dumps(parts, ensure_ascii=False, sort_keys=True)
         return hashlib.sha256(blob.encode()).hexdigest()
 
     def generate(self, messages: list[dict], seed: int) -> str:
@@ -323,6 +339,12 @@ def main() -> None:
     p.add_argument("--model", default=None, help="LLM (défaut : LLM_MODEL ou aya-expanse-8b)")
     p.add_argument("--limit", type=int, default=None, help="essai rapide sur N affirmations")
     p.add_argument(
+        "--exp-id",
+        type=exp_id_arg,
+        default=DEFAULT_EXP_ID,
+        help=f"identifiant écrit dans le fichier de résultats (défaut : {DEFAULT_EXP_ID})",
+    )
+    p.add_argument(
         "--main-only",
         action="store_true",
         help="gabarit + LLM (3 graines) seulement, sans les ablations (quota d'API limité)",
@@ -341,7 +363,7 @@ def main() -> None:
         generator.name = args.model
     generator = CachedGenerator(generator)
     payload = {
-        "exp_id": "EXP-D-009",
+        "exp_id": args.exp_id,
         "date": date.today().isoformat(),
         "llm": generator.name,
         "prompt_version": lv.PROMPT_VERSION,

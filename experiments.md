@@ -27,6 +27,10 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-C-016 | 2026-11-22 | C | NLI (Model 2) palier Gold : inversions de polarité (supports ↔ refutes) | prédictions Silver d'EXP-C-011 relues, sans inférence ; protocole écrit avant calcul ; règle : < 20 erreurs = descriptif | erreurs par type (test, n = 56) | inversions : principal 1 / 10 erreurs, zero-shot 1 / 11 (même paire NLI-P010), Bronze 16 / 30 ; erreurs des modèles surtout vers « neutral » (7 / 10, 9 / 11) | aucune conclusion sur un taux (trop peu d'erreurs) ; à rapprocher, qualitativement, d'EXP-D-011 (autre unité) |
 | EXP-D-011 | 2026-11-15 | D | Silver : verdict avec le NLI affiné du Lot C (PR #21) | même système qu'EXP-D-010 (recherche hybride top 5, gabarit A1–A4, Aya Expanse 8B 4 bits, prompt v1, graine 42) ; seul change le NLI : règles Bronze → mDeBERTa-v3 affiné (EXP-C-011) ; configurations et hypothèses fixées avant la mesure (commit 77a98e7) ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | gabarit : 0.286 / 0.219 → **0.524 / 0.404** (+0.238, IC95 [0.000 ; 0.476], p = 0.031 ; macro-F1 +0.185, p = 0.019), arabe 0.29 → 0.86 ; mais exactitude = majorité (0.524, p = 0.56) ; Aya + indices NLI affiné 0.619 / 0.360 contre 0.714 / 0.408 avec les indices Bronze (H2 rejetée) | le NLI affiné sert au gabarit (repli, démo sans GPU) ; système officiel inchangé : Aya sans indices (EXP-D-010) ; suite (Gold) : inversions de polarité, abstention du gabarit à combiner avec le LLM |
+| EXP-D-015 | 2026-11-19 | D | Silver : Falcon-H1-3B en local, format JSON imposé | comme EXP-D-014, seul changement : `LLM_RESPONSE_FORMAT=json` (Ollama, json_object) ; cache séparé ; plan fixé avant mesure (commit 325f28a) | exactitude / macro-F1 du verdict (test, 21) | **0.762 ± 0.048 / 0.600** (3 graines), valides 0.968, tunisien 5/5 ; contre gabarit +0.524, p = 0.0001 ; 2e passage d'un système Falcon-H1-3B sur le test | règle remplie : LLM de la démo et de l'intégration locales ; résultat officiel du Silver inchangé (Aya 8B) |
+| EXP-D-014 | 2026-11-19 | D | Silver : Falcon-H1-3B en local (Ollama, GTX 1650 4 Go) | GGUF Q4_K_M, 100 % GPU (2,1 Go), protocole d'EXP-D-010 (`--main-only`, 3 graines) ; plan fixé avant mesure | exactitude / macro-F1 / sorties valides (test, 21) | 0.651 ± 0.028 / 0.499, **valides 0.571** (9 réponses sans JSON sur 21) | règle non remplie (valides < 0.90) → EXP-D-015 |
+| EXP-D-013 | 2026-11-18 | D | Silver : Falcon-H1-7B contre Aya Expanse 8B | Colab T4, 4 bits, calcul float32 (float16 : inf / nan), protocole d'EXP-D-010 ; règle fixée avant mesure (commit 9433fca) | exactitude / macro-F1 (test, 21) | 0.698 ± 0.027 / **0.628 ± 0.083** ; abstention justifiée 1.00 (Aya 0.00) ; tunisien 0.6 | règle (exactitude > 0.730) non remplie : Aya 8B reste ; piste Gold (abstention) |
+| EXP-D-012 | 2026-11-19 | D | Silver : Tiny Aya (3,35 Md) contre Aya Expanse 8B | tiny-aya-global, 4 bits (Colab) puis API Cohere sans quantification, dev seulement | exactitude (dev, 20) | 4 bits 0.15 ± 0.05 (couverture 0.15) ; API 0.283 ± 0.104 (sélective 0.29) ; gabarit 0.50 | écarté après le dev ; test non mesuré |
 | EXP-D-010 | 2026-11-15 | D | Silver officiel : verdict par LLM ouvert ≤ 8 Md contraint aux preuves | CohereLabs/aya-expanse-8b (4 bits, Colab T4), même prompt v1 et mêmes contrôles qu'EXP-D-009, température 0.3, 3 graines locales (13, 42, 2026) ; recherche hybride (EXP-D-008) ; 4 ablations ; bootstrap apparié 10 000 tirages ; aucune donnée envoyée à une API | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.730 ± 0.028 / 0.410 ± 0.016 (graine 42 : 0.714 / 0.401) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.429, IC95 [0.143 ; 0.714], p = 0.004) et majorité 0.524 / 0.172 (exactitude +0.19, p = 0.055 ; macro-F1 +0.23, p = 0.004) ; couverture 1.00, abstention justifiée 0.00 ; tunisien 0.8 ; 0 citation invalide | résultat officiel du Silver ; exact mais jamais d'abstention (3 affirmations sans preuve jugées « faux ») ; suite : contrôle de pertinence avant le LLM, abstention évaluée (Gold) |
 | EXP-D-009 | 2026-11-15 | D | Comparaison (non officiel) : verdict par LLM contraint, API Gemini | gemini-3.5-flash-lite (API gratuite), prompt v1 figé sur le dev (JSON imposé, citations limitées aux passages fournis, abstention), température 0.3 ; recherche hybride (EXP-D-008) ; 3 exécutions ; 4 ablations ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | LLM 0.810 / 0.844 (3 exécutions : 0.762 ± 0.048 / 0.809 ± 0.032) vs gabarit + NLI Bronze 0.286 / 0.219 (+0.524, IC95 [0.333 ; 0.714]) et majorité 0.524 / 0.172 ; précision sélective 1.00 ; tunisien 0.0 → 0.6 ; 0 citation invalide | comparaison seulement (modèle > 8 Md, données envoyées à une API) ; officiel : EXP-D-010 ; erreurs restantes = abstentions dues à la recherche (langue croisée, arabizi) ; suite : contamination (Gold), NLI fine-tuné |
 | EXP-D-008 | 2026-11-14 | D | Silver : recherche dense et hybride sur le test gelé | BM25 / dense e5-base / hybride RRF (BM25 + e5-base, k = 60, retenu a priori sur le dev) ; ablations sans seuil dense et e5-small ; top 5 ; bootstrap apparié 10 000 tirages, graine 42 | Rappel@5 / MRR (test, 18 affirmations avec preuve) | hybride 0.446 / 0.646 vs BM25 0.411 / 0.630 (R@5 +0.035, IC95 [-0.022 ; 0.111], p = 0.17) ; dense seul 0.394 / 0.630 ; fr 0.357 → 0.429 ; dev 0.944 vs 0.667 (EXP-D-003 reproduit) | hybride e5-base retenu pour le Silver ; gain non significatif sur le test ; suite : verdict (NLI fine-tuné du Lot C, LLM contraint) |
@@ -111,6 +115,115 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 - **Analyse** : sur le test NLI du Lot C, avec des preuves gold, les erreurs des deux modèles mDeBERTa vont surtout **vers « neutral »** (7 sur 10 pour le principal, 9 sur 11 pour le zero-shot) ; une seule inversion de polarité chacun. Les inversions sont en revanche la première erreur des règles Bronze (16 sur 30). Avec 10 et 11 erreurs, ce ne sont que des cas, pas des taux (règle fixée avant calcul) : on ne conclut pas sur un taux d'inversion du NLI affiné. Ce résultat ne contredit pas l'observation du Lot D, qui porte sur une autre unité (verdict d'une affirmation, vrai / faux) et d'autres entrées (passages retrouvés automatiquement, puis gabarit de verdict qui agrège plusieurs positions) ; une hypothèse à vérifier côté Lot D est que ses inversions viennent des passages retrouvés ou de l'agrégation, plutôt que du NLI seul sur une preuve correcte.
 - **Décision / suite** : aucun changement du modèle ; résultat transmis au Lot D pour sa discussion d'EXP-D-011 ; pour l'étudier, il faudrait les positions du NLI sur les passages du Lot D (paires affirmation / passage retrouvé), qui ne sont pas dans les données du Lot C.
 
+### EXP-D-015 — Silver : Falcon-H1-3B en local avec format JSON imposé
+- **Date** : 2026-11-19 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : corriger la seule cause d'échec d'EXP-D-014 (réponses sans JSON) et vérifier la règle.
+- **Plan fixé avant la mesure** : `rag_llm/exp_d_015_falcon3b_json.ps1`, commit `325f28a`. Seul changement
+  par rapport à EXP-D-014 : `LLM_RESPONSE_FORMAT=json` (Ollama impose `response_format = json_object` ;
+  option ajoutée à `OpenAICompatibleGenerator`, sans effet par défaut, tests `test_rag_llm_json_mode.py`).
+  Règle inchangée (sorties valides ≥ 0.90 graine 42 ; exactitude moyenne ≥ majorité 0.524 ; meilleur que
+  le gabarit, p < 0.05).
+- **Incident (avant toute mesure)** : le premier lancement du dev a repris les 60 réponses d'EXP-D-014
+  dans le cache (la clé du cache ne contient pas le format). Correction : cache séparé
+  (`LLM_CACHE=evaluation/results/lot-d_llm_cache_exp-d-015.jsonl`, commité avant la relance) ; résultats
+  d'EXP-D-014 sauvegardés sous `*_exp-d-014.json` (même nom de fichier de sortie). Après la relecture
+  de la PR #33, le format JSON imposé entre dans la clé du cache (clé inchangée sans ce format).
+- **Résultats — dev (20, 60 réponses générées)** : 0.667 ± 0.076 / macro-F1 0.51 ± 0.045, couverture 0.80,
+  sorties valides **0.983 ± 0.029** (EXP-D-014 : 0.80) ; 1 rejet (`json_invalide`).
+- **Résultats — test gelé (21, une seule fois)** :
+
+  | | Exactitude | Macro-F1 | Couverture | Sélective | Valides | fr (9) | ar (7) | tunisien (5) |
+  |---|---|---|---|---|---|---|---|---|
+  | Falcon-H1-3B + JSON, graine 42 | **0.810** | 0.625 | 0.857 | 0.833 | 1.00 | 0.778 | 0.714 | **1.000** |
+  | 3 graines (moyenne ± é.-t.) | **0.762 ± 0.048** | 0.600 ± 0.029 | 0.762 ± 0.083 | | 0.968 ± 0.028 | | | |
+  | gabarit + NLI Bronze | 0.286 | 0.219 | 0.381 | 0.500 | | 0.444 | 0.286 | 0.000 |
+  | majorité (« faux ») | 0.524 | 0.172 | 1.000 | | | | | |
+
+  Contre le gabarit (graine 42) : exactitude +0.524 [0.286 ; 0.762], p = 0.0001 ; macro-F1 +0.406
+  [0.182 ; 0.682], p = 0.0002. **Règle remplie** (valides 1.00 ; 0.762 ≥ 0.524 ; p < 0.05).
+- **Analyse / limites** :
+  1. Imposer le JSON fait passer les sorties valides de 0.57 à 0.97 sur le test, sans perte de qualité.
+  2. **2e passage** d'un système Falcon-H1-3B sur le même test (EXP-D-014 puis EXP-D-015) : risque
+     d'optimisme, les deux résultats sont rapportés ensemble.
+  3. **Comparaison appariée avec Aya 8B** (EXP-D-010, graine 42, `rag_llm.compare_llm_runs`, calculée
+     après la mesure) : exactitude 0.810 contre 0.714, +0.095 IC95 [−0.095 ; 0.286] ; macro-F1 0.625
+     contre 0.401, +0.224 IC95 [−0.044 ; 0.391] → **aucune différence significative** dans un sens ou
+     dans l'autre (p « Aya meilleur » = 0.91 et 0.96). 6 verdicts différents : gagnés tf-c11 (arabizi,
+     « faux » au lieu de « vrai »), tf-c13 et tf-c15 (abstention correcte) ; perdu tf-c08 (abstention à
+     tort) ; tf-c05 et tf-c09 (« trompeur ») faux pour les deux modèles. **Abstention justifiée : 0.667**
+     (2 affirmations sans preuve sur 3 ; tf-c14 reste « faux ») contre **0.000** pour Aya 8B. Le
+     tunisien 5/5 porte sur 5 affirmations seulement.
+  4. Quantification GGUF (Ollama) différente de bitsandbytes (Colab) ; `max_tokens` 1024 (API) au lieu
+     de 300.
+- **Décision** : Falcon-H1-3B (Ollama, JSON imposé) est le LLM de la **démo et de l'intégration
+  locales** (Lot E), sans GPU distant ni API : `LLM_PROVIDER=ollama`, `LLM_BASE_URL=http://localhost:11434/v1`,
+  `LLM_MODEL=hf.co/tiiuae/Falcon-H1-3B-Instruct-GGUF:Q4_K_M`, `LLM_RESPONSE_FORMAT=json`. Le **résultat
+  officiel du Silver reste Aya Expanse 8B** (EXP-D-010), comme prévu dans le plan.
+
+### EXP-D-014 — Silver : Falcon-H1-3B en local (Ollama, GPU 4 Go)
+- **Date** : 2026-11-19 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : un LLM ≤ 8 Md qui tourne entièrement sur le PC de l'équipe (GTX 1650, 4 Go), pour
+  l'intégration locale, sans GPU distant ni API (Aya 8B demande ~6 Go).
+- **Plan fixé avant la mesure** : `rag_llm/exp_d_014_falcon3b_local.ps1` (commité avant toute exécution).
+  Falcon-H1-3B-Instruct, GGUF Q4_K_M (`hf.co/tiiuae/Falcon-H1-3B-Instruct-GGUF:Q4_K_M`), servi par Ollama
+  (100 % GPU, 2,1 Go) ; protocole d'EXP-D-010 (`--main-only`, prompt v1, température 0.3, top-p 0.9,
+  graines 13 / 42 / 2026, recherche hybride top 5, NLI Bronze pour le repli). Règle : voir EXP-D-015.
+- **Vitesse** (après le premier chargement) : lecture du prompt ~165 tokens/s, génération ~47 tokens/s,
+  soit ~10–15 s par verdict.
+- **Résultats** :
+  - dev (20) : 0.633 ± 0.029 / macro-F1 0.49 ± 0.012, couverture 0.78, sorties valides 0.80 ± 0.087 ;
+  - test gelé (21) : graine 42 0.667 / 0.502, couverture 0.714, sélective 0.80, **valides 0.571**
+    (9 réponses sans JSON → repli gabarit) ; fr 0.667, ar 0.857, tunisien 0.4 ; 3 graines 0.651 ± 0.028 /
+    0.499 ± 0.023, valides 0.587 ± 0.073 ; contre gabarit +0.381 [0.19 ; 0.571], p < 0.001.
+- **Décision** : règle non remplie (sorties valides < 0.90) ; cause technique identifiée (le modèle
+  oublie le JSON) → EXP-D-015 (format JSON imposé), avec un plan fixé avant la mesure.
+
+### EXP-D-013 — Silver : Falcon-H1-7B contre Aya Expanse 8B
+- **Date** : 2026-11-18 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : Falcon-H1-7B (7,6 Md ; 18 langues dont l'arabe et le français ; meilleur modèle ≤ 8 Md
+  sur les dialectes arabes de DialectalArabicMMLU, sans tunisien) donne-t-il de meilleurs verdicts
+  qu'Aya Expanse 8B ?
+- **Plan fixé avant la mesure** : `notebooks/lot_d_rag/05_falcon_h1.ipynb`, commit `9433fca`. Protocole
+  d'EXP-D-010 (Colab T4, 4 bits, `--main-only`, 3 graines). Règle : Falcon remplace Aya 8B si sorties
+  valides ≥ 0.90 et exactitude moyenne > 0.730.
+- **Incident (avant toute mesure)** : premier essai arrêté par une erreur `inf` / `nan` (calcul float16 ;
+  le T4 n'a pas de bfloat16), aucun résultat produit. Correction : calcul float32
+  (`LLM_COMPUTE_DTYPE`, float16 par défaut pour Aya ; tests `test_rag_llm_compute_dtype.py`). Le notebook
+  n'avait pas été commité avant cet essai : plan, règle et correctif commités ensemble (`9433fca`) avant
+  la mesure.
+- **Résultats** :
+  - dev (20) : 0.80 / macro-F1 0.583, couverture 0.90, valides 1.00, identique sur les 3 graines
+    (Aya 8B : 0.75 / 0.557) ;
+  - test gelé (21) : graine 42 0.667 / 0.533, couverture 0.714, sélective 0.733, valides 1.00 ; fr 0.556,
+    ar 0.857, tunisien 0.6 ; 3 graines **0.698 ± 0.027 / 0.628 ± 0.083** ; contre gabarit +0.381
+    [0.143 ; 0.619], p = 0.0015 (macro-F1 +0.315, p = 0.0048).
+  - Graine 42, par affirmation : **abstention justifiée 1.00** (tf-c13, c14, c15 : « preuves
+    insuffisantes » ; Aya 8B : 0.00) ; abstentions à tort sur tf-c08, c11, c19 (dont 2 en arabizi) ;
+    erreurs tf-c01, c17 (justes avec Aya) et tf-c05, c09 (« trompeur » jamais produit, comme Aya).
+    Par rapport à Aya 8B (d'après EXP-D-010) : 3 affirmations gagnées, 4 perdues. Comparaison appariée
+    avec le fichier d'EXP-D-010 (`rag_llm.compare_llm_runs`) à ajouter.
+- **Décision** : règle non remplie (0.698 < 0.730) → **Aya 8B reste**. À retenir pour le Gold : macro-F1
+  bien supérieur et abstention correcte sur les affirmations sans preuve, là où Aya ne s'abstient jamais.
+  Le fichier de sortie indique `exp_id: EXP-D-009` (valeur écrite en dur dans `silver_verdict.py` ;
+  option `--exp-id` ajoutée après la relecture de la PR #33, défaut inchangé).
+
+### EXP-D-012 — Silver : Tiny Aya (3,35 Md) contre Aya Expanse 8B
+- **Date** : 2026-11-16 (Colab) et 2026-11-19 (API) — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : un modèle assez petit pour un portable (GPU 4 Go) perd-il beaucoup par rapport à Aya 8B ?
+- **Plan fixé avant la mesure** : `rag_llm/compare_llm_runs.py` et `notebooks/lot_d_rag/04_tiny_aya.ipynb`
+  (`tiny-aya-global` principal, `tiny-aya-earth` secondaire, protocole d'EXP-D-010, dev puis test).
+- **Résultats (dev, 20 affirmations fictives)** :
+  - `tiny-aya-global`, 4 bits sur Colab : 0.15 ± 0.05 / macro-F1 0.089, **couverture 0.15** (répond
+    « preuves insuffisantes » presque toujours), valides 1.00 ;
+  - même modèle sans quantification, API Cohere (clé d'essai ; dev fictif, aucune donnée Tunifact
+    envoyée) : 0.283 ± 0.104 / 0.194, couverture 0.82, **précision sélective 0.29** ;
+  - références : gabarit 0.50, majorité 0.60, Aya 8B 0.75.
+- **Écart au plan** : arrêt après le dev (le test et `tiny-aya-earth` n'ont pas été mesurés) : le modèle
+  fait moins bien que le gabarit et la majorité, avec ou sans quantification ; aucune chance de remplir
+  la règle.
+- **Décision** : Tiny Aya écarté. Le comportement d'abstention dépend fortement du modèle (Aya 8B ne
+  s'abstient jamais, Tiny Aya presque toujours) : l'abstention doit être contrôlée par le système.
+  Note : Aya Expanse 8B n'est plus disponible dans l'API Cohere (retiré le 4 avril 2026).
 ### EXP-B-014 — Robustesse (INV) du système gelé : perturbations à sens conservé
 - **Date** : 2026-11-20
 - **Auteur / Lot** : Membre 3 / Lot B
