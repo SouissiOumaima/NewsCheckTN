@@ -25,7 +25,9 @@ Ces constats ne constituent pas une mesure de performance des modeles.
 - Test : 56 paires.
 - Brouillons exclus : 37 paires.
 - Split : NLI V3, seed 42.
-- Verification SHA-256 du split et du corpus : conforme aux references auditees.
+- SHA-256 corpus NLI V6 prive (300 paires) : `FBB13F118F4A2F3B604C86BA1729295BED5A6BEA4A7EDBF80262CF15835B7B29`.
+- SHA-256 split NLI V3, seed 42 : `59582EB759DF4CD9E15F7A17D1DF7E85DFAE411717A111D52D536FC1C6C3552C`.
+- SHA-256 corpus NLI V3 utilise pour la comparaison des labels : `5FA857BE810D568E6266641EADE1C0FFFE805E804D6E4A989BA0CA5B5CFC1099`.
 
 Le split officiel est conserve sans modification.
 
@@ -70,6 +72,48 @@ L'independance statistique des paires n'est donc pas garantie.
 Les paraphrases et recouvrements semantiques n'ont pas ete exclus
 par ces controles exacts.
 
+### 5.1. Protocole d'audit reproductible
+
+Script : `scripts/audit_gold_a1_nli_v6.py` (ajoute dans la
+presente PR ; commit `10057bc093f85492d739a409a1aa72a9f2505958`).
+
+Fonctions de reference : `models/nli/data.py`, commit
+`2795077df6cce466bec14be24adde89ee2e3e0e8`.
+
+Normalisation exacte du Lot C :
+`re.sub(r"\s+", " ", text).strip().lower()`.
+
+Cette normalisation reduit les espaces, supprime les espaces
+exterieurs et applique les minuscules. Elle n'applique pas NFKC.
+
+Les controles sont realises par intersection d'ensembles
+entre train, validation et test, pour chaque variable.
+
+| Variable | Uniques train/val/test | Repetitions internes train/val/test | Chevauchements inter-partitions |
+|---|---|---|---|
+| claim_id | 151 / 25 / 47 | 23 / 8 / 9 | 0 |
+| evidence_id | 166 / 32 / 56 | 8 / 1 / 0 | 0 |
+| claim normalise | 151 / 25 / 47 | 23 / 8 / 9 | 0 |
+| evidence normalisee | 157 / 23 / 48 | 17 / 10 / 8 | 0 |
+| article_id reconstruit | 30 / 8 / 10 | 144 / 25 / 46 | 0 |
+
+Commande de reproduction, depuis la racine du depot :
+
+```powershell
+python -B scripts/audit_gold_a1_nli_v6.py `
+  --v6 "CHEMIN_LOCAL_PRIVE_V6.jsonl" `
+  --v3 "CHEMIN_LOCAL_PRIVE_V3.jsonl" `
+  --split "data/splits/nli_v3_by_article_seed42.json"
+```
+
+Remplacer les deux chemins prives par les copies locales correspondant
+aux SHA-256 documentes. Le script ne publie aucune paire privee.
+Execution locale de controle : `status=PASS`, code retour 0.
+
+Les effectifs de repetitions sont des nombres de lignes
+supplementaires par rapport aux valeurs distinctes ; ils
+ne representent pas des paires de doublons independantes.
+
 ## 6. Separation par article
 
 | Partition | Articles distincts |
@@ -84,6 +128,18 @@ par ces controles exacts.
 
 Les identifiants ont ete reconstruits ; aucun `article_id`
 explicite n'etait renseigne dans les 263 paires actives.
+
+La fonction `article_id()` du Lot C applique, dans cet ordre :
+1. `article_id` explicite s'il existe (0/300 dans V6) ;
+2. regex `tunifact-(\d+)` dans `evidence_id` (259/300) ;
+3. regex `tunifact\.org/articles/(\d+)` dans `remarque` (3/300) ;
+4. premiere URL presente dans `remarque`, sans slash final
+   et en minuscules (38/300) ;
+5. identifiant `inconnu:` de secours (0/300).
+
+Ces comptes couvrent les 300 paires, y compris les 37 brouillons.
+La reconstruction permet de grouper les sources, mais ne certifie
+pas l'existence en ligne ou la validite editoriale des articles.
 
 ## 7. Provenance et identifiants reconstruits
 
@@ -141,6 +197,33 @@ etiquettes finales.
 
 Aucun corpus ni split n'est modifie par ce constat.
 
+### 8.3. Versions NLI V3/V6 et experience EXP-C-011
+
+La comparaison par `pair_id` des deux corpus NLI de 300 paires
+montre 300 identifiants communs, 0 difference de claim,
+0 difference d'evidence et 0 difference de langue.
+
+Un seul label change entre V3 et V6 :
+- partition validation : `neutral` (V3) vers `refutes` (V6) ;
+- train : 0 changement ;
+- test : 0 changement ;
+- brouillons exclus : 0 changement.
+
+Les labels du test sont identiques dans les deux versions :
+23 `supports`, 19 `refutes` et 14 `neutral`.
+
+L'experience Silver `EXP-C-011` du Lot C documente une
+evaluation sur les donnees V3, avec split V3 seed 42.
+Reference : `models/nli/measure_test.py`, commit `01074c9`.
+
+La copie intermediaire privee V3 du Lot C n'a pas ete retrouvee
+lors de ce controle. Les performances documentees de
+`EXP-C-011` ne sont pas attribuees au corpus V6.
+Aucune nouvelle evaluation de modele sur V6 n'est revendiquee.
+
+Cette difference NLI V3/V6 est distincte des 199 differences
+historiques mentionnees plus haut pour le corpus A1 de 600 textes.
+
 ## 9. Recommandations pour les lots C/D
 
 1. Conserver les partitions gelees pour les evaluations officielles.
@@ -182,8 +265,8 @@ Document de travail Gold A1, non approuve et non gele.
 
 References documentaires Silver :
 - [rapport_silver_a1_ghofran_2026-11-20_nli_v6_proposition.md](https://github.com/SouissiOumaima/NewsCheckTN/blob/07d05e5/docs/rapport_silver_a1_ghofran_2026-11-20_nli_v6_proposition.md)
-- [data_card_v1.2_silver_consolidee_proposition.md](https://github.com/SouissiOumaima/NewsCheckTN/blob/07d05e5/docs/data_card_v1.2_silver_consolidee_proposition.md)
-- [manifeste_reproductibilite_silver_a1_v1.1_proposition.md](https://github.com/SouissiOumaima/NewsCheckTN/blob/07d05e5/docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md)
+- [data_card_v1.2_silver_consolidee_proposition.md](https://github.com/SouissiOumaima/NewsCheckTN/blob/d1eb551/docs/data_card_v1.2_silver_consolidee_proposition.md)
+- [manifeste_reproductibilite_silver_a1_v1.1_proposition.md](https://github.com/SouissiOumaima/NewsCheckTN/blob/d1eb551/docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md)
 
 Les arbitrages Silver A1 `0066` et `0071` restent soumis
 a validation collective.
