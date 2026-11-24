@@ -139,7 +139,7 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   « pertinent » ; 8 explications avec un fait inventé ; 12 verdicts infidèles, surtout une étiquette
   contraire à l'explication (l'explication contredit l'affirmation, le verdict dit « vrai » :
   dev-c01, c02, c06, c07, c11). Annotations indépendantes des mêmes 10 verdicts (tirés avec la
-  graine 42) : Wiem (rendue, sans IA) ; Mouhib et Achref (en attente).
+  graine 42) : Wiem (rendue, sans IA) ; Achref (rendue, dev-c04 laissé sans étiquette, « je ne sais pas ») ; Mouhib (en attente).
 - **Juge** : Qwen2.5-3B-Instruct (Ollama, local, 100 % GPU), différent de Falcon ; température 0,
   graine 42, JSON imposé.
 - **Résultats sur « mise au point »** (15 verdicts ; kappa de Cohen, IC 95 % par bootstrap) :
@@ -181,27 +181,39 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
      ambiguë sur certains cas (dev-c04, c09, c17 : erreur de lecture ou hors sujet plutôt
      qu'invention) — l'accord humain-humain dira si elle l'est aussi pour des annotateurs humains.
 - **Accord entre annotateurs (complément, script `rag_llm/gold_agreement.py`, commit bf3398e ;
-  sorties du juge déjà enregistrées, aucun nouveau lancement)** :
+  sorties du juge déjà enregistrées, aucun nouveau lancement ; trois annotateurs humains au
+  2026-11-24)** :
 
-  | Paire | Étiquette | n | Accord brut | Kappa | IC 95 % |
-  |-------|-----------|---|-------------|-------|---------|
-  | Hadil / Wiem | Fidélité | 10 | 0.80 | **0.55** | [0.00 ; 1.00] |
-  | Hadil / Wiem | Invention | 10 | 0.60 | **0.00** | [0.00 ; 0.00] |
-  | Hadil / Wiem | Pertinence | 8 | 1.00 | non défini | — |
-  | Hadil / juge | Fidélité | 30 | 0.53 | 0.15 | [−0.13 ; 0.43] |
-  | Hadil / juge | Invention | 30 | 0.73 | 0.00 | [0.00 ; 0.00] |
-  | Wiem / juge | Fidélité | 10 | 0.50 | 0.19 | [0.00 ; 0.60] |
-  | Wiem / juge | Invention | 10 | 1.00 | non défini | — |
+  | Paire | n | Fidélité : accord / kappa [IC 95 %] | Invention : accord / kappa [IC 95 %] |
+  |-------|---|--------------------------------------|---------------------------------------|
+  | Hadil / Wiem | 10 | 0.80 / **0.55** [0.00 ; 1.00] | 0.60 / 0.00 [0.00 ; 0.00] |
+  | Hadil / Achref | 9 | 0.44 / **−0.15** [−0.62 ; 0.50] | 0.78 / 0.50 [−0.17 ; 1.00] |
+  | Wiem / Achref | 9 | 0.44 / **−0.22** [−0.53 ; 0.00] | 0.67 / 0.00 [0.00 ; 0.00] |
+  | Hadil / juge | 30 | 0.53 / 0.15 [−0.13 ; 0.43] | 0.73 / 0.00 [0.00 ; 0.00] |
+  | Wiem / juge | 10 | 0.50 / 0.19 [0.00 ; 0.60] | 1.00 / non défini |
+  | Achref / juge | 9 | 0.56 / 0.14 [−0.47 ; 0.77] | 0.67 / 0.00 [0.00 ; 0.00] |
 
-  Lecture : (1) pour la **fidélité**, les deux humains s'accordent nettement mieux entre eux (0.55)
-  qu'avec le juge (0.15 et 0.19) : la faiblesse du juge sur cette étiquette est réelle ;
-  (2) pour l'**invention**, les humains ne s'accordent pas (Wiem ne marque aucune invention, Hadil
-  en marque 4 sur ces 10 : dev-c01, c04, c09, hs01) ; Wiem et le juge répondent tous deux « non »
-  partout. La définition de « fait inventé » est ambiguë même pour des humains : cette étiquette ne
-  peut pas servir à valider un juge, et le kappa nul du juge sur l'invention tient en partie à la
-  référence ; (3) 10 verdicts seulement : intervalles très larges, à compléter avec Mouhib et Achref.
+  Pertinence : tous les passages cités sont « pertinent » pour les trois humains (kappa non défini).
+
+  Lecture :
+  1. **La fidélité n'est pas stable entre humains** : accord modéré entre Hadil et Wiem (0.55),
+     mais nul ou négatif avec Achref (−0.15, −0.22). Les désaccords portent sur deux cas que le
+     guide ne tranche pas assez clairement : (a) verdict contraire à sa propre explication
+     (dev-c01 : « vrai » alors que l'explication dit « contredit » ; jugé fidèle par Achref,
+     infidèle par Hadil et Wiem) ; (b) abstention dont l'explication décrit des passages non cités
+     (dev-hs04, hs05, hs09 : infidèles pour Achref, fidèles pour Hadil et Wiem ; Hadil a jugé
+     infidèles des cas semblables sur le test, tf-c13 et c15).
+  2. **L'invention est ambiguë** : accords humains de 0.00 à 0.50 selon la paire.
+  3. Le juge reste sous 0.20 avec chacun des trois humains pour la fidélité. Mais, faute d'accord
+     humain stable, on ne peut pas attribuer tout l'écart au juge : la référence elle-même est
+     incertaine. La conclusion « juge non validé » tient ; la cause est double (petit modèle et
+     consignes ambiguës).
+  4. Effectifs très faibles (9 ou 10 verdicts) : intervalles très larges.
 - **Décision** : juge **non validé** ; comme prévu au protocole (section 6), les trois étiquettes
-  restent annotées à la main sur le test v2 (EXP-D-019). L'accord juge / humain y sera de nouveau
+  restent annotées à la main sur le test v2 (EXP-D-019). **Avant le test v2** : préciser le guide
+  d'annotation sur les deux cas ambigus (verdict contraire à l'explication ; abstention qui décrit
+  des passages non cités) et sur la notion de fait inventé, puis vérifier l'accord humain sur un
+  petit lot du dev avant d'annoter le test. L'accord juge / humain y sera de nouveau
   rapporté, à titre descriptif.
 
 ### EXP-D-016 — Gold : audit humain des verdicts de Falcon sur le test Tunifact v1
