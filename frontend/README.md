@@ -41,6 +41,63 @@ claire (code 503, avec le fichier et le numéro de ligne) au lieu de retomber en
 Le fichier `data/processed/evidence_corpus*.jsonl` est ignoré par Git, pour ne jamais versionner par
 erreur un corpus dont les droits ne sont pas confirmés.
 
+## Démonstration Falcon locale
+
+Le modèle officiel actuel du Lot D est Falcon-H1-3B + JSON (EXP-D-015).
+Aya 8B (EXP-D-010) reste historique ; les résultats existants ne sont pas réécrits.
+Le score de Falcon est optimiste car issu d'un second passage sur le même test.
+
+**Prérequis :** utiliser une version intégrant la PR #33 (`lot-d-falcon` tant que
+non fusionnée), installer Ollama et le modèle sur le PC qui lance l'API, préparer
+les checkpoints Model 1/NLI et le corpus privé. Ollama doit répondre sur le port 11434.
+Le chargement initial des modèles publics peut nécessiter le réseau ; préparer
+les caches avant une démonstration hors connexion. Ne pas versionner les modèles
+ni les passages Tunifact.
+
+Depuis la racine du dépôt, dans PowerShell :
+
+```powershell
+$env:VERDICT_BACKEND = "llm"
+$env:LLM_PROVIDER = "ollama"
+$env:LLM_BASE_URL = "http://localhost:11434/v1"
+$env:LLM_API_KEY = "ollama"
+$env:LLM_MODEL = "hf.co/tiiuae/Falcon-H1-3B-Instruct-GGUF:Q4_K_M"
+$env:LLM_RESPONSE_FORMAT = "json"
+$env:LLM_MIN_INTERVAL = "0"
+$env:LLM_ALLOW_EXTERNAL = "0"
+$env:CLAIM_DETECTOR_BACKEND = "xlmr"
+$env:CLAIM_DETECTOR_CHECKPOINT = "models/checkpoints/claim_detection_xlmr_lora_seed42"
+$env:RETRIEVAL_METHOD = "hybrid"
+$env:EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
+$env:EVIDENCE_CORPUS = "data/interim/lot_d/evidence_tunifact_v1.jsonl"
+# Gold (EXP-D-018) : NLI affiné ; EXP-D-014/015 utilisaient Bronze.
+$env:NLI_BACKEND = "fine-tuned"
+$env:NLI_FINETUNED_MODEL = "models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42"
+# Pour reproduire EXP-D-014/015 seulement : $env:NLI_BACKEND = "bronze"
+# CPU pour les encodeurs de l'API ; le serveur Ollama garde le GPU.
+$env:CUDA_VISIBLE_DEVICES = ""
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Ouvrir `http://127.0.0.1:8000/app/`. Les variables doivent être définies dans le
+processus qui lance l'API : `.env` n'est pas chargé automatiquement.
+
+Ce bloc correspond à la configuration Gold confirmée par le Lot D (EXP-D-018),
+pas aux runs Falcon EXP-D-014/015 avec Bronze. La variable CUDA s'applique au
+processus Python lancé depuis ce terminal ; elle réserve le GPU au serveur
+Ollama lancé séparément. Redémarrer l'API après tout changement et consigner
+la configuration matérielle dans la trace.
+
+Vérifier dans `/check/detail` le NLI actif, `verdict_engine.used=llm`, le modèle
+Falcon et l'absence de repli. Un résultat gabarit n'est pas une exécution Falcon.
+L'interface distingue le modèle utilisé du « modèle tenté » lors d'un repli et masque l'incertitude fixe du
+LLM au profit de « incertitude non calibrée ». Une citation présente dans les
+passages retrouvés peut rester hors sujet : montrer aussi cette limite.
+
+La règle d'abstention Gold n'est pas activée ici : elle n'a pas été adoptée après
+la mesure sur dev (EXP-D-018). Le juge Qwen n'est pas validé (EXP-D-017).
+Les réécritures NLI EXP-C-012/013 restent suspendues.
+
 ## Pages
 
 | Page | Fichier | Responsable | Route(s) API |
@@ -71,7 +128,7 @@ sans toucher au frontend.
     renvoyées sous forme de message lisible.
   - `NC.text(s)` affiche un texte avec `dir="auto"` et la police arabe si besoin ; `NC.esc(s)` échappe
     le HTML ; `NC.fmt(x, 2)` formate un nombre à la française.
-  - `NC.verdictBox(verdict)`, `NC.verdictChip(label)`, `NC.stanceChip(stance, conf)` : affichage
+  - `NC.verdictBox(verdict, verdict_engine)`, `NC.verdictChip(label)`, `NC.stanceChip(stance, conf)` : affichage
     standard d'un verdict et d'une position.
 
 L'adresse de l'API se change dans l'en-tête (« changer ») ; le choix est gardé dans le navigateur.

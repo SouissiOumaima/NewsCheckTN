@@ -85,8 +85,8 @@
               <span class="examples"><span class="tag">${NC.esc(v.claim.lang)}</span>${v.claim.modality ? `<span class="tag">${NC.esc(v.claim.modality)}</span>` : ""}</span>
             </div>
             <div style="font-size:1.08rem">${NC.text(v.claim.text)}</div>
-            ${NC.verdictBox(v)}
-            <p class="sub">Verdict : ${NC.esc(detail.claims[i].verdict_engine.used)}${detail.claims[i].verdict_engine.fallback_reason ? ` · repli : ${NC.esc(detail.claims[i].verdict_engine.fallback_reason)}` : ""} · recherche ${NC.fmt(detail.claims[i].timings_ms.retrieval, 1)} ms · NLI ${NC.fmt(detail.claims[i].timings_ms.nli, 1)} ms · verdict ${NC.fmt(detail.claims[i].timings_ms.verdict, 1)} ms</p>
+            ${NC.verdictBox(v, detail.claims[i].verdict_engine)}
+            <p class="sub">Verdict : ${NC.esc(detail.claims[i].verdict_engine.used)}${detail.claims[i].verdict_engine.model ? ` · ${NC.esc(NC.verdictModelText(detail.claims[i].verdict_engine))}` : ""}${detail.claims[i].verdict_engine.fallback_reason ? ` · repli : ${NC.esc(detail.claims[i].verdict_engine.fallback_reason)}` : ""} · recherche ${NC.fmt(detail.claims[i].timings_ms.retrieval, 1)} ms · NLI ${NC.fmt(detail.claims[i].timings_ms.nli, 1)} ms · verdict ${NC.fmt(detail.claims[i].timings_ms.verdict, 1)} ms</p>
           </article>`).join("")
           : `<p class="empty">Aucune affirmation vérifiable détectée dans ce texte.</p>`;
         out.insertAdjacentHTML("afterbegin", `<section class="card"><h2>Texte normalisé</h2><p>${NC.text(detail.normalized.text)}</p><p class="sub">Langue détectée : ${NC.esc(detail.normalized.lang)} · écriture : ${NC.esc(detail.normalized.script)}</p></section>`);

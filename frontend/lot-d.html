@@ -56,7 +56,9 @@
 
     <section class="card">
       <h2>Mesures du Lot D</h2>
-      <p class="sub" style="margin:0">Jeux d'évaluation : jeu de développement fictif et jeu réel Tunifact (articles du Lot A1). Journal : entrées EXP-D-001 à EXP-D-010 de <code>experiments.md</code>. Les fichiers de résultats sont dans le <a href="evaluation.html">tableau de bord d'évaluation</a>.</p>
+      <p>Le modèle officiel actuel du Lot D est <strong>Falcon-H1-3B avec sortie JSON imposée</strong> (EXP-D-015), exécuté localement avec Ollama. Aya Expanse 8B (EXP-D-010) reste une référence historique.</p>
+      <p class="sub">Le score de Falcon provient d'un second passage sur le même test et est considéré comme optimiste. La présence d'une citation ne garantit pas sa pertinence ; le modèle peut produire un verdict au lieu de s'abstenir. Le modèle réellement utilisé et les éventuels replis sont affichés avec chaque résultat.</p>
+      <p class="sub" style="margin:0">Jeux d'évaluation : jeu de développement fictif et jeu réel Tunifact (articles du Lot A1). Journal : <code>experiments.md</code>, notamment EXP-D-010 et EXP-D-015 après intégration de la PR #33. Les fichiers de résultats sont dans le <a href="evaluation.html">tableau de bord d'évaluation</a>.</p>
     </section>
   </main>
 
@@ -90,11 +92,11 @@
         if (d.nli_engine) notes.push(`NLI actif : ${NC.esc(d.nli_engine.backend || d.nli_engine.status)}.`);
         if (d.verdict_engine) {
           notes.push(`Verdict demandé : ${NC.esc(d.verdict_engine.requested)} ; utilisé : ${NC.esc(d.verdict_engine.used)}.`);
-          if (d.verdict_engine.model) notes.push(`Modèle : ${NC.esc(d.verdict_engine.model)}.`);
+          if (d.verdict_engine.model) notes.push(`${NC.esc(NC.verdictModelText(d.verdict_engine))}.`);
           if (d.verdict_engine.fallback_reason) notes.push(`Repli : ${NC.esc(d.verdict_engine.fallback_reason)}.`);
         }
         document.getElementById("notice").innerHTML = `<p class="notice">${notes.join(" ")}</p>`;
-        document.getElementById("verdict").innerHTML = NC.verdictBox(d.verdict);
+        document.getElementById("verdict").innerHTML = NC.verdictBox(d.verdict, d.verdict_engine);
         const cited = new Set(d.verdict.citations);
         document.getElementById("evs").innerHTML = d.evidences.length ? d.evidences.map((ev) => `
           <div class="ev${cited.has(ev.doc_id) ? " cited" : ""}">
