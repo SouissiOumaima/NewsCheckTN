@@ -109,6 +109,13 @@ Cette actualisation prevaut sur les statuts d'attente historiques concernant les
 
 ### Preuve conservee hors depot
 
+**Reserve de tracabilite des CSV historiques :** les empreintes
+`A20B69DE...` et `B0E4F154...` correspondent a des versions
+historiquement declarees, mais non retrouvees ni verifiees.
+Leur equivalence avec la copie du 20/11 conservee par Achref
+(`C5C61F4D...`) n'est pas etablie.
+Voir `docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md`.
+
 - CSV normalise prive : `a1_silver_18_cas_accord_achref_normalise_prive.csv`.
 - SHA-256 CSV normalise : A20B69DE199BA3DE35ADEE018F457848AC3F9F72ED06C7E277A9D9B1DF9D41E5.
 - SHA-256 export original : B0E4F154508A482ECFB91B6697B1CD4C16335519616BB1E8B099341573004BE7.
