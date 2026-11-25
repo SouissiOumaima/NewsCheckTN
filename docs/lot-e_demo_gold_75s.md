@@ -64,6 +64,6 @@ L'ancienne vidéo Silver avec Aya/Colab reste historique et ne doit pas être r�
 - Le moteur affiché correspond au moteur annoncé ; un repli est nommé.
 - Aucun chiffre de test n'est déduit des exemples montrés.
 - Aucun extrait privé n'est publié sans validation de son usage.
-- Les résultats de l'audit sont attribués au Lot D : 17/21 justes mais 8/21 justes et fidèles, sur le test v1 déjà utilisé (EXP-D-016).
+- Les résultats de l'audit sont attribués au Lot D : 17/21 verdicts justes, dont 8 seulement fidèles (8/17), sur le test v1 déjà utilisé (EXP-D-016).
 - L'annotation indépendante est réalisée sans IA ; aucun accord humain n'est inventé.
 - Les réécritures NLI suspendues ne sont pas utilisées.

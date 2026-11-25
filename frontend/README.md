@@ -70,24 +70,27 @@ $env:CLAIM_DETECTOR_CHECKPOINT = "models/checkpoints/claim_detection_xlmr_lora_s
 $env:RETRIEVAL_METHOD = "hybrid"
 $env:EMBEDDING_MODEL = "intfloat/multilingual-e5-base"
 $env:EVIDENCE_CORPUS = "data/interim/lot_d/evidence_tunifact_v1.jsonl"
-# Bronze dans les expériences Falcon existantes ; affiné confirmé pour le Gold.
-$env:NLI_BACKEND = "bronze"
+# Gold (EXP-D-018) : NLI affiné ; EXP-D-014/015 utilisaient Bronze.
+$env:NLI_BACKEND = "fine-tuned"
+$env:NLI_FINETUNED_MODEL = "models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42"
+# Pour reproduire EXP-D-014/015 seulement : $env:NLI_BACKEND = "bronze"
+# CPU pour les encodeurs de l'API ; le serveur Ollama garde le GPU.
+$env:CUDA_VISIBLE_DEVICES = ""
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 
 Ouvrir `http://127.0.0.1:8000/app/`. Les variables doivent être définies dans le
 processus qui lance l'API : `.env` n'est pas chargé automatiquement.
 
-Pour l'essai Gold confirmé par le Lot D (EXP-D-018), remplacer `NLI_BACKEND`
-par `fine-tuned` et définir `NLI_FINETUNED_MODEL` vers
-`models/checkpoints/nli_mdeberta-ft_v3_lr1e-05_e6_seed42`. Redémarrer l'API et
-consigner ce changement ; il ne reproduit pas les runs Falcon avec Bronze.
-Sur la GTX 1650 de Hadil, les encodeurs peuvent rester sur CPU pour réserver le
-GPU au serveur Ollama ; la configuration matérielle fait partie de la trace.
+Ce bloc correspond à la configuration Gold confirmée par le Lot D (EXP-D-018),
+pas aux runs Falcon EXP-D-014/015 avec Bronze. La variable CUDA s'applique au
+processus Python lancé depuis ce terminal ; elle réserve le GPU au serveur
+Ollama lancé séparément. Redémarrer l'API après tout changement et consigner
+la configuration matérielle dans la trace.
 
 Vérifier dans `/check/detail` le NLI actif, `verdict_engine.used=llm`, le modèle
 Falcon et l'absence de repli. Un résultat gabarit n'est pas une exécution Falcon.
-L'interface affiche le moteur et le modèle réels et masque l'incertitude fixe du
+L'interface distingue le modèle utilisé du « modèle tenté » lors d'un repli et masque l'incertitude fixe du
 LLM au profit de « incertitude non calibrée ». Une citation présente dans les
 passages retrouvés peut rester hors sujet : montrer aussi cette limite.
 

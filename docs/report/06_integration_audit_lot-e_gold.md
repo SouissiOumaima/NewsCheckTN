@@ -1,7 +1,7 @@
 # Intégration et audit du Lot E pour le Gold
 
 **Auteur :** Achref Chabene — Lot E et contribution Model 1.
-**Point de situation :** 24 novembre 2026.
+**Point de situation :** 25 novembre 2026.
 **Statut :** section de rapport préparée ; intégration finale et répétition commune encore à valider.
 
 ## Contribution et périmètre
@@ -30,7 +30,7 @@ Falcon-H1-3B avec JSON est le modèle officiel actuel annoncé par le Lot D. Aya
 
 Les expériences Falcon EXP-D-014/015 utilisent le NLI Bronze. Le NLI affiné seed 42 est confirmé par Hadil pour le Gold et déclaré dans EXP-D-018. Les deux configurations ne sont pas interchangeables : la présence du checkpoint affiné dans une démo n'attribue pas rétroactivement les scores historiques à ce moteur.
 
-Le mode JSON de Falcon dépend de la PR #33. Définir `LLM_RESPONSE_FORMAT=json` sur une ancienne version qui ignore cette option ne reproduit pas l'expérience. La PR #41 reste donc en brouillon tant que ses dépendances et ses relectures ne sont pas terminées. La PR #39 peut être revue indépendamment.
+Le mode JSON de Falcon dépend de la PR #33. Définir `LLM_RESPONSE_FORMAT=json` sur une ancienne version qui ignore cette option ne reproduit pas l'expérience. Les PR #32/#33 sont fusionnées et la branche #41 est actualisée avec main ; la relecture finale de #41 et la répétition restent à terminer. La PR #39 est fusionnée dans main (9a22612).
 
 ## Vérifications techniques et portée des tests
 
@@ -51,11 +51,13 @@ Les résultats suivants sont attribués au Lot D. Ils proviennent du journal de 
 
 | Expérience | Résultat rapporté | Conséquence pour l'intégration |
 |---|---|---|
-| EXP-D-016, audit humain du test v1 | 17 verdicts justes sur 21 ; 8 justes et fidèles ; 29 passages cités pertinents sur 39 | Séparer exactitude, fidélité et pertinence ; ne pas réduire l'audit au bon label |
-| EXP-D-017, juge Qwen local | Juge non validé ; les analyses d'accord et leurs limites sont conservées dans le journal | Ne pas automatiser l'approbation des verdicts avec ce juge |
-| EXP-D-018, règle d'abstention sur dev | Règle non adoptée ; absence d'amélioration selon le critère fixé | Ne pas brancher cette règle comme une amélioration Gold validée |
+| EXP-D-016, audit humain du test v1 | 17/21 verdicts justes, dont 8 seulement fidèles (8/17) ; 29 passages cités pertinents sur 39 | Séparer exactitude, fidélité et pertinence ; ne pas réduire l'audit au bon label |
+| EXP-D-017, juge Qwen local | Juge non validé : fidélité κ = −0,03 sur la moitié « mesure » ; accord Hadil/Wiem : fidélité 0,55, invention 0,00 | Ne pas automatiser l'approbation des verdicts avec ce juge |
+| EXP-D-018, règle d'abstention sur dev | Règle non adoptée : aucun verdict modifié ; Falcon s'abstenait déjà sur les 12 cas sans preuve du dev | Ne pas présenter le problème d'abstention comme résolu : tf-c14 reste « faux » avec une citation hors sujet dans l'audit du test |
 
 EXP-D-016 est un audit descriptif d'exécutions déjà enregistrées sur un ancien test. Il ne constitue pas une nouvelle mesure indépendante sur un jeu jamais vu. Les 39 passages sont des occurrences de citations, pas la taille du corpus de preuves. Une citation appartenant à la liste autorisée peut rester hors sujet ; une bonne réponse ne garantit pas une justification fidèle.
+
+L'accord humain sur l'invention est nul dans cet audit : la notion reste ambiguë même entre humains. Ces résultats ne permettent pas de valider le juge automatique.
 
 Une seconde annotation indépendante de verdicts a été demandée à Achref, avec un outil HTML local et un guide. Les décisions doivent être prises sans IA ni accès aux annotations de Hadil. Ce rapport ne présente aucun coefficient d'accord attribué à Achref tant que la réception et la comparaison de son fichier ne sont pas établies.
 
@@ -71,11 +73,11 @@ Les corpus, traces et annotations restent hors des ajouts de cette contribution 
 
 Les réécritures NLI EXP-C-012/013 restent suspendues jusqu'à la décision avec l'encadrante. Leurs protocoles ne sont pas présentés comme des résultats mesurés. Les arbitrages A1 ouverts et la traçabilité des annotations initiales restent distincts d'une approbation technique de PR.
 
-Le système peut encore filtrer à tort une phrase en arabizi, produire un verdict avec des citations peu pertinentes, ou échouer à s'abstenir. Les scores et comparaisons par langue doivent être accompagnés de leurs effectifs. L'incertitude affichée n'est pas une probabilité calibrée.
+L'arabizi n'est pas translittéré (MODEL_CARD du Lot A2, section 5). Les cas tf-c11 et tf-c19, dont les citations sont toutes hors sujet dans l'audit, sont en arabizi ; cela ne démontre pas une causalité. Le système peut encore filtrer à tort une phrase en arabizi, produire un verdict avec des citations peu pertinentes, ou échouer à s'abstenir. Les scores et comparaisons par langue doivent être accompagnés de leurs effectifs. L'incertitude affichée n'est pas une probabilité calibrée.
 
 ## Conditions de finalisation
 
-1. Résoudre les conflits et terminer les revues de #32/#33, puis actualiser et relire #41 ; terminer la revue de #39.
+1. Terminer la relecture de #41 actualisée avec main ; #32, #33 et #39 sont déjà fusionnées.
 2. Répéter le parcours complet sur le PC de Hadil avec le code retenu, et consigner commit, modèles, corpus, latences à froid/à chaud et replis.
 3. Documenter la seconde annotation et sa comparaison sans inventer de validation ou d'indépendance.
 4. Consolider le tableau de bord, les résultats et les réserves avec les responsables de lots, sans relancer un test gelé pour régler le système.

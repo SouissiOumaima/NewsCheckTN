@@ -139,7 +139,13 @@ const NC = (() => {
         <span class="t">${esc(p.label)}</span><span class="d">${esc(p.desc)}</span></a>`).join("");
   }
 
+  /** Le modèle tenté ne devient pas le moteur d'un verdict de repli. */
+  function verdictModelText(engine = {}) {
+    if (!engine.model) return "";
+    return `${engine.used === "llm" ? "modèle" : "modèle tenté"} : ${engine.model}`;
+  }
+
   function init(pageId) { header(pageId); footer(); ping(); }
 
-  return { PAGES, LABELS, STANCES, init, tiles, api, apiBase, esc, text, fmt, verdictChip, stanceChip, verdictBox };
+  return { PAGES, LABELS, STANCES, init, tiles, api, apiBase, esc, text, fmt, verdictChip, stanceChip, verdictBox, verdictModelText };
 })();
