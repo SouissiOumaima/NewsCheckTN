@@ -17,6 +17,29 @@ def test_health():
     assert r.status_code == 200 and r.json()["status"] == "ok"
 
 
+def test_startup_loads_nli_before_serving_requests(monkeypatch):
+    calls = []
+    info = {"backend": "fine-tuned", "model": "local-checkpoint", "status": "loaded"}
+
+    def load_nli():
+        calls.append("loaded")
+        return info
+
+    monkeypatch.setattr(api_main, "backend_info", load_nli)
+    with TestClient(app) as started_client:
+        assert calls == ["loaded"]
+        assert started_client.get("/health").json()["nli"] == info
+
+
+def test_health_exposes_nli_fallback_without_claiming_model_loaded(monkeypatch):
+    info = {"backend": "stub", "model": "missing-checkpoint", "status": "unavailable"}
+    monkeypatch.setattr(api_main, "backend_info", lambda: info)
+    with TestClient(app) as started_client:
+        response = started_client.get("/health")
+        assert response.status_code == 200
+        assert response.json()["nli"] == info
+
+
 def test_stage_routes():
     assert client.post("/normalize", json={"text": TEXT}).status_code == 200
     assert client.post("/extract", json={"text": TEXT}).json()["claims"]
