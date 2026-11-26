@@ -27,6 +27,9 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-C-016 | 2026-11-22 | C | NLI (Model 2) palier Gold : inversions de polarité (supports ↔ refutes) | prédictions Silver d'EXP-C-011 relues, sans inférence ; protocole écrit avant calcul ; règle : < 20 erreurs = descriptif | erreurs par type (test, n = 56) | inversions : principal 1 / 10 erreurs, zero-shot 1 / 11 (même paire NLI-P010), Bronze 16 / 30 ; erreurs des modèles surtout vers « neutral » (7 / 10, 9 / 11) | aucune conclusion sur un taux (trop peu d'erreurs) ; à rapprocher, qualitativement, d'EXP-D-011 (autre unité) |
 | EXP-D-011 | 2026-11-15 | D | Silver : verdict avec le NLI affiné du Lot C (PR #21) | même système qu'EXP-D-010 (recherche hybride top 5, gabarit A1–A4, Aya Expanse 8B 4 bits, prompt v1, graine 42) ; seul change le NLI : règles Bronze → mDeBERTa-v3 affiné (EXP-C-011) ; configurations et hypothèses fixées avant la mesure (commit 77a98e7) ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | gabarit : 0.286 / 0.219 → **0.524 / 0.404** (+0.238, IC95 [0.000 ; 0.476], p = 0.031 ; macro-F1 +0.185, p = 0.019), arabe 0.29 → 0.86 ; mais exactitude = majorité (0.524, p = 0.56) ; Aya + indices NLI affiné 0.619 / 0.360 contre 0.714 / 0.408 avec les indices Bronze (H2 rejetée) | le NLI affiné sert au gabarit (repli, démo sans GPU) ; système officiel inchangé : Aya sans indices (EXP-D-010) ; suite (Gold) : inversions de polarité, abstention du gabarit à combiner avec le LLM |
+| EXP-D-018 | 2026-11-22 | D | Gold : règle d'abstention R-abst (dev) | Falcon-H1-3B + JSON (comme EXP-D-015), NLI affiné du Lot C (EXP-C-011) au lieu de Bronze, 3 graines ; dev 20 affirmations + 10 phrases hors sujet ; R-abst appliquée après le LLM ; plan fixé avant mesure (commits fe97fdc, da06966, cf25004) | abstention justifiée ; bons verdicts avec preuve (dev, 30) | sans règle déjà **1.00** (12/12, 3 graines) ; R-abst appliquée **0 fois** ; exactitude 0.778 ± 0.051 (graine 42 : 0.733), couverture 0.533 ; avec preuve 10/18 (graine 42) | règle non adoptée (condition 1 impossible : plafond) ; test v2 sans R-abst |
+| EXP-D-017 | 2026-11-22 | D | Gold : LLM-juge local validé sur l'annotation humaine (dev) | Qwen2.5-3B-Instruct (Ollama), température 0, JSON ; 30 verdicts de Falcon (EXP-D-018, graine 42) en 2 moitiés de 15 ; prompts v1-v3 et candidat Qwen2.5-7B sur « mise au point », puis « mesure » une fois ; plan avant mesure (commits 3be7f11, 3d5df43, 0e83d36, 2a7e655) | kappa de Cohen juge / humain par étiquette ; validation si ≥ 0.60 | mesure (3B, v2) : fidélité **−0.03** [−0.47 ; 0.40], invention 0.00, pertinence 0.00 (mise au point : fidélité 0.31) | juge **non validé** pour les 3 étiquettes ; l'audit du test v2 reste humain |
+| EXP-D-016 | 2026-11-22 | D | Gold : audit humain des verdicts de Falcon sur le test v1 | 21 verdicts existants d'EXP-D-015 (graine 42), aucune nouvelle génération ; passages retrouvés par la recherche hybride refaite (citations vérifiées) ; annotation humaine selon le guide (commit 4e0ed92) | pertinence des citations, faits inventés, fidélité (descriptif) | justes 17/21 ; **fidèles 10/21** ; justes et fidèles **8/17** ; citations pertinentes 29/39 (0.74) ; faits inventés 6/21 ; 3 verdicts ne citent que des passages hors sujet | l'exactitude surestime la qualité : vérifier les citations ; audit à refaire sur le test v2 |
 | EXP-D-015 | 2026-11-19 | D | Silver : Falcon-H1-3B en local, format JSON imposé | comme EXP-D-014, seul changement : `LLM_RESPONSE_FORMAT=json` (Ollama, json_object) ; cache séparé ; plan fixé avant mesure (commit 325f28a) | exactitude / macro-F1 du verdict (test, 21) | **0.762 ± 0.048 / 0.600** (3 graines), valides 0.968, tunisien 5/5 ; contre gabarit +0.524, p = 0.0001 ; 2e passage d'un système Falcon-H1-3B sur le test | règle remplie : LLM de la démo et de l'intégration locales ; résultat officiel du Silver inchangé (Aya 8B) |
 | EXP-D-014 | 2026-11-19 | D | Silver : Falcon-H1-3B en local (Ollama, GTX 1650 4 Go) | GGUF Q4_K_M, 100 % GPU (2,1 Go), protocole d'EXP-D-010 (`--main-only`, 3 graines) ; plan fixé avant mesure | exactitude / macro-F1 / sorties valides (test, 21) | 0.651 ± 0.028 / 0.499, **valides 0.571** (9 réponses sans JSON sur 21) | règle non remplie (valides < 0.90) → EXP-D-015 |
 | EXP-D-013 | 2026-11-18 | D | Silver : Falcon-H1-7B contre Aya Expanse 8B | Colab T4, 4 bits, calcul float32 (float16 : inf / nan), protocole d'EXP-D-010 ; règle fixée avant mesure (commit 9433fca) | exactitude / macro-F1 (test, 21) | 0.698 ± 0.027 / **0.628 ± 0.083** ; abstention justifiée 1.00 (Aya 0.00) ; tunisien 0.6 | règle (exactitude > 0.730) non remplie : Aya 8B reste ; piste Gold (abstention) |
@@ -114,6 +117,181 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - principal et zero-shot ne diffèrent que sur 3 paires : NLI-P004 (principal faux, « depuis neutral »), P188 et P207 (zero-shot faux, « vers neutral ») ; aucune ne change le nombre d'inversions.
 - **Analyse** : sur le test NLI du Lot C, avec des preuves gold, les erreurs des deux modèles mDeBERTa vont surtout **vers « neutral »** (7 sur 10 pour le principal, 9 sur 11 pour le zero-shot) ; une seule inversion de polarité chacun. Les inversions sont en revanche la première erreur des règles Bronze (16 sur 30). Avec 10 et 11 erreurs, ce ne sont que des cas, pas des taux (règle fixée avant calcul) : on ne conclut pas sur un taux d'inversion du NLI affiné. Ce résultat ne contredit pas l'observation du Lot D, qui porte sur une autre unité (verdict d'une affirmation, vrai / faux) et d'autres entrées (passages retrouvés automatiquement, puis gabarit de verdict qui agrège plusieurs positions) ; une hypothèse à vérifier côté Lot D est que ses inversions viennent des passages retrouvés ou de l'agrégation, plutôt que du NLI seul sur une preuve correcte.
 - **Décision / suite** : aucun changement du modèle ; résultat transmis au Lot D pour sa discussion d'EXP-D-011 ; pour l'étudier, il faudrait les positions du NLI sur les passages du Lot D (paires affirmation / passage retrouvé), qui ne sont pas dans les données du Lot C.
+### EXP-D-018 — Gold : règle d'abstention R-abst sur le dev
+- **Date** : 2026-11-22 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : vérifier si la règle sans seuil « tous les passages cités sont neutres →
+  preuves insuffisantes » corrige les verdicts émis sans preuve (limite connue d'EXP-D-015),
+  sans perdre de bons verdicts. Protocole : `docs/lot-d_protocole_gold.md`, section 5.
+- **Plan fixé avant la mesure** : protocole (commits fe97fdc, da06966), code et lanceur
+  (`rag_llm/gold_abstention.py`, `rag_llm/exp_d_018_gold_abstention.ps1`, commit cf25004).
+- **Données** : dev du Lot D (20 affirmations fictives, dont 2 sans preuve) + 10 phrases hors sujet
+  (8 affirmations réelles de X-FACT, 2 phrases en tunisien rédigées par Hadil ;
+  SHA-256 `16006c44…ccc4ecc2`, vérifié par le script). Aucune donnée du test.
+- **Configuration** : Falcon-H1-3B-Instruct Q4_K_M (Ollama, GPU), prompt v1, JSON imposé,
+  température 0.3, graines 13 / 42 / 2026, recherche hybride top 5. **Changement par rapport à
+  EXP-D-015** : NLI affiné du Lot C (`NLI_BACKEND=fine-tuned`, EXP-C-011, sur le CPU) au lieu de
+  Bronze. Le LLM ne voit pas les positions NLI : elles ne servent qu'au repli et à R-abst.
+- **Règle de décision (fixée avant)** : R-abst adoptée si, graine 42, (1) l'abstention justifiée
+  augmente et (2) au plus une bonne réponse est perdue sur les affirmations qui ont une preuve.
+- **Résultats** (30 phrases ; 18 avec preuve, 12 sans preuve) :
+
+  | Graine | Exactitude | Couverture | Précision sélective | Abstention justifiée | Corrects avec preuve |
+  |--------|-----------|------------|---------------------|----------------------|----------------------|
+  | 13 | 0.833 | 0.533 | 0.812 | 1.00 | 13 / 18 |
+  | 42 | 0.733 | 0.533 | 0.625 | 1.00 | 10 / 18 |
+  | 2026 | 0.767 | 0.533 | 0.688 | 1.00 | 11 / 18 |
+  | moyenne | 0.778 ± 0.051 | 0.533 | 0.708 ± 0.095 | 1.00 | 11.3 ± 1.5 |
+
+  Avec R-abst : **résultats identiques**, la règle ne s'applique à aucun verdict (aucun verdict émis
+  ne cite uniquement des passages neutres). Bootstrap apparié de l'exactitude : +0.000.
+- **Lecture** :
+  1. Sur le dev, Falcon + JSON s'abstient déjà sur les 12 phrases sans preuve, dont les 10 hors
+     sujet et les 3 pièges : la limite vue en démonstration (phrase hors sujet jugée « faux ») ne se
+     reproduit pas ici. La condition 1 ne pouvait pas être remplie (plafond à 1.00).
+  2. L'avertissement du Lot C (le NLI affiné répond souvent « neutre ») ne se vérifie pas non plus :
+     0 bon verdict transformé en abstention.
+  3. Le défaut principal sur le dev est inverse : Falcon s'abstient sur des affirmations qui ont
+     une preuve (couverture 0.533 ; graine 42 : 2 affirmations avec preuve en abstention, 6 verdicts
+     émis faux).
+  4. Limites : dev fictif et petit (corpus de quelques passages, très différents des phrases hors
+     sujet) ; un seul ensemble de pièges ; effectifs trop faibles pour une conclusion générale.
+- **Décision** : règle de décision appliquée telle quelle : **R-abst non adoptée** ; le test v2 se
+  fait sans R-abst. Elle n'est pas modifiée après coup. Suite : annotation des 30 verdicts
+  (graine 42, Hadil ; 10 pour Wiem) et LLM-juge (EXP-D-017) ; l'abstention sera de nouveau mesurée
+  sur le test v2 (EXP-D-019), où les passages proposés sont réels.
+
+### EXP-D-017 — Gold : LLM-juge local validé sur l'annotation humaine
+- **Date** : 2026-11-22 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : savoir si un LLM local peut remplacer l'annotation humaine pour juger les verdicts
+  (pertinence des citations, fait inventé, fidélité de l'explication). Protocole :
+  `docs/lot-d_protocole_gold.md`, sections 4 et 6 ; guide `docs/lot-d_guide_annotation_verdict.md`.
+- **Plan fixé avant chaque mesure** : code, lanceur et prompt v1 (commit 3be7f11), prompt v2
+  (3d5df43), prompt v3 et règle d'arrêt (0e83d36), amendement « candidat Qwen2.5-7B » (2a7e655).
+- **Données** : les 30 verdicts de Falcon (graine 42) d'EXP-D-018 sur le dev (20 affirmations
+  fictives + 10 phrases hors sujet), avec les passages montrés au système. Partage fixe (graine 42)
+  en deux moitiés de 15 : « mise au point » (prompt modifiable) et « mesure » (une seule fois).
+- **Annotation humaine (référence)** : Hadil, à deux avec son binôme (annotation commune des
+  30 verdicts, sans outil d'IA, rendue avant tout lancement du juge ; une incohérence entre les lignes
+  dev-c16 et dev-hs01 corrigée avant tout calcul). Sur les 30 : 25 passages cités, tous
+  « pertinent » ; 8 explications avec un fait inventé ; 12 verdicts infidèles, surtout une étiquette
+  contraire à l'explication (l'explication contredit l'affirmation, le verdict dit « vrai » :
+  dev-c01, c02, c06, c07, c11). Annotations indépendantes des mêmes 10 verdicts (tirés avec la
+  graine 42) : Wiem (rendue, sans IA) ; Achref (rendue, dev-c04 laissé sans étiquette, « je ne sais pas »). Une quatrième annotation, prévue un temps, a été annulée.
+- **Juge** : Qwen2.5-3B-Instruct (Ollama, local, 100 % GPU), différent de Falcon ; température 0,
+  graine 42, JSON imposé.
+- **Résultats sur « mise au point »** (15 verdicts ; kappa de Cohen, IC 95 % par bootstrap) :
+
+  | Juge | Sorties inexploitables | Invention | Fidélité |
+  |------|------------------------|-----------|----------|
+  | 3B, prompt v1 | 8 / 15 | 0.00 (n = 13) | 0.14 [−0.43 ; 0.75] (n = 8) |
+  | 3B, prompt v2 (clés à plat oui/non, textes en arabe) | 0 | 0.00 | **0.31** [0.05 ; 0.67] |
+  | 3B, prompt v3 (règle de fidélité appliquée par le code) | 0 | 0.14 | 0.22 [0.00 ; 0.55] |
+  | 7B, prompt v2 (amendement) | 0 | 0.00 | 0.25 [0.00 ; 0.76] |
+
+  Pertinence : kappa non défini (tout « pertinent » chez l'humain et le juge). Erreurs observées :
+  v1 mélange les valeurs entre questions et rend des JSON vides sur les explications en arabe ; v2
+  lit bien le sens de l'explication mais juge « infidèle » des verdicts cohérents ; v3 voit des faits
+  absents presque partout (10 / 15) ; le 7B ne trouve qu'un verdict infidèle sur 15. Aucune version
+  ne détecte les inventions repérées par l'humain.
+- **Sélection (règle fixée avant)** : meilleur kappa de fidélité sur « mise au point » →
+  **3B, prompt v2**.
+- **Résultat sur « mesure »** (15 verdicts, 3B, prompt v2) :
+
+  | Étiquette | n | Accord brut | Kappa | IC 95 % | Humain / juge |
+  |-----------|---|-------------|-------|---------|---------------|
+  | Pertinence | 15 | 0.867 | 0.00 | [0.00 ; 0.00] | 15 pertinent / 13 pertinent, 2 non |
+  | Invention | 15 | 0.600 | 0.00 | [0.00 ; 0.00] | 6 oui, 9 non / 15 non |
+  | Fidélité | 15 | 0.467 | **−0.03** | [−0.47 ; 0.40] | 8 fidèle, 7 infidèle / 4 fidèle, 11 infidèle |
+
+  La commande « mesure » a été lancée deux fois : le second lancement a réutilisé les 15 réponses du
+  premier depuis le cache (même prompt, mêmes entrées) ; le résultat est identique.
+- **Lecture** :
+  1. Le juge n'est validé pour **aucune** étiquette : sur « mesure », il ne fait pas mieux que le
+     hasard pour la fidélité et ne détecte aucune invention.
+  2. La chute de 0.31 (« mise au point ») à −0.03 (« mesure ») montre que le meilleur score de mise au
+     point tenait au réglage et au hasard sur 15 verdicts : la séparation des deux moitiés a évité de
+     rapporter un chiffre trompeur.
+  3. Passer de 3B à 7B n'a pas aidé : juger la fidélité d'un verdict reste hors de portée de ces
+     petits modèles locaux, dans nos conditions.
+  4. Limites : 15 verdicts par moitié (intervalles très larges) ; dev fictif ; référence humaine
+     unique pour l'instant (annotation commune à deux) ; la définition de « fait inventé » est
+     ambiguë sur certains cas (dev-c04, c09, c17 : erreur de lecture ou hors sujet plutôt
+     qu'invention) — l'accord humain-humain dira si elle l'est aussi pour des annotateurs humains.
+- **Accord entre annotateurs (complément, script `rag_llm/gold_agreement.py`, commit bf3398e ;
+  sorties du juge déjà enregistrées, aucun nouveau lancement ; trois annotateurs humains au
+  2026-11-24)** :
+
+  | Paire | n | Fidélité : accord / kappa [IC 95 %] | Invention : accord / kappa [IC 95 %] |
+  |-------|---|--------------------------------------|---------------------------------------|
+  | Hadil / Wiem | 10 | 0.80 / **0.55** [0.00 ; 1.00] | 0.60 / 0.00 [0.00 ; 0.00] |
+  | Hadil / Achref | 9 | 0.44 / **−0.15** [−0.62 ; 0.50] | 0.78 / 0.50 [−0.17 ; 1.00] |
+  | Wiem / Achref | 9 | 0.44 / **−0.22** [−0.53 ; 0.00] | 0.67 / 0.00 [0.00 ; 0.00] |
+  | Hadil / juge | 30 | 0.53 / 0.15 [−0.13 ; 0.43] | 0.73 / 0.00 [0.00 ; 0.00] |
+  | Wiem / juge | 10 | 0.50 / 0.19 [0.00 ; 0.60] | 1.00 / non défini |
+  | Achref / juge | 9 | 0.56 / 0.14 [−0.47 ; 0.77] | 0.67 / 0.00 [0.00 ; 0.00] |
+
+  Pertinence : tous les passages cités sont « pertinent » pour les trois humains (kappa non défini).
+
+  Lecture :
+  1. **La fidélité n'est pas stable entre humains** : accord modéré entre Hadil et Wiem (0.55),
+     mais nul ou négatif avec Achref (−0.15, −0.22). Les désaccords portent sur deux cas que le
+     guide ne tranche pas assez clairement : (a) verdict contraire à sa propre explication
+     (dev-c01 : « vrai » alors que l'explication dit « contredit » ; jugé fidèle par Achref,
+     infidèle par Hadil et Wiem) ; (b) abstention dont l'explication décrit des passages non cités
+     (dev-hs04, hs05, hs09 : infidèles pour Achref, fidèles pour Hadil et Wiem ; Hadil a jugé
+     infidèles des cas semblables sur le test, tf-c13 et c15).
+  2. **L'invention est ambiguë** : accords humains de 0.00 à 0.50 selon la paire.
+  3. Le juge reste sous 0.20 avec chacun des trois humains pour la fidélité. Mais, faute d'accord
+     humain stable, on ne peut pas attribuer tout l'écart au juge : la référence elle-même est
+     incertaine. La conclusion « juge non validé » tient ; la cause est double (petit modèle et
+     consignes ambiguës).
+  4. Effectifs très faibles (9 ou 10 verdicts) : intervalles très larges.
+- **Décision** : juge **non validé** ; comme prévu au protocole (section 6), les trois étiquettes
+  restent annotées à la main sur le test v2 (EXP-D-019). **Avant le test v2** : préciser le guide
+  d'annotation sur les deux cas ambigus (verdict contraire à l'explication ; abstention qui décrit
+  des passages non cités) et sur la notion de fait inventé, puis vérifier l'accord humain sur un
+  petit lot du dev avant d'annoter le test. L'accord juge / humain y sera de nouveau
+  rapporté, à titre descriptif.
+
+### EXP-D-016 — Gold : audit humain des verdicts de Falcon sur le test Tunifact v1
+- **Date** : 2026-11-22 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : mesurer, au-delà de l'exactitude, si les verdicts de Falcon sont fondés sur les
+  passages cités (protocole `docs/lot-d_protocole_gold.md`, sections 3 et 8 ; guide
+  `docs/lot-d_guide_annotation_verdict.md`). Audit **descriptif** : le test a déjà été vu deux fois
+  (EXP-D-010, EXP-D-015), rien n'est réglé à partir de ces chiffres.
+- **Données** : les 21 verdicts de Falcon-H1-3B + JSON (graine 42) d'EXP-D-015 sur Tunifact v1,
+  **sans nouvelle génération**. Les passages montrés au système, non enregistrés, ont été retrouvés en
+  refaisant la recherche hybride (déterministe, sans LLM) ; chaque passage cité fait partie des cinq
+  retrouvés (contrôle du script `rag_llm/gold_audit_test.py`, commit 4e0ed92).
+- **Annotation** : Hadil, avec l'outil d'annotation et le guide, sans le verdict de référence.
+- **Résultats** (21 verdicts ; 18 émis, 3 abstentions ; 39 passages cités) :
+
+  | Langue | n | Justes | Fidèles | Justes et fidèles | Citations pertinentes | Faits inventés | Tout cité hors sujet |
+  |--------|---|--------|---------|-------------------|-----------------------|----------------|----------------------|
+  | fr | 9 | 7 | 3 | 2 | 9 / 11 | 2 | 0 |
+  | ar | 7 | 5 | 4 | 3 | 14 / 19 | 2 | 1 |
+  | tn | 5 | 5 | 3 | 3 | 6 / 9 | 2 | 2 |
+  | **total** | **21** | **17** | **10** | **8** | **29 / 39 (0.74)** | **6** | **3** |
+
+- **Lecture** :
+  1. **Falcon a souvent raison pour de mauvaises raisons** : sur 17 verdicts justes, 9 ne sont pas
+     fidèles (explication contraire aux passages, chiffre déformé, passage hors sujet). Exemples :
+     tf-c11 (arabizi) « faux » juste, mais l'explication parle du « port de Tunis » en citant un
+     commentaire de forum sans rapport ; tf-c19 « faux » juste en citant des commentaires sur la
+     révolution ; tf-c01 et tf-c06 attribuent 3 000 ou 3 300 médecins aux deux passages alors qu'ils
+     diffèrent. L'exactitude de 0.81 surestime donc la qualité réelle des verdicts.
+  2. **La limite vue en démonstration se reproduit sur des données réelles** : tf-c14 (hausse de
+     l'essence, aucune preuve dans le corpus) reçoit « faux » en citant un message de forum sur des
+     cadeaux d'anniversaire. Sur le dev fictif (EXP-D-018), Falcon s'abstenait toujours dans ce cas :
+     le dev, trop simple, ne représentait pas ce risque.
+  3. Les abstentions sans citation (tf-c13, c15) décrivent des passages non cités : jugées
+     infidèles selon le guide.
+  4. Les cas en tunisien sont les plus touchés par les citations hors sujet (2 sur 5).
+  5. Limites : 21 verdicts, une seule annotatrice sur le test, test déjà vu ; chiffres descriptifs.
+- **Décision** : la pertinence des citations et la fidélité deviennent des mesures obligatoires du
+  test v2 (EXP-D-019), annotées à la main (juge non validé, EXP-D-017). Piste pour la suite, à
+  évaluer sur le dev puis le test v2 : refuser un verdict dont aucun passage cité n'est pertinent
+  (contrôle de pertinence avant le verdict).
 
 ### EXP-D-015 — Silver : Falcon-H1-3B en local avec format JSON imposé
 - **Date** : 2026-11-19 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
