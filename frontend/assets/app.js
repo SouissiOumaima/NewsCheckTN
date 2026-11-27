@@ -70,9 +70,13 @@ const NC = (() => {
   /** Encadré de verdict : label, explication, citations, incertitude. `v` = Verdict de l'API. */
   function verdictBox(v, engine = {}) {
     const unc = Math.max(0, Math.min(1, +v.uncertainty || 0));
-    const uncertainty = engine.used === "llm"
+    const nliUncertainty = engine.used === "llm" && engine.uncertainty_source === "nli";
+    const uncertaintyLabel = nliUncertainty
+      ? "incertitude estimée par le NLI (indicateur, non calibré)"
+      : "indice d'incertitude (non calibré)";
+    const uncertainty = engine.used === "llm" && !nliUncertainty
       ? '<span class="tag">incertitude non calibrée</span>'
-      : `<span class="meter">indice d'incertitude (non calibré) <span class="track"><span class="fill" style="width:${Math.round(unc * 100)}%"></span></span><span class="num">${fmt(unc)}</span></span>`;
+      : `<span class="meter">${uncertaintyLabel} <span class="track"><span class="fill" style="width:${Math.round(unc * 100)}%"></span></span><span class="num">${fmt(unc)}</span></span>`;
     const cites = (v.citations || []).map((c) => `<span class="tag">${esc(c)}</span>`).join(" ");
     return `<div class="verdict vb-${esc(v.label)}">
       <div class="row" style="align-items:center">${verdictChip(v.label)}

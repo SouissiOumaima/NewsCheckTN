@@ -47,6 +47,52 @@ def test_valid_llm_output_maps_only_supplied_citations(case, monkeypatch):
     assert "raw" not in info and generator.calls == 1
 
 
+@pytest.mark.parametrize("source", ["nli", "fixe", None])
+def test_uncertainty_source_reaches_detail_routes_only_for_valid_llm(case, monkeypatch, source):
+    from rag_llm import llm_verdict as module
+
+    original = module.llm_verdict
+    generator = FakeGenerator('{"label":"vrai","citations":["P1"],"explication":"Démo"}')
+    monkeypatch.setattr(runtime, "_generator", lambda *args: generator)
+
+    def with_source(*args, **kwargs):
+        result = original(*args, **kwargs)
+        result.info = {} if source is None else {"uncertainty_source": source}
+        return result
+
+    monkeypatch.setattr(module, "llm_verdict", with_source)
+    client = TestClient(app)
+    text = "Le taux de chômage en Tunisie est de 16,4 % en 2023."
+    detail = client.post("/verdict/detail", json={"claim": text})
+    trace = client.post("/check/detail", json={"text": text})
+    assert detail.status_code == trace.status_code == 200
+    engines = [detail.json()["verdict_engine"], trace.json()["claims"][0]["verdict_engine"]]
+    for engine in engines:
+        assert engine["used"] == "llm"
+        if source is None:
+            assert "uncertainty_source" not in engine
+        else:
+            assert engine["uncertainty_source"] == source
+
+
+def test_rejected_llm_does_not_attribute_its_uncertainty_to_gabarit(case, monkeypatch):
+    from rag_llm import llm_verdict as module
+
+    monkeypatch.setattr(runtime, "_generator", lambda *args: FakeGenerator(""))
+    fallback = runtime.generate_verdict(case[0], case[2])
+    monkeypatch.setattr(
+        module, "llm_verdict",
+        lambda *args, **kwargs: module.LLMResult(
+            fallback, False, error="json_invalide", fallback="gabarit",
+            info={"uncertainty_source": "nli"},
+        ),
+    )
+    verdict, engine = runtime.resolve_verdict(*case)
+    assert verdict == fallback
+    assert engine["used"] == "gabarit" and engine["fallback_reason"] == "json_invalide"
+    assert "uncertainty_source" not in engine
+
+
 @pytest.mark.parametrize("text", [
     '{"label":"vrai","citations":["P99"]}',
     '{"label":"vrai","citations":[]}',

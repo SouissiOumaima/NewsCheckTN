@@ -7,7 +7,10 @@
 
 Montrer le parcours réel de bout en bout et la traçabilité du verdict : texte normalisé, filtre Model 1, preuves, NLI, Falcon, citations et limites. Cette démo n'est pas une mesure scientifique. Elle utilise le PC de Hadil équipé d'Ollama/Falcon ; aucune connexion GPU distante n'est nécessaire.
 
-Préparer la version intégrant #33, les corrections NLI de #39 et l'affichage de #41. Les PR encore ouvertes ne sont pas supposées présentes dans main. Vérifier la configuration réelle plutôt que le nom de la branche.
+Préparer la version intégrant #33, les corrections NLI de #39 et l'affichage de #41. Les PR encore ouvertes ne sont pas supposées présentes dans main. Vérifier la configuration réelle plutôt que le nom de la branche. Pour la nouvelle jauge,
+intégrer aussi #45 et la transmission Lot E de `uncertainty_source` :
+`LLM_UNCERTAINTY_MODE=nli`, `RERANKER=off`. Contrôler que la source vaut `nli`
+avant d'annoncer un indicateur calculé. Une ancienne valeur fixe reste masquée.
 
 - Model 1 : `CLAIM_DETECTOR_BACKEND=xlmr`, checkpoint seed 42.
 - Recherche : `RETRIEVAL_METHOD=hybrid`, multilingual-e5-base.
