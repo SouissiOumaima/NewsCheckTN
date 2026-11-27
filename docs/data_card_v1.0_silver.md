@@ -231,6 +231,11 @@ Lignes : Ghofran. Colonnes : Achref.
 
 Les 31 désaccords initiaux ont été examinés par arbitrage humain.
 
+La traçabilité des 100 textes distingue deux catégories :
+
+- ACCORD_INITIAL : 69 cas.
+- ARBITRAGE_HUMAIN : 31 cas.
+
 La consolidation technique a produit :
 
 | Label final | Nombre |
@@ -240,13 +245,22 @@ La consolidation technique a produit :
 | AUTRE | 59 |
 | **Total** | **100** |
 
-Ces résultats concernent exclusivement le sous-ensemble doublement annoté de 100 textes, et non la distribution des 600 phrases A1.
+Ces résultats concernent exclusivement le sous-ensemble doublement
+annoté de 100 textes, et non la distribution des 600 phrases A1.
 
 Parmi les 31 désaccords initiaux, 27 concernent OPINION et AUTRE.
 
-La comparaison de ces 27 cas avec le corpus consolidé de 540 annotations a relevé 13 concordances et 14 divergences.
+La comparaison de ces 27 cas avec le corpus consolidé de 540 annotations
+a relevé :
+- 13 concordances.
+- 14 divergences.
 
-Cette analyse porte sur des cas sélectionnés pour leurs difficultés ; elle n'est pas généralisable à l'ensemble du corpus.
+Cette analyse porte sur des cas sélectionnés pour leurs difficultés ;
+elle n'est pas généralisable à l'ensemble du corpus.
+
+Les labels arbitrés ne constituent pas une seconde annotation
+indépendante et ne doivent pas être utilisés pour recalculer
+le Cohen's Kappa initial.
 
 ### 5.5 Correction documentée
 
@@ -317,20 +331,32 @@ Ces résultats ne constituent pas une validation sémantique exhaustive.
 
 ### 7.3 Contrôles restant nécessaires
 
-- Détection exhaustive des doublons textuels et quasi-doublons.
-- Recherche des fuites textuelles et sémantiques entre partitions.
-- Vérification individuelle des preuves et relations NLI.
-- Vérification de la provenance de chaque enregistrement.
-- Vérification des droits de réutilisation et de redistribution.
-- Revue scientifique indépendante des décisions d'annotation.
+Des contrôles de répétitions ont déjà été documentés dans le manifeste,
+notamment les répétitions internes, les répétitions normalisées entre
+partitions et les quasi-doublons au seuil de 0,80.
+
+Ces analyses ne constituent pas une garantie de détection exhaustive
+des doublons, des paraphrases ou des fuites sémantiques.
+
+Les vérifications complémentaires restant nécessaires sont :
+
+- Évaluer la couverture des contrôles de doublons et quasi-doublons.
+- Compléter la recherche des fuites textuelles et sémantiques entre partitions.
+- Vérifier individuellement les preuves et relations NLI.
+- Compléter la vérification de provenance de chaque enregistrement.
+- Vérifier les droits de réutilisation et de redistribution.
+- Obtenir une revue scientifique indépendante des décisions d'annotation.
+
+L'inventaire documentaire déjà réalisé ne remplace pas la vérification
+individuelle des sources et des droits applicables.
 
 ### 7.4 Reproductibilité
 
 Les fichiers de référence et les statistiques des contrôles sont documentés.
 
-Pour figer une version scientifique reproductible, il reste à confirmer la disponibilité d'un manifeste précisant les versions, les empreintes des corpus, les paramètres des partitions et les scripts de validation.
+Un manifeste de reproductibilité Silver A1 v1.0 a été créé : `docs/manifeste_reproductibilite_silver_a1_v1.1_proposition.md`. Il centralise les références des corpus, les empreintes SHA-256 disponibles, les partitions et les contrôles documentés.
 
-L'existence d'un tel manifeste complet n'a pas été établie pendant cet audit.
+Le contrôle canonique des 12 références SHA-256 du manifeste a été effectué le 15/11/2026 : 12/12 empreintes conformes. Ce contrôle confirme l'intégrité des fichiers vérifiés, mais ne valide pas à lui seul les versions logicielles ni les scripts de génération.
 
 ## 8. Sources et traçabilité
 
@@ -422,33 +448,35 @@ Ces limites doivent être conservées dans toute version diffusée.
 
 ## 11. Prochaines étapes
 
-### Validation humaine
+### Validation humaine et scientifique
 
-1. Obtenir la revue du rapport Bronze A1 par l'équipe.
-2. Valider ou rejeter les trois propositions de révision.
-3. Confirmer le guide d'annotation v1.1.
-4. Clarifier la politique d'identification des claims pour P266/P267.
+1. Obtenir la réponse d'Achref sur la traçabilité et la clôture des 31 arbitrages.
+2. Documenter précisément la version des annotations utilisée pour le Kappa initial, en distinguant les données indépendantes des corrections ultérieures.
+3. Confirmer la provenance et le processus de constitution des 540 annotations.
+4. Maintenir les trois propositions `tarc-forum-0054`, `tarc-forum-0066` et `tarc-forum-0462` en attente de décision humaine.
+5. Confirmer le guide d'annotation v1.1.
+6. Clarifier la cohérence des claims et des relations P266/P267.
 
 ### Qualité scientifique
 
-5. Contrôler les doublons textuels et quasi-doublons.
-6. Compléter la validation sémantique NLI.
-7. Rechercher les fuites potentielles entre partitions au niveau du contenu.
-8. Vérifier la provenance individuelle des textes.
+7. Réaliser, si nécessaire, une analyse des doublons textuels et quasi-doublons.
+8. Compléter la revue sémantique des relations NLI.
+9. Examiner les risques de fuites textuelles et sémantiques entre partitions.
+10. Compléter la vérification de provenance individuelle.
 
 ### Conformité et reproductibilité
 
-9. Vérifier les licences et les droits de redistribution.
-10. Confirmer les règles de confidentialité.
-11. Préparer ou vérifier le manifeste de versions et d'empreintes.
-12. Clarifier les correspondances éventuelles entre les corpus A1 et Lot C.
+11. Vérifier les licences et les droits de redistribution.
+12. Confirmer les règles de confidentialité.
+13. [x] Vérifier les empreintes des 12 références du manifeste : 12/12 PASS le 15/11/2026.
+14. Confirmer les versions et scripts de génération des partitions.
+15. Clarifier les correspondances éventuelles entre A1 et Lot C.
 
-### Livrables Silver
+### Finalisation des livrables
 
-13. Faire valider cette Data Card.
-14. Rédiger la section Données du rapport scientifique.
-15. Vérifier la cohérence entre les deux livrables et les résultats Bronze.
-16. Préparer une PR documentaire isolée après autorisation.
+16. Obtenir la revue scientifique collective de la Data Card et du rapport.
+17. Vérifier leur cohérence avec les résultats Bronze et le manifeste.
+18. Préparer une PR documentaire isolée après autorisation.
 
 ## 12. Historique des versions
 
