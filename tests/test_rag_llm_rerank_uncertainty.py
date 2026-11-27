@@ -108,3 +108,24 @@ def test_lignes_et_controle_des_citations():
     assert rows[0]["u"] == pytest.approx(0.2)
     with pytest.raises(SystemExit, match="non reproduite"):
         gu.build_rows([{**verdicts[0], "citations": ["zz"]}], stances, None)
+
+
+def test_comparaison_verdict_bonnes_reponses_perdues():
+    from rag_llm import gold_reranker_verdict as gv
+
+    base = [
+        {"claim_id": "a", "pred": "faux", "gold": "faux"},
+        {"claim_id": "b", "pred": "vrai", "gold": "faux"},
+        {"claim_id": "c", "pred": "vrai", "gold": "vrai"},
+    ]
+    new = [
+        {"claim_id": "a", "pred": "vrai", "gold": "faux"},
+        {"claim_id": "b", "pred": "faux", "gold": "faux"},
+        {"claim_id": "c", "pred": "vrai", "gold": "vrai"},
+    ]
+    cmp_ = gv.compare(base, new)
+    assert cmp_["lost"] == ["a"] and cmp_["gained"] == ["b"]
+    assert cmp_["correct_base"] == cmp_["correct_rerank"] == 2
+    assert cmp_["condition_at_most_one_lost"]
+    new2 = [{**r, "pred": "trompeur"} for r in new]
+    assert not gv.compare(base, new2)["condition_at_most_one_lost"]
