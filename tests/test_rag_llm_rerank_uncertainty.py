@@ -129,3 +129,88 @@ def test_comparaison_verdict_bonnes_reponses_perdues():
     assert cmp_["condition_at_most_one_lost"]
     new2 = [{**r, "pred": "trompeur"} for r in new]
     assert not gv.compare(base, new2)["condition_at_most_one_lost"]
+
+
+# ---------------------------------------------------------------------------
+# Intégration : incertitude NLI dans le verdict LLM, re-ranker en option
+# ---------------------------------------------------------------------------
+
+from common.schemas import Stance, StanceResult  # noqa: E402
+from rag_llm import llm_verdict as lv  # noqa: E402
+from rag_llm.retrieval import hybrid  # noqa: E402
+
+EVS = [ev("d1", "Le chômage est de 16 %."), ev("d2", "Tunis est la capitale.")]
+CLAIM = Claim(text="Le chômage est de 25 %.", lang=Lang.FR)
+
+
+class FakeLLM:
+    name = "fake-llm"
+
+    def __init__(self, answer):
+        self.answer = answer
+
+    def generate(self, messages, seed):
+        return self.answer
+
+
+def test_verdict_llm_incertitude_nli_par_defaut(monkeypatch):
+    monkeypatch.delenv("LLM_UNCERTAINTY_MODE", raising=False)
+    stances = [
+        StanceResult(EVS[0], Stance.REFUTES, 0.85),
+        StanceResult(EVS[1], Stance.NEUTRAL, 0.9),
+    ]
+    llm = FakeLLM(json.dumps({"label": "faux", "citations": ["P1"], "explication": "16 %"}))
+    res = lv.llm_verdict(CLAIM, EVS, llm, stances=stances)
+    assert res.valid and res.verdict.uncertainty == pytest.approx(0.15)
+    assert res.info == {"uncertainty_source": "nli"}
+    vrai = FakeLLM(json.dumps({"label": "vrai", "citations": ["P1"], "explication": "x"}))
+    assert lv.llm_verdict(CLAIM, EVS, vrai, stances=stances).verdict.uncertainty == 1.0
+
+
+def test_verdict_llm_incertitude_fixe_et_sans_nli(monkeypatch):
+    llm = FakeLLM(json.dumps({"label": "faux", "citations": ["P1"], "explication": "16 %"}))
+    stances = [
+        StanceResult(EVS[0], Stance.REFUTES, 0.85),
+        StanceResult(EVS[1], Stance.NEUTRAL, 0.9),
+    ]
+    monkeypatch.setenv("LLM_UNCERTAINTY_MODE", "fixe")
+    res = lv.llm_verdict(CLAIM, EVS, llm, stances=stances)
+    assert (
+        res.verdict.uncertainty == lv.LLM_UNCERTAINTY and res.info["uncertainty_source"] == "fixe"
+    )
+    monkeypatch.delenv("LLM_UNCERTAINTY_MODE")
+    sans = lv.llm_verdict(CLAIM, EVS, llm)  # pas de positions NLI : valeur fixe
+    assert sans.verdict.uncertainty == lv.LLM_UNCERTAINTY
+    monkeypatch.setenv("LLM_UNCERTAINTY_MODE", "autre")
+    with pytest.raises(ValueError):
+        lv.uncertainty_mode()
+
+
+def test_formule_partagee_avec_l_experience():
+    from rag_llm.uncertainty import nli_uncertainty
+
+    assert gu.uncertainty is nli_uncertainty
+
+
+def test_reranker_desactive_par_defaut(monkeypatch):
+    monkeypatch.delenv("RERANKER", raising=False)
+    assert hybrid.reranker_name() == "off"
+    monkeypatch.setenv("RERANKER", "bge")
+    assert hybrid.reranker_name() == rr.PRIMARY_MODEL
+
+
+def test_reranker_active_reclasse_la_recherche(monkeypatch):
+    passages = [ev("a", "A"), ev("b", "B"), ev("c", "C")]
+    monkeypatch.setattr(hybrid, "retrieve_hybrid", lambda claim, corpus, k=5: passages[:k])
+    monkeypatch.setenv("RERANKER", "bge")
+    hybrid.set_reranker(FakeScorer({"A": 0.1, "B": 0.9, "C": 0.5}))
+    try:
+        out = hybrid.retrieve(CLAIM, passages, k=2, method="hybrid")
+        assert [e.doc_id for e in out] == ["b", "c"]
+        monkeypatch.setenv("RERANKER", "off")
+        assert [e.doc_id for e in hybrid.retrieve(CLAIM, passages, k=2, method="hybrid")] == [
+            "a",
+            "b",
+        ]
+    finally:
+        hybrid.set_reranker(None)

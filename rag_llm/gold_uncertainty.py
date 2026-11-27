@@ -30,17 +30,16 @@ from datetime import date
 from pathlib import Path
 
 from data.loaders import load_evidence_corpus
-from rag_llm.bronze_report import NEI
 from rag_llm.evaluate_retrieval import RESULTS_DIR, ROOT, load_claims
 from rag_llm.silver_retrieval import SPLITS
 from rag_llm.silver_verdict import K, prepare
+from rag_llm.uncertainty import nli_uncertainty as uncertainty  # formule partagée avec le verdict
 
 EXP_ID = "EXP-D-021"
 NLI_REQUIRED = "fine-tuned"
 REPLICATIONS = 10_000
 SEED = 42
 N_BINS = 5
-EXPECTED = {"vrai": {"supports"}, "faux": {"refutes"}, "trompeur": {"supports", "refutes"}}
 SOURCES = {
     "dev": "lot-d_gold_abstention_dev_*_20261122.json",
     "test": "lot-d_silver_verdict_test_*_exp-d-015.json",
@@ -54,21 +53,6 @@ ANNOTATIONS = {
 # ---------------------------------------------------------------------------
 # Formule
 # ---------------------------------------------------------------------------
-
-
-def uncertainty(pred: str, citations: list[str], stances: dict[str, tuple[str, float]]) -> float:
-    """u = 1 − soutien ; `stances` : doc_id → (position, confiance) des 5 passages proposés."""
-    if pred == NEI:
-        if not stances:
-            return 1.0
-        s = sum(conf if st == "neutral" else 0.0 for st, conf in stances.values()) / len(stances)
-    else:
-        want = EXPECTED.get(pred, set())
-        s = max(
-            (stances[d][1] for d in citations if d in stances and stances[d][0] in want),
-            default=0.0,
-        )
-    return round(1.0 - s, 4)
 
 
 # ---------------------------------------------------------------------------

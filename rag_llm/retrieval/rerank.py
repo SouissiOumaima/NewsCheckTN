@@ -52,7 +52,7 @@ class CrossEncoderScorer:
 
 def candidates(claim: Claim, corpus: list[Evidence], n: int = CANDIDATES) -> list[Evidence]:
     """Les n premiers passages de la recherche hybride (même fusion RRF qu'EXP-D-008)."""
-    return hybrid.retrieve(claim, corpus, k=n, method="hybrid")
+    return hybrid.retrieve_hybrid(claim, corpus, k=n)
 
 
 def rerank(claim: Claim, passages: list[Evidence], scorer: Scorer, k: int = 5) -> list[Evidence]:
