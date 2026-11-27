@@ -27,6 +27,8 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
 |----|------|-----|-------|---------------|---------------------|----------|----------|
 | EXP-C-016 | 2026-11-22 | C | NLI (Model 2) palier Gold : inversions de polarité (supports ↔ refutes) | prédictions Silver d'EXP-C-011 relues, sans inférence ; protocole écrit avant calcul ; règle : < 20 erreurs = descriptif | erreurs par type (test, n = 56) | inversions : principal 1 / 10 erreurs, zero-shot 1 / 11 (même paire NLI-P010), Bronze 16 / 30 ; erreurs des modèles surtout vers « neutral » (7 / 10, 9 / 11) | aucune conclusion sur un taux (trop peu d'erreurs) ; à rapprocher, qualitativement, d'EXP-D-011 (autre unité) |
 | EXP-D-011 | 2026-11-15 | D | Silver : verdict avec le NLI affiné du Lot C (PR #21) | même système qu'EXP-D-010 (recherche hybride top 5, gabarit A1–A4, Aya Expanse 8B 4 bits, prompt v1, graine 42) ; seul change le NLI : règles Bronze → mDeBERTa-v3 affiné (EXP-C-011) ; configurations et hypothèses fixées avant la mesure (commit 77a98e7) ; bootstrap apparié 10 000 tirages | exactitude / macro-F1 du verdict (test, 21 affirmations) | gabarit : 0.286 / 0.219 → **0.524 / 0.404** (+0.238, IC95 [0.000 ; 0.476], p = 0.031 ; macro-F1 +0.185, p = 0.019), arabe 0.29 → 0.86 ; mais exactitude = majorité (0.524, p = 0.56) ; Aya + indices NLI affiné 0.619 / 0.360 contre 0.714 / 0.408 avec les indices Bronze (H2 rejetée) | le NLI affiné sert au gabarit (repli, démo sans GPU) ; système officiel inchangé : Aya sans indices (EXP-D-010) ; suite (Gold) : inversions de polarité, abstention du gabarit à combiner avec le LLM |
+| EXP-D-021 | 2026-11-27 | D | Incertitude du verdict calculée à partir du NLI | u = 1 − soutien des passages cités au verdict (confiances du NLI affiné, aucun paramètre) ; verdicts enregistrés (dev : EXP-D-018, test : EXP-D-015, graine 42), aucune nouvelle génération ; plan avant mesure (f0b29b5) | AUROC (verdict faux ; faux ou infidèle), Brier, ECE | dev : AUROC **0.96** [0.87 ; 1.00] ; test (descriptif) : 0.82 [0.63 ; 0.96], ECE 0.33 | **adoptée** comme indicateur de classement, non calibré |
+| EXP-D-020 | 2026-11-27 | D | Re-ranker cross-encoder après la recherche hybride | bge-reranker-v2-m3 (CPU) sur les 20 candidats RRF, top 5 ; modèle et règles fixés avant (f0b29b5, ba0417f) ; dev puis mesure unique sur le test v1 ; effet sur le verdict sur le dev (Falcon, 3 graines) | rappel@5, MRR ; bonnes réponses perdues (graine 42) | test : rappel@5 0.446 → **0.565** (+0.119, IC95 [0.037 ; 0.211], p = 0.003) ; verdict dev graine 42 : 0.733 → 0.833 mais **2** bonnes réponses perdues (arabizi) | adopté pour la recherche ; critère de sécurité du verdict non rempli → **non activé par défaut** (option) |
 | EXP-D-018 | 2026-11-22 | D | Gold : règle d'abstention R-abst (dev) | Falcon-H1-3B + JSON (comme EXP-D-015), NLI affiné du Lot C (EXP-C-011) au lieu de Bronze, 3 graines ; dev 20 affirmations + 10 phrases hors sujet ; R-abst appliquée après le LLM ; plan fixé avant mesure (commits fe97fdc, da06966, cf25004) | abstention justifiée ; bons verdicts avec preuve (dev, 30) | sans règle déjà **1.00** (12/12, 3 graines) ; R-abst appliquée **0 fois** ; exactitude 0.778 ± 0.051 (graine 42 : 0.733), couverture 0.533 ; avec preuve 10/18 (graine 42) | règle non adoptée (condition 1 impossible : plafond) ; test v2 sans R-abst |
 | EXP-D-017 | 2026-11-22 | D | Gold : LLM-juge local validé sur l'annotation humaine (dev) | Qwen2.5-3B-Instruct (Ollama), température 0, JSON ; 30 verdicts de Falcon (EXP-D-018, graine 42) en 2 moitiés de 15 ; prompts v1-v3 et candidat Qwen2.5-7B sur « mise au point », puis « mesure » une fois ; plan avant mesure (commits 3be7f11, 3d5df43, 0e83d36, 2a7e655) | kappa de Cohen juge / humain par étiquette ; validation si ≥ 0.60 | mesure (3B, v2) : fidélité **−0.03** [−0.47 ; 0.40], invention 0.00, pertinence 0.00 (mise au point : fidélité 0.31) | juge **non validé** pour les 3 étiquettes ; l'audit du test v2 reste humain |
 | EXP-D-016 | 2026-11-22 | D | Gold : audit humain des verdicts de Falcon sur le test v1 | 21 verdicts existants d'EXP-D-015 (graine 42), aucune nouvelle génération ; passages retrouvés par la recherche hybride refaite (citations vérifiées) ; annotation humaine selon le guide (commit 4e0ed92) | pertinence des citations, faits inventés, fidélité (descriptif) | justes 17/21 ; **fidèles 10/21** ; justes et fidèles **8/17** ; citations pertinentes 29/39 (0.74) ; faits inventés 6/21 ; 3 verdicts ne citent que des passages hors sujet | l'exactitude surestime la qualité : vérifier les citations ; audit à refaire sur le test v2 |
@@ -117,6 +119,95 @@ Numérotation : `EXP-A1-001`, `EXP-A2-001`, `EXP-B-001`, `EXP-C-001`, `EXP-D-001
   - principal et zero-shot ne diffèrent que sur 3 paires : NLI-P004 (principal faux, « depuis neutral »), P188 et P207 (zero-shot faux, « vers neutral ») ; aucune ne change le nombre d'inversions.
 - **Analyse** : sur le test NLI du Lot C, avec des preuves gold, les erreurs des deux modèles mDeBERTa vont surtout **vers « neutral »** (7 sur 10 pour le principal, 9 sur 11 pour le zero-shot) ; une seule inversion de polarité chacun. Les inversions sont en revanche la première erreur des règles Bronze (16 sur 30). Avec 10 et 11 erreurs, ce ne sont que des cas, pas des taux (règle fixée avant calcul) : on ne conclut pas sur un taux d'inversion du NLI affiné. Ce résultat ne contredit pas l'observation du Lot D, qui porte sur une autre unité (verdict d'une affirmation, vrai / faux) et d'autres entrées (passages retrouvés automatiquement, puis gabarit de verdict qui agrège plusieurs positions) ; une hypothèse à vérifier côté Lot D est que ses inversions viennent des passages retrouvés ou de l'agrégation, plutôt que du NLI seul sur une preuve correcte.
 - **Décision / suite** : aucun changement du modèle ; résultat transmis au Lot D pour sa discussion d'EXP-D-011 ; pour l'étudier, il faudrait les positions du NLI sur les passages du Lot D (paires affirmation / passage retrouvé), qui ne sont pas dans les données du Lot C.
+### EXP-D-021 — Incertitude du verdict calculée à partir du NLI
+- **Date** : 2026-11-27 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : remplacer la valeur d'incertitude fixe (affichée « non calibrée ») par une valeur
+  calculée (fiche de rôle, S6). Protocole : `docs/lot-d_protocole_reranker_incertitude.md`,
+  section 4.
+- **Plan fixé avant la mesure** : protocole, formule, cibles et règle de décision (commit
+  f0b29b5) ; code `rag_llm/gold_uncertainty.py`, lanceur `rag_llm/exp_d_021_incertitude.ps1`.
+- **Formule (aucun paramètre réglé)** : soutien `s` = plus haute confiance du NLI affiné parmi les
+  passages cités qui vont dans le sens du verdict (« soutient » pour vrai, « contredit » pour faux,
+  l'un ou l'autre pour trompeur) ; pour « preuves insuffisantes », moyenne sur les 5 passages de la
+  confiance « neutre » ; **u = 1 − s**.
+- **Données** : aucune nouvelle génération de Falcon ; verdicts enregistrés, graine 42 :
+  dev = 30 verdicts d'EXP-D-018 ; test v1 = 21 verdicts d'EXP-D-015 (descriptif). Recherche et NLI
+  affiné recalculés (déterministes) ; chaque passage cité fait partie des 5 retrouvés (contrôlé).
+  Cible secondaire : annotation humaine de fidélité (EXP-D-017 pour le dev, EXP-D-016 pour le test).
+- **Résultats** :
+
+  | Jeu | Cible | n | Positifs | AUROC [IC 95 %] | Brier | ECE |
+  |-----|-------|---|----------|-----------------|-------|-----|
+  | dev | verdict faux (principale) | 30 | 8 | **0.96** [0.87 ; 1.00] | 0.10 | 0.13 |
+  | dev | faux ou infidèle | 30 | 13 | 0.78 [0.57 ; 0.96] | 0.18 | 0.21 |
+  | test v1 | verdict faux | 21 | 4 | 0.82 [0.63 ; 0.96] | 0.26 | 0.33 |
+  | test v1 | faux ou infidèle | 21 | 13 | 0.70 [0.43 ; 0.94] | 0.31 | 0.34 |
+
+  Le calcul du test a été lancé deux fois : la première fois, l'annotation du test n'était pas dans
+  `evaluation/results/` (cible secondaire absente) ; la seconde, après copie du fichier, donne une
+  cible principale identique (AUROC 0.824) et ajoute la cible secondaire. Calcul déterministe,
+  aucune décision prise sur le test.
+- **Lecture** :
+  1. L'incertitude classe très bien les verdicts faux sur le dev (0.96) et encore bien sur le test
+     (0.82) : quand Falcon répond « vrai » en citant des passages qui contredisent l'affirmation
+     (défaut relevé dans EXP-D-016 et EXP-D-017), aucun passage cité ne soutient le verdict, et
+     l'incertitude vaut 1.
+  2. Elle prédit moins bien les verdicts infidèles (0.78 et 0.70) : une explication peut être
+     infidèle avec une étiquette juste.
+  3. Elle n'est **pas calibrée** (ECE 0.33 sur le test) : c'est un indicateur de classement, pas une
+     probabilité.
+  4. Limites : 30 et 21 verdicts, 8 et 4 erreurs ; dev fictif ; test déjà vu.
+- **Décision (règle fixée avant)** : borne basse de l'IC 95 % de l'AUROC principale sur le dev
+  (0.87) > 0.5 → **adoptée**. Affichage prévu : « incertitude estimée par le NLI (indicateur, non
+  calibré) », intégration avec le Lot E.
+
+### EXP-D-020 — Re-ranker cross-encoder après la recherche hybride
+- **Date** : 2026-11-27 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
+- **Objectif** : ajouter le re-ranking prévu dans la fiche de rôle (S5) : reclasser les passages de la
+  fusion RRF par un cross-encoder. Protocole : `docs/lot-d_protocole_reranker_incertitude.md`,
+  section 3.
+- **Plan fixé avant la mesure** : modèle, nombre de candidats, règle de repli (vitesse) et règles de
+  décision (commit f0b29b5) ; code de l'étape « verdict sur le dev » (commit ba0417f), avant son
+  lancement. Code : `rag_llm/retrieval/rerank.py`, `rag_llm/gold_reranker.py`,
+  `rag_llm/gold_reranker_verdict.py`.
+- **Configuration** : `BAAI/bge-reranker-v2-m3` (multilingue, Apache 2.0), sur le CPU, longueur
+  512, score passé par une sigmoïde ; 20 candidats de la recherche hybride (BM25 + e5-base, RRF
+  k = 60), top 5 ; aucun autre modèle mesuré sur le test.
+- **Dev (contrôle et vitesse)** : 18 affirmations avec preuve : rappel@5 0.944 → 0.944, MRR
+  0.956 → 0.944 (fr 0.950 → 1.000 ; ar 1.000 → 1.000 ; tn 0.875 → 0.750) ; 1.6 s par affirmation
+  (< 15 s) → modèle principal conservé.
+- **Test v1 (mesure unique)** : 18 affirmations avec preuve :
+
+  | | Rappel@5 | MRR (top 5) |
+  |---|---|---|
+  | Hybride | 0.446 | 0.630 |
+  | Hybride + re-ranker | **0.565** | **0.773** |
+
+  Par langue (rappel@5) : fr 0.429 → 0.676 (n = 7) ; ar 0.672 → 0.672 (n = 6) ; tn 0.200 → 0.280
+  (n = 5). Bootstrap apparié : **+0.119**, IC 95 % [0.037 ; 0.211], p unilatéral = 0.003.
+  5.7 s par affirmation. Le rappel@5 de l'hybride reproduit EXP-D-008 (0.446) ; le MRR est ici
+  calculé sur le top 5 (EXP-D-008 : top 10, d'où 0.646).
+- **Décision sur la recherche** : conditions fixées avant remplies (rappel@5 du test en hausse avec
+  p < 0.05, rappel@5 du dev pas en baisse) → **adopté pour la recherche**.
+- **Effet sur le verdict (dev seulement, Falcon-H1-3B + JSON, NLI affiné, 3 graines, comparé à
+  EXP-D-018)** :
+
+  | Graine | Exactitude | Couverture | Abstention justifiée | Bonnes réponses perdues | Gagnées |
+  |--------|-----------|------------|----------------------|-------------------------|---------|
+  | 13 | 0.833 → 0.833 | 0.533 → 0.567 | 1.00 → 0.92 | 3 | 3 |
+  | 42 | 0.733 → 0.833 | 0.533 → 0.533 | 1.00 → 0.92 | **2** (dev-c09, dev-c17) | 5 |
+  | 2026 | 0.767 → 0.867 | 0.533 → 0.567 | 1.00 → 0.92 | 2 | 5 |
+
+  Les deux réponses perdues à la graine 42 sont en tunisien arabizi (dev-c09, dev-c17).
+- **Décision sur le verdict (règle fixée avant)** : au plus une bonne réponse perdue à la graine 42 :
+  **non rempli** (2), malgré un gain net d'exactitude. La règle n'est pas modifiée après coup :
+  le re-ranker **n'est pas activé par défaut** dans le pipeline ; il reste disponible comme option.
+- **Lecture** : le re-ranker améliore nettement la recherche en français et l'exactitude du verdict
+  sur le dev, mais reste faible en tunisien (rappel@5 0.280) et fait perdre des verdicts en arabizi,
+  cohérent avec l'absence de translittération de l'arabizi (Lot A2, MODEL_CARD §5). Le test a déjà
+  été vu : le gain est optimiste, mais aucun paramètre n'y a été réglé. Suite : l'activer après la
+  translittération de l'arabizi, et le réévaluer sur un test jamais vu.
+
 ### EXP-D-018 — Gold : règle d'abstention R-abst sur le dev
 - **Date** : 2026-11-22 — **Auteur / Lot** : Membre 5 (Hadil) / Lot D
 - **Objectif** : vérifier si la règle sans seuil « tous les passages cités sont neutres →
