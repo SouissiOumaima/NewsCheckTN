@@ -106,12 +106,62 @@ def retrieve(
     if not corpus or k <= 0:
         return []
     method = method or get_method()
-    query = claim.text
     if method == "bm25":
-        return _get_bm25(corpus).search(query, k=k)
+        return _get_bm25(corpus).search(claim.text, k=k)
     if method == "dense":
-        return _get_dense(corpus).search(query, k=k, min_similarity=MIN_DENSE_SIMILARITY)
+        return _get_dense(corpus).search(claim.text, k=k, min_similarity=MIN_DENSE_SIMILARITY)
+    if reranker_name() != "off":
+        from rag_llm.retrieval.rerank import CANDIDATES as POOL
+        from rag_llm.retrieval.rerank import rerank
+
+        return rerank(claim, retrieve_hybrid(claim, corpus, k=max(k, POOL)), _get_reranker(), k=k)
+    return retrieve_hybrid(claim, corpus, k=k)
+
+
+def retrieve_hybrid(claim: Claim, corpus: list[Evidence], k: int = 5) -> list[Evidence]:
+    """Fusion RRF de BM25 et du dense, sans re-ranking (EXP-D-008)."""
+    if not corpus or k <= 0:
+        return []
     n = max(k, CANDIDATES)
-    lexical = _get_bm25(corpus).search(query, k=n)
-    semantic = _get_dense(corpus).search(query, k=n, min_similarity=MIN_DENSE_SIMILARITY)
+    lexical = _get_bm25(corpus).search(claim.text, k=n)
+    semantic = _get_dense(corpus).search(claim.text, k=n, min_similarity=MIN_DENSE_SIMILARITY)
     return rrf_fuse([lexical, semantic], k=k)
+
+
+# ---------------------------------------------------------------------------
+# Re-ranker (EXP-D-020) : option, désactivée par défaut
+# ---------------------------------------------------------------------------
+
+_reranker: dict = {"name": None, "scorer": None}
+
+
+def reranker_name() -> str:
+    """`RERANKER` : « off » (défaut), « bge » (bge-reranker-v2-m3) ou un nom de modèle.
+
+    EXP-D-020 : adopté pour la recherche (rappel@5 du test +0.119), mais non activé par défaut,
+    car il fait perdre deux verdicts en arabizi sur le dev (critère de sécurité non rempli).
+    """
+    name = (os.getenv("RERANKER") or "off").strip()
+    if name.lower() in {"", "off", "0", "non"}:
+        return "off"
+    if name.lower() == "bge":
+        from rag_llm.retrieval.rerank import PRIMARY_MODEL
+
+        return PRIMARY_MODEL
+    return name
+
+
+def set_reranker(scorer) -> None:
+    """Remplace le cross-encoder (tests) ; None = modèle de `RERANKER`."""
+    _reranker.update(name="__test__" if scorer is not None else None, scorer=scorer)
+
+
+def _get_reranker():
+    name = reranker_name()
+    if _reranker["name"] == "__test__":
+        return _reranker["scorer"]
+    if _reranker["name"] != name:
+        from rag_llm.retrieval.rerank import CrossEncoderScorer
+
+        _reranker.update(name=name, scorer=CrossEncoderScorer(name))
+    return _reranker["scorer"]

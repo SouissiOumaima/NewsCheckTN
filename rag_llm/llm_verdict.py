@@ -43,7 +43,17 @@ TEMPERATURE = 0.3
 TOP_P = 0.9
 MAX_NEW_TOKENS = 300
 PASSAGE_LEN = 700  # caractères gardés par passage dans le prompt
-LLM_UNCERTAINTY = 0.4  # le LLM ne donne pas de probabilité calibrée : valeur fixe, documentée
+LLM_UNCERTAINTY = 0.4  # valeur fixe historique (le LLM ne donne pas de probabilité calibrée)
+UNCERTAINTY_MODES = ("nli", "fixe")
+
+
+def uncertainty_mode() -> str:
+    """`LLM_UNCERTAINTY_MODE` : « nli » (défaut, EXP-D-021) ou « fixe » (0.4, avant EXP-D-021)."""
+    mode = (os.getenv("LLM_UNCERTAINTY_MODE") or "nli").strip().lower()
+    if mode not in UNCERTAINTY_MODES:
+        raise ValueError(f"LLM_UNCERTAINTY_MODE={mode!r} : choisir parmi {UNCERTAINTY_MODES}")
+    return mode
+
 
 SYSTEM_PROMPT = """Tu es un vérificateur de faits pour la Tunisie. On te donne une affirmation et \
 des passages numérotés (P1, P2…) tirés d'articles de vérification. Tu dois juger l'affirmation \
@@ -200,15 +210,23 @@ def llm_verdict(
     cited = [evidences[i - 1].doc_id for i in out["indices"]]
     label = Label(out["label"])
     abstained = label == Label.NOT_ENOUGH_INFO
+    if stances is not None and uncertainty_mode() == "nli":
+        from rag_llm.uncertainty import nli_uncertainty, stance_table
+
+        uncertainty = nli_uncertainty(label.value, cited, stance_table(stances))
+        source = "nli"
+    else:
+        uncertainty = 1.0 if abstained else LLM_UNCERTAINTY
+        source = "fixe"
     verdict = Verdict(
         claim=claim,
         label=label,
         explanation=out["explanation"] or (_abstention(claim).explanation if abstained else ""),
         citations=cited,
-        uncertainty=1.0 if abstained else LLM_UNCERTAINTY,
+        uncertainty=uncertainty,
         abstained=abstained,
     )
-    return LLMResult(verdict, True, None, raw)
+    return LLMResult(verdict, True, None, raw, info={"uncertainty_source": source})
 
 
 # ---------------------------------------------------------------------------
