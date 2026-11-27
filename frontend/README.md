@@ -63,6 +63,8 @@ $env:LLM_BASE_URL = "http://localhost:11434/v1"
 $env:LLM_API_KEY = "ollama"
 $env:LLM_MODEL = "hf.co/tiiuae/Falcon-H1-3B-Instruct-GGUF:Q4_K_M"
 $env:LLM_RESPONSE_FORMAT = "json"
+$env:LLM_UNCERTAINTY_MODE = "nli" # nécessite #45 ; indicateur non calibré
+$env:RERANKER = "off"            # sécurité du verdict : non activé par défaut
 $env:LLM_MIN_INTERVAL = "0"
 $env:LLM_ALLOW_EXTERNAL = "0"
 $env:CLAIM_DETECTOR_BACKEND = "xlmr"
@@ -90,8 +92,15 @@ la configuration matérielle dans la trace.
 
 Vérifier dans `/check/detail` le NLI actif, `verdict_engine.used=llm`, le modèle
 Falcon et l'absence de repli. Un résultat gabarit n'est pas une exécution Falcon.
-L'interface distingue le modèle utilisé du « modèle tenté » lors d'un repli et masque l'incertitude fixe du
-LLM au profit de « incertitude non calibrée ». Une citation présente dans les
+L'interface distingue le modèle utilisé du « modèle tenté » lors d'un repli.
+Avec #45, `LLM_UNCERTAINTY_MODE=nli` et des positions NLI disponibles, les routes
+`/check/detail` et `/verdict/detail` transmettent `verdict_engine.uncertainty_source=nli` :
+la jauge affiche « incertitude estimée par le NLI (indicateur, non calibré) ».
+Une valeur élevée indique moins de soutien NLI au verdict ; elle ne représente pas une
+probabilité que le verdict soit faux et ne déclenche aucune abstention automatique.
+Avec `fixe` ou une ancienne version sans métadonnée, la valeur fixe reste masquée.
+Le re-ranker reste `off` pour la démo ; aucune activation n'est nécessaire pour l'incertitude.
+Une citation présente dans les
 passages retrouvés peut rester hors sujet : montrer aussi cette limite.
 
 La règle d'abstention Gold n'est pas activée ici : elle n'a pas été adoptée après

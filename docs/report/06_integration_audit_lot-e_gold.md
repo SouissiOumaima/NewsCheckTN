@@ -1,7 +1,7 @@
 # Intégration et audit du Lot E pour le Gold
 
 **Auteur :** Achref Chabene — Lot E et contribution Model 1.
-**Point de situation :** 25 novembre 2026.
+**Point de situation :** 27 novembre 2026.
 **Statut :** section de rapport préparée ; intégration finale et répétition commune encore à valider.
 
 ## Contribution et périmètre
@@ -30,7 +30,7 @@ Falcon-H1-3B avec JSON est le modèle officiel actuel annoncé par le Lot D. Aya
 
 Les expériences Falcon EXP-D-014/015 utilisent le NLI Bronze. Le NLI affiné seed 42 est confirmé par Hadil pour le Gold et déclaré dans EXP-D-018. Les deux configurations ne sont pas interchangeables : la présence du checkpoint affiné dans une démo n'attribue pas rétroactivement les scores historiques à ce moteur.
 
-Le mode JSON de Falcon dépend de la PR #33. Définir `LLM_RESPONSE_FORMAT=json` sur une ancienne version qui ignore cette option ne reproduit pas l'expérience. Les PR #32/#33 sont fusionnées et la branche #41 est actualisée avec main ; la relecture finale de #41 et la répétition restent à terminer. La PR #39 est fusionnée dans main (9a22612).
+Le mode JSON de Falcon dépend de la PR #33. Définir `LLM_RESPONSE_FORMAT=json` sur une ancienne version qui ignore cette option ne reproduit pas l'expérience. Les PR #32/#33 sont fusionnées et la branche #41 est actualisée avec main ; #41 est fusionnée (847b6a2) et #43 est fusionnée ; la répétition reste à terminer. La PR #39 est fusionnée dans main (9a22612).
 
 ## Vérifications techniques et portée des tests
 
@@ -61,6 +61,22 @@ L'accord humain sur l'invention est nul dans cet audit : la notion reste ambigu�
 
 Une seconde annotation indépendante de verdicts a été demandée à Achref, avec un outil HTML local et un guide. Les décisions doivent être prises sans IA ni accès aux annotations de Hadil. Ce rapport ne présente aucun coefficient d'accord attribué à Achref tant que la réception et la comparaison de son fichier ne sont pas établies.
 
+## Compléments Lot D : recherche et incertitude
+
+La PR #45 (`lot-d-final`) fournit EXP-D-020/021, journal au commit `6caa24e`.
+Les chiffres ci-dessous sont rapportés par Hadil ; ils ne sont pas des mesures relancées par le Lot E.
+
+| Expérience | Résultat rapporté | Conséquence pour la démo |
+|---|---|---|
+| EXP-D-020, re-ranking BGE sur CPU | Rappel@5 0,446 → 0,565 sur 18 affirmations avec preuve du test v1 ; différence +0,119, IC95 [0,037 ; 0,211], p = 0,003 | Gain de recherche, mais 2 bonnes réponses perdues en arabizi sur le dev, pour 1 autorisée : garder RERANKER=off |
+| EXP-D-021, incertitude NLI | AUROC des verdicts incorrects : dev 0,96 [0,87 ; 1,00], n=30 ; test v1 descriptif 0,82 [0,63 ; 0,96], n=21 ; ECE du test 0,33 | Indicateur adopté par le Lot D, non calibré ; afficher sa provenance sans le convertir en probabilité |
+
+L'incertitude correspond à `1 − soutien NLI` : pour vrai/faux/trompeur, soutien parmi les passages cités ; pour une abstention, soutien neutre moyen sur les passages proposés. L'étiquette et l'explication du verdict restent inchangées. Aucune nouvelle génération Falcon n'est nécessaire pour l'expérience ; cela ne constitue pas une nouvelle validation sur un test jamais vu.
+
+Lot E transmet uniquement la métadonnée connue `uncertainty_source` d'un résultat LLM valide. La jauge « incertitude estimée par le NLI (indicateur, non calibré) » apparaît seulement si le moteur utilisé est LLM et la source est NLI. La valeur fixe historique reste masquée ; un repli garde son propre indice et n'est pas attribué au NLI du LLM rejeté. L'interface reste compatible avec main avant #45, qui n'envoie pas encore cette source.
+
+Ces modifications ne changent ni la formule du Lot D, ni les contrats Verdict, ni un seuil d'abstention. La répétition finale doit utiliser une version intégrant #45 et cette transmission avant l'enregistrement Falcon.
+
 ## Contribution Model 1 et limites de provenance
 
 Les prédictions des seeds 42, 123 et 2026 ont été exportées pour la comparaison avec le Lot B, avec le split `claim_detection_multiclass_600_seed42` et les empreintes. Le sous-ensemble P061–P600 du test contient 112 textes : 23 FR, 29 AR, 60 TN. Il ne forme pas un jeu de 112 textes tunisiens.
@@ -77,7 +93,7 @@ L'arabizi n'est pas translittéré (MODEL_CARD du Lot A2, section 5). Les cas tf
 
 ## Conditions de finalisation
 
-1. Terminer la relecture de #41 actualisée avec main ; #32, #33 et #39 sont déjà fusionnées.
+1. Terminer la relecture de #45 et de l'intégration de sa métadonnée d'incertitude ; #32, #33, #39, #41 et #43 sont déjà fusionnées.
 2. Répéter le parcours complet sur le PC de Hadil avec le code retenu, et consigner commit, modèles, corpus, latences à froid/à chaud et replis.
 3. Documenter la seconde annotation et sa comparaison sans inventer de validation ou d'indépendance.
 4. Consolider le tableau de bord, les résultats et les réserves avec les responsables de lots, sans relancer un test gelé pour régler le système.
@@ -88,5 +104,7 @@ La contribution d'intégration est développée et ses changements sont publiés
 
 - [PR #39 API NLI](https://github.com/SouissiOumaima/NewsCheckTN/pull/39)
 - [PR #41 interface et configuration Falcon](https://github.com/SouissiOumaima/NewsCheckTN/pull/41)
+- [PR #45 re-ranking et incertitude NLI](https://github.com/SouissiOumaima/NewsCheckTN/pull/45)
+- [Journal EXP-D-020/021, commit 6caa24e](https://github.com/SouissiOumaima/NewsCheckTN/blob/6caa24e/experiments.md)
 - [Journal Gold Lot D au commit 24bc73b](https://github.com/SouissiOumaima/NewsCheckTN/blob/24bc73b/experiments.md) : EXP-D-016, EXP-D-017, EXP-D-018.
 - [Journal NLI Gold](https://github.com/SouissiOumaima/NewsCheckTN/pull/34) : EXP-C-012 à EXP-C-016.

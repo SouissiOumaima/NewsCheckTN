@@ -65,6 +65,9 @@ def resolve_verdict(
             model=generator.name,
             provider=provider,
         )
+        source = result.info.get("uncertainty_source")
+        if result.valid and source in {"nli", "fixe"}:
+            info["uncertainty_source"] = source
         return result.verdict, info
     except Exception:
         # Ne pas exposer une clé, un prompt ou un extrait dans une erreur API.
